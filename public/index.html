@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en-SG">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1565c0">
+  <meta name="description" content="Check if you have enough money to buy what you want.">
+  <title>Can I Afford It?</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/img/icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+
+  <header class="app-header">
+    <h1>Can I afford it?</h1>
+    <button id="start-over" class="ghost-btn" type="button">
+      <span aria-hidden="true">🔄</span> Start over
+    </button>
+  </header>
+
+  <main>
+    <!-- Zone 1: money the user has -->
+    <section class="zone" aria-labelledby="money-heading">
+      <h2 id="money-heading"><span class="zone-icon" aria-hidden="true">👛</span> My money</h2>
+      <div class="money-row">
+        <label class="amount-field" for="money-input">
+          <span class="dollar-prefix" aria-hidden="true">$</span>
+          <input id="money-input" type="text" inputmode="decimal" autocomplete="off"
+                 enterkeyhint="done" placeholder="0" aria-label="How much money I have, in dollars">
+        </label>
+      </div>
+      <p id="money-chip" class="chip" hidden><span aria-hidden="true">💵</span> from my notes and coins</p>
+      <button id="open-picker" class="big-btn" type="button">
+        <span aria-hidden="true">💵</span> Tap my notes and coins
+      </button>
+    </section>
+
+    <!-- Zone 2: item prices -->
+    <section class="zone" aria-labelledby="items-heading">
+      <h2 id="items-heading"><span class="zone-icon" aria-hidden="true">🛒</span> Things I want to buy</h2>
+      <ul id="items-list" class="items-list"></ul>
+      <button id="add-item" class="add-btn" type="button">
+        <span aria-hidden="true">＋</span> Add another thing
+      </button>
+      <p class="items-total">Things cost: <strong id="items-total">$0</strong></p>
+    </section>
+  </main>
+
+  <!-- Zone 3: the answer, always visible -->
+  <section id="result" class="result is-neutral" role="status" aria-live="polite">
+    <span id="result-icon" class="result-icon" aria-hidden="true">⬆️</span>
+    <div class="result-text">
+      <p id="result-headline" class="result-headline">Type your money and prices above</p>
+      <p id="result-subline" class="result-subline"></p>
+    </div>
+  </section>
+
+  <!-- Undo toast -->
+  <div id="toast" class="toast" hidden>
+    <span id="toast-text"></span>
+    <button id="toast-undo" class="toast-btn" type="button">Put it back</button>
+  </div>
+
+  <!-- Money picker: full-screen sheet -->
+  <dialog id="picker" class="picker" aria-labelledby="picker-total">
+    <header class="picker-header">
+      <p class="picker-total-label">You have</p>
+      <p id="picker-total" class="picker-total">$0</p>
+      <button id="picker-done" class="done-btn" type="button">
+        <span aria-hidden="true">✔</span> Done
+      </button>
+    </header>
+
+    <div id="picker-tray" class="picker-tray" aria-label="Money I tapped">
+      <p id="tray-empty" class="tray-empty">Tap your notes and coins below <span aria-hidden="true">⬇️</span></p>
+      <ul id="tray-list" class="tray-list"></ul>
+    </div>
+
+    <div class="picker-actions">
+      <button id="picker-undo" class="picker-action-btn" type="button">
+        <span aria-hidden="true">↩️</span> Take back one
+      </button>
+      <button id="picker-clear" class="picker-action-btn" type="button">
+        <span aria-hidden="true">🗑️</span> Start again
+      </button>
+    </div>
+
+    <h3 class="picker-group-label">Notes</h3>
+    <div id="note-grid" class="note-grid"></div>
+
+    <h3 class="picker-group-label">Coins</h3>
+    <div id="coin-grid" class="coin-grid"></div>
+  </dialog>
+
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>
