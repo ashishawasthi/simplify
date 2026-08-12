@@ -19,7 +19,7 @@ const state = {
 const moneyInput = $("money-input");
 const speakMoneyBtn = $("speak-money");
 const clearMoneyBtn = $("clear-money");
-const startOverBtn = $("start-over");
+const clearAllBtn = $("clear-all");
 const addItemBtn = $("add-item");
 const moneyChip = $("money-chip");
 const itemsTotalEl = $("items-total");
@@ -127,7 +127,7 @@ clearMoneyBtn.addEventListener("click", () => {
 
 $("add-item").addEventListener("click", addItem);
 
-startOverBtn.addEventListener("click", () => {
+clearAllBtn.addEventListener("click", () => {
   const before = snapshot();
   state.moneyValue = "";
   state.moneySource = "typed";
@@ -135,7 +135,7 @@ startOverBtn.addEventListener("click", () => {
   moneyInput.value = "";
   setItems([]);
   update();
-  speakMoneyBtn.focus(); // start-over hides itself once everything is empty
+  speakMoneyBtn.focus(); // clear-all hides itself once everything is empty
   showToast("Everything cleared", () => restore(before));
 });
 
@@ -172,8 +172,8 @@ function update() {
   const moneyFilled = moneyInput.value.trim() !== "";
   speakMoneyBtn.hidden = moneyFilled;
   clearMoneyBtn.hidden = !moneyFilled;
-  // nothing entered anywhere yet means nothing to start over from
-  startOverBtn.hidden = !moneyFilled && !anyItemHasValue();
+  // nothing entered anywhere yet means nothing to clear
+  clearAllBtn.hidden = !moneyFilled && !anyItemHasValue();
   // one empty row at a time: fill it before another can be added
   addItemBtn.hidden = !lastItemHasValue();
   renderResult({
