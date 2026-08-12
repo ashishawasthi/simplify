@@ -39,9 +39,9 @@
 
   <header class="app-header">
     <h1>Can I afford it?</h1>
-    <div class="clear-all-wrap">
-      <span class="clear-all-label" aria-hidden="true">Start over</span>
-      <button id="clear-all" class="clear-btn" type="button"
+    <div id="clear-all-wrap" class="labelled-btn">
+      <span class="labelled-btn-text" aria-hidden="true">Start over</span>
+      <button id="clear-all" class="round-btn" type="button"
               aria-label="Start over: clear everything">
         <span aria-hidden="true">✕</span>
       </button>
@@ -124,12 +124,20 @@
     </div>
 
     <div class="picker-actions">
-      <button id="picker-undo" class="picker-action-btn" type="button">
-        <span aria-hidden="true">↩️</span> Take back one
-      </button>
-      <button id="picker-clear" class="picker-action-btn" type="button">
-        <span aria-hidden="true">🗑️</span> Start again
-      </button>
+      <div class="labelled-btn">
+        <span class="labelled-btn-text" aria-hidden="true">Take back one</span>
+        <button id="picker-undo" class="round-btn" type="button"
+                aria-label="Take back one: remove the last note or coin I tapped">
+          <span aria-hidden="true">↩</span>
+        </button>
+      </div>
+      <div class="labelled-btn">
+        <span class="labelled-btn-text" aria-hidden="true">Start again</span>
+        <button id="picker-clear" class="round-btn" type="button"
+                aria-label="Start again: take back all the notes and coins I tapped">
+          <span aria-hidden="true">✕</span>
+        </button>
+      </div>
     </div>
 
     <h3 class="picker-group-label">Notes</h3>

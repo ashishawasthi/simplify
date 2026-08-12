@@ -63,22 +63,20 @@ main {
 }
 h1 { font-size: 26px; margin: 0; }
 
-/* "Start over" pairs a quiet text label with the same round ✕ used to
-   clear a single box, so one glyph means "clear" everywhere in the app. */
-.clear-all-wrap {
+/* A quiet text label beside a round icon button — used for "Start over" in
+   the header and for the picker's two actions, so a circle always reads as
+   a small action and ✕ always means "clear". */
+.labelled-btn {
   display: flex;
   align-items: center;
   gap: 8px;
   flex: none;
 }
-.clear-all-label {
+.labelled-btn-text {
   font-size: 15px;
   color: var(--color-muted);
 }
-.clear-all-wrap .clear-btn {
-  position: static;
-  transform: none;
-}
+.labelled-btn:has(:disabled) { opacity: 0.4; }
 
 /* ---------- zones ---------- */
 .zone { margin-bottom: 28px; }
@@ -131,15 +129,13 @@ h2 {
   flex: 1;
 }
 
-/* One slot at the box's right end, always filled by exactly one of these:
-   🎤 while the box is empty (speak instead of type), ✕ once it has a number
-   (wipe it). Neither can read as "press this to continue". */
+/* Round icon buttons. In a money box the 🎤/✕ pair shares one slot at the
+   right end: 🎤 while it is empty (speak instead of type), ✕ once it has a
+   number (wipe it). .round-btn is the same circle standing on its own beside
+   a label, so a circle always reads as "a small action here". */
 .mic-btn,
-.clear-btn {
-  position: absolute;
-  top: 50%;
-  right: 6px;
-  transform: translateY(-50%);
+.clear-btn,
+.round-btn {
   width: var(--target-small);
   height: var(--target-small);
   font-size: 26px;
@@ -149,15 +145,27 @@ h2 {
   border-radius: 50%;
   cursor: pointer;
 }
+/* only the in-box pair overlays the field */
+.mic-btn,
 .clear-btn {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+}
+.clear-btn,
+.round-btn {
   font-size: 28px;
   font-weight: 700;
   color: var(--color-muted);
 }
+.round-btn:disabled { cursor: default; }
 .mic-btn:active,
-.clear-btn:active { background: #e3f2fd; }
+.clear-btn:active,
+.round-btn:not(:disabled):active { background: #e3f2fd; }
 .mic-btn:focus-visible,
-.clear-btn:focus-visible {
+.clear-btn:focus-visible,
+.round-btn:focus-visible {
   outline: 3px solid var(--color-primary);
   outline-offset: 2px;
 }
@@ -437,22 +445,10 @@ h2 {
 
 .picker-actions {
   display: flex;
+  justify-content: space-between;
   gap: var(--gap);
   margin-top: var(--gap);
 }
-.picker-action-btn {
-  flex: 1;
-  min-height: var(--target);
-  font-family: inherit;
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--color-text);
-  background: #fff;
-  border: 3px solid var(--color-border);
-  border-radius: var(--radius);
-  cursor: pointer;
-}
-.picker-action-btn:disabled { opacity: 0.4; cursor: default; }
 
 .picker-group-label {
   margin: 24px 0 10px;
