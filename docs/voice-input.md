@@ -39,14 +39,12 @@ page cannot tell dictation from typing.
 
 ### The obstacle
 
-The money fields are declared like this, because the app's whole point is
-entering amounts and a numeric keypad is far easier to hit accurately:
+The money fields (`#money-input` and each item row's price box, in
+[`public/index.html`](../public/index.html)) carry `inputmode="decimal"`,
+because the app's whole point is entering amounts and a numeric keypad is far
+easier to hit accurately.
 
-```html
-<input id="money-input" type="text" inputmode="decimal" ...>
-```
-
-`inputmode="decimal"` asks the OS for the number pad. **Neither Gboard nor the
+That attribute asks the OS for the number pad. **Neither Gboard nor the
 iOS keyboard offers voice typing on the number pad.** Tapping the mic there
 produces Gboard's "This app doesn't support voice input" toast — the keyboard
 is declining, not the browser, and no page-level code can change that.
@@ -56,42 +54,25 @@ has to be dictated somewhere that gets a full keyboard.
 
 ### The workaround: a dialog with a plain text box
 
-The 🎤 button opens a `<dialog>` containing an ordinary text input — no
-`inputmode`, so the OS shows the full alphabetic keyboard, mic included:
-
-```html
-<dialog id="speak" class="speak" aria-labelledby="speak-title">
-  <h2 id="speak-title">Tap 🎤, say your money</h2>
-  <p class="speak-hint">Tap the microphone on your keyboard, then say the amount.</p>
-  <input id="speak-input" type="text" autocomplete="off"
-         enterkeyhint="done" placeholder="ten dollars fifty"
-         aria-label="Say or type the amount">
-  <p id="speak-heard" role="status">&nbsp;</p>
-  ...
-</dialog>
-```
+The 🎤 button opens the `#speak` `<dialog>` in
+[`public/index.html`](../public/index.html). Its `#speak-input` is an ordinary
+`type="text"` field with **no `inputmode`**, so the OS shows the full
+alphabetic keyboard, mic included. Its placeholder is an example amount rather
+than an instruction, because the field works just as well for typing.
 
 The user flow is: tap 🎤 → dialog opens with the keyboard up → tap the
 keyboard's own mic → speak → the words appear as text → tap Done.
 
 ### The one timing detail that matters
 
-```js
-export function openSpeak(cb) {
-  onAmount = cb;
-  els.input.value = "";
-  preview();
-  els.dialog.showModal();
-  els.input.focus(); // same tap gesture, so the keyboard opens right away
-}
-```
-
-`focus()` must run **synchronously inside the button's click handler**. Mobile
-browsers only raise the on-screen keyboard for a focus call that is part of a
-user gesture. Move that `focus()` into a `setTimeout`, a promise callback, or a
-transition-end handler and the dialog opens with no keyboard — the user then has
-to tap the field themselves before they can reach the mic, which is an extra
-step for the people least able to absorb one.
+`openSpeak()` in [`public/js/speak.js`](../public/js/speak.js) calls
+`showModal()` and then focuses the input **synchronously**, still inside the
+button's click handler. That ordering is load-bearing: mobile browsers only
+raise the on-screen keyboard for a focus call that is part of a user gesture.
+Move that focus into a `setTimeout`, a promise callback, or a transition-end
+handler and the dialog opens with no keyboard — the user then has to tap the
+field themselves before they can reach the mic, which is an extra step for the
+people least able to absorb one.
 
 ### Why a text input and not a `<select>`, buttons, or a custom widget
 
@@ -142,107 +123,56 @@ All of this lives in [`public/js/speak.js`](../public/js/speak.js) as
 `speechToCents(raw)`, which returns **integer cents** or `null` when no number
 can be found. Integer cents avoids float rounding errors on money.
 
-**Step 1 — normalise the text.**
+**Step 1 — normalise the text.** Lowercase, drop `$` and `,` as noise, and
+rewrite a `12:50`-shaped colon into `12.50`. That last rule is the important
+one: it reinterprets ITN's time guess as a decimal amount.
 
-```js
-let s = String(raw)
-  .toLowerCase()
-  .replace(/[,$]/g, "")
-  .replace(/(\d+):(\d{2})/g, "$1.$2") // "twelve fifty" often arrives as "12:50"
-  .trim();
-```
+**Step 2 — convert any surviving number words to digits.** `wordsToDigits()`
+splits on whitespace *and hyphens*, then walks the words with two registers:
+`cur`, the part being built right now, and `done`, the thousands groups already
+banked. It emits a number — `flush()` — whenever the next word cannot continue
+the current one. `UNITS` and `TENS` are the word tables it matches against.
 
-Currency symbols and thousands separators are noise. The colon rule is the
-important one: it reinterprets ITN's time guess as a decimal amount.
-
-**Step 2 — convert any surviving number words to digits.**
-
-`wordsToDigits()` walks the tokens with two registers — `cur`, the part being
-built right now, and `done`, the thousands groups already banked — emitting a
-number whenever the next word cannot continue the current one:
-
-```js
-for (const word of s.split(/[\s-]+/)) {   // "twenty-five" is two number words
-  if (word in TENS) {
-    // a tens word never continues a small number: "twelve fifty" is 12 | 50
-    if (cur != null && cur % 100 !== 0) flush();
-    cur = (cur ?? 0) + TENS[word];
-  } else if (word in UNITS) {
-    if (cur != null && cur < 20) flush(); // "five five" is 5 | 5
-    cur = (cur ?? 0) + UNITS[word];
-  } else if (word === "hundred") {
-    cur = (cur ?? 1) * 100;
-  } else if (word === "thousand") {
-    done += (cur ?? 1) * 1000;
-    cur = null;
-  }
-}
-```
-
-The two `flush()` guards encode how people actually say prices:
+Four details carry the behaviour:
 
 - **"twelve fifty" is two numbers, not 62.** A tens word after a small number
-  starts a new number. But `cur % 100 !== 0` keeps "two hundred fifty" as a
+  flushes. The `cur % 100 !== 0` test in that guard keeps "two hundred fifty" a
   single 250, because a hundreds value *can* legitimately absorb a tens word.
 - **"five five" is two numbers, not 10.** A unit word after another small
-  number starts a new one.
-
-Banking thousands into `done` — rather than multiplying one accumulator — is
-what keeps "one thousand two hundred" at 1200: the later `× 100` reaches only
-the `two`, never the thousand that is already settled. `flush()` emits
-`done + cur`.
-
-Splitting on hyphens matters more than it looks. Deleting them instead (an
-earlier version did) turns "twenty-five" into `twentyfive`, which matches no
-number word and is quietly passed through as an ordinary word — so
-"twenty-five dollars fifty cents" parsed as **$50.00**, a wrong amount stated
-with full confidence rather than a visible failure.
+  number (`cur < 20`) flushes too.
+- **Thousands are banked into `done` rather than multiplied into `cur`.** This
+  is what keeps "one thousand two hundred" at 1200: the later `× 100` for
+  "hundred" reaches only the `two`, never the thousand already settled.
+- **Hyphens split rather than vanish.** Deleting them (an earlier version did)
+  turns "twenty-five" into `twentyfive`, which matches no word table and is
+  passed through as ordinary text — so "twenty-five dollars fifty cents"
+  parsed as **$50.00**, a wrong amount stated with full confidence rather than
+  a visible failure.
 
 Words that aren't numbers pass through untouched, so "dollars" and "cents"
 survive for the next step. `"and"` and `"a"` are skipped, letting "a hundred
 and five" work.
 
-**Step 3 — decide what the numbers mean.**
-
-```js
-const hasDollar = /dollar|buck/.test(s);
-const hasCent = /cent/.test(s);
-const nums = s.match(/\d*\.\d+|\d+/g);
-if (!nums) return null;
-
-const first = parseFloat(nums[0]);
-if (hasCent && !hasDollar) return Math.round(first);        // "50 cents"
-if (nums.length >= 2 && !nums[0].includes(".") && !nums[1].includes(".")) {
-  const second = parseFloat(nums[1]);
-  if (second < 100) return Math.round(first * 100 + second); // "10 dollars 50"
-}
-return Math.round(first * 100);                              // "12.50", "10"
-```
-
-Three rules, in priority order:
+**Step 3 — decide what the numbers mean.** Back in `speechToCents()`: test the
+text for `dollar|buck` and for `cent`, pull out every number with a regex, and
+apply three rules in priority order.
 
 1. **Cents mentioned without dollars** → the number *is* cents. "fifty cents"
    is 50¢, not $50.
 2. **Two whole numbers, second under 100** → dollars and cents. Covers
    "ten dollars fifty", "ten fifty", and the `12 50` that step 2 produced.
-   Both must be whole: `12.50` and `50` should not merge. The `< 100` test
+   Both must be whole, so `12.50` and `50` don't merge. The under-100 test
    stops a second number that cannot be cents from being merged — though note
    it is then *dropped* rather than reconsidered, so "10 200" yields $10.
 3. **Otherwise** → dollars, decimals included.
 
-The only place a real number is created is `parseFloat` / `Math.round` here.
-Everything before this is string manipulation.
+The only place a real number is created is the `parseFloat`/`Math.round` in
+these three rules. Everything before this is string manipulation.
 
 ### Showing the user what was understood
 
-The parse runs on every `input` event, not just on Done:
-
-```js
-function preview() {
-  const cents = speechToCents(els.input.value);
-  els.heard.textContent = cents == null ? " " : `That is ${formatCents(cents)}`;
-}
-```
+`preview()` runs the parse on every `input` event, not just on Done, and writes
+the result into `#speak-heard`.
 
 So as dictation lands, the dialog says **"That is $10.50"** underneath. The
 user confirms the interpretation before it reaches their money — important
