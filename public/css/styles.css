@@ -114,16 +114,19 @@ h2 {
 }
 
 /* ---------- money input ---------- */
-.money-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+/* anchors the mic over the field's right end; flex:1 fills item rows */
+.amount-wrap {
+  position: relative;
+  flex: 1;
 }
-.money-row .amount-field { flex: 1; }
 
-/* voice entry: sits beside every money box */
+/* voice entry: inside every money box, only while the box is empty — once a
+   number is in, it disappears so it can't read as a "now press this" step */
 .mic-btn {
-  flex: none;
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
   width: var(--target-small);
   height: var(--target-small);
   font-size: 26px;
@@ -197,7 +200,6 @@ h2 {
   align-items: center;
   gap: 12px;
 }
-.item-row .amount-field { flex: 1; }
 
 .remove-btn {
   flex: none;

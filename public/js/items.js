@@ -93,11 +93,15 @@ function render() {
     speak.className = "mic-btn";
     speak.textContent = "🎤";
     speak.setAttribute("aria-label", `Say the price of thing ${i + 1}`);
+    speak.hidden = input.value.trim() !== "";
     speak.addEventListener("click", () =>
       openSpeak((text) => {
         input.value = text;
         input.dispatchEvent(new Event("input"));
       }));
+    input.addEventListener("input", () => {
+      speak.hidden = input.value.trim() !== "";
+    });
 
     const remove = document.createElement("button");
     remove.type = "button";
@@ -106,8 +110,11 @@ function render() {
     remove.setAttribute("aria-label", `Remove thing ${i + 1}`);
     remove.addEventListener("click", () => removeItem(item.id));
 
+    const wrap = document.createElement("div");
+    wrap.className = "amount-wrap";
     label.append(prefix, input);
-    li.append(label, speak, remove);
+    wrap.append(label, speak);
+    li.append(wrap, remove);
     listEl.append(li);
   });
 }

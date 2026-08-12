@@ -16,6 +16,7 @@ const state = {
 };
 
 const moneyInput = $("money-input");
+const speakMoneyBtn = $("speak-money");
 const moneyChip = $("money-chip");
 const itemsTotalEl = $("items-total");
 const toast = $("toast");
@@ -144,6 +145,8 @@ function update() {
   const moneyCents = parseToCents(state.moneyValue);
   itemsTotalEl.textContent = formatCents(itemsTotalCents());
   moneyChip.hidden = state.moneySource !== "notes";
+  // the mic only offers itself while the box is empty
+  speakMoneyBtn.hidden = moneyInput.value.trim() !== "";
   renderResult({
     moneyCents: moneyCents ?? 0,
     hasMoney: moneyCents != null,

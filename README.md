@@ -117,7 +117,8 @@ When releasing a new version, bump the `CACHE` version string in
 - The money inputs use `type="text"` + `inputmode="decimal"` for the big
   numeric keyboard — but that keyboard has **no dictation key** on iOS or
   Android (Gboard shows "This app doesn't support voice input"). Voice entry
-  therefore goes through the 🎤 button next to each money box: it opens the
+  therefore goes through the 🎤 button inside each money box — shown only
+  while the box is empty, so it can't read as a submit step: it opens the
   `#speak` dialog whose plain text input summons the full keyboard (mic
   available), and `js/speak.js` parses the dictated text — digits, "10
   dollars 50 cents", word numbers like "twelve fifty" — into a clean amount.
