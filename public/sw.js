@@ -2,18 +2,20 @@
 // launch picks up new files; firebase.json serves this file with no-cache.
 // "/guide" (not "/guide.html"): Hosting cleanUrls 301s the .html form, and a
 // cached redirected response breaks offline navigations.
-const CACHE = "afford-v9";
+const CACHE = "afford-v10";
 const ASSETS = [
   "/",
   "/index.html",
   "/guide",
   "/img/guide/screen-money.png",
+  "/img/guide/screen-speak.png",
   "/img/guide/screen-yes.png",
   "/img/guide/screen-no.png",
   "/img/guide/screen-picker.png",
   "/css/styles.css",
   "/js/app.js",
   "/js/money.js",
+  "/js/speak.js",
   "/js/currency-data.js",
   "/js/note-picker.js",
   "/js/items.js",

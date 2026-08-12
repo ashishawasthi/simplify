@@ -60,6 +60,10 @@
           <input id="money-input" type="text" inputmode="decimal" autocomplete="off"
                  enterkeyhint="done" placeholder="0" aria-label="How much money I have, in dollars">
         </label>
+        <button id="speak-money" class="mic-btn" type="button"
+                aria-label="Say how much money I have" title="Say my money">
+          <span aria-hidden="true">🎤</span>
+        </button>
       </div>
       <p id="money-chip" class="chip" hidden><span aria-hidden="true">💵</span> from my notes and coins</p>
     </section>
@@ -125,6 +129,24 @@
 
     <h3 class="picker-group-label">Coins</h3>
     <div id="coin-grid" class="coin-grid"></div>
+  </dialog>
+
+  <!-- Speak: a plain text box so the full keyboard (with its mic) opens.
+       The money fields' decimal keypad has no voice key on iOS or Android,
+       so dictation has to happen here and get parsed back into the field. -->
+  <dialog id="speak" class="speak" aria-labelledby="speak-title">
+    <h2 id="speak-title" class="speak-title"><span aria-hidden="true">🎤</span> Say your money</h2>
+    <p class="speak-hint">Tap the microphone on your keyboard, then say the amount.</p>
+    <input id="speak-input" class="speak-input" type="text" autocomplete="off"
+           enterkeyhint="done" placeholder="ten dollars fifty"
+           aria-label="Say or type the amount">
+    <p id="speak-heard" class="speak-heard" role="status">&nbsp;</p>
+    <div class="speak-actions">
+      <button id="speak-cancel" class="ghost-btn" type="button">Cancel</button>
+      <button id="speak-done" class="done-btn" type="button">
+        <span aria-hidden="true">✔</span> Done
+      </button>
+    </div>
   </dialog>
 
   <script type="module" src="/js/app.js"></script>

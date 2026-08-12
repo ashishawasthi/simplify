@@ -114,9 +114,15 @@ When releasing a new version, bump the `CACHE` version string in
 
 ## Platform notes
 
-- The money inputs use `type="text"` + `inputmode="decimal"`, so the numeric
-  keyboard appears on mobile *and* the OS keyboard microphone (dictation)
-  still works; dictated text like "10 dollars 50" is parsed forgivingly.
+- The money inputs use `type="text"` + `inputmode="decimal"` for the big
+  numeric keyboard — but that keyboard has **no dictation key** on iOS or
+  Android (Gboard shows "This app doesn't support voice input"). Voice entry
+  therefore goes through the 🎤 button next to each money box: it opens the
+  `#speak` dialog whose plain text input summons the full keyboard (mic
+  available), and `js/speak.js` parses the dictated text — digits, "10
+  dollars 50 cents", word numbers like "twelve fifty" — into a clean amount.
+  (The Web Speech API was rejected because it doesn't work in installed
+  home-screen PWAs on iOS.)
 - `<dialog>` requires iOS ≥ 15.4 / modern Android.
 - Haptic tick on note taps uses `navigator.vibrate` (not supported on iOS;
   silently skipped).

@@ -4,6 +4,7 @@ import { parseToCents, formatCents, sum } from "./money.js";
 import { initItems, setItems, getItems, itemsTotalCents, hasAnyPrice, addItem, restoreItem } from "./items.js";
 import { initResult, renderResult } from "./result.js";
 import { initPicker, openPicker } from "./note-picker.js";
+import { initSpeak, openSpeak } from "./speak.js";
 import { load, save } from "./storage.js";
 
 const $ = (id) => document.getElementById(id);
@@ -86,6 +87,21 @@ moneyInput.addEventListener("blur", () => {
 $("open-picker").addEventListener("click", () => {
   openPicker(state.moneySource === "notes" ? state.pickedNotes : []);
 });
+
+initSpeak({
+  dialog: $("speak"),
+  input: $("speak-input"),
+  heard: $("speak-heard"),
+  done: $("speak-done"),
+  cancel: $("speak-cancel"),
+});
+
+$("speak-money").addEventListener("click", () =>
+  openSpeak((text) => {
+    moneyInput.value = text;
+    // run the normal typing path: sets state, drops stale picked notes
+    moneyInput.dispatchEvent(new Event("input"));
+  }));
 
 $("add-item").addEventListener("click", addItem);
 

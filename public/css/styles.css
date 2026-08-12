@@ -114,6 +114,31 @@ h2 {
 }
 
 /* ---------- money input ---------- */
+.money-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.money-row .amount-field { flex: 1; }
+
+/* voice entry: sits beside every money box */
+.mic-btn {
+  flex: none;
+  width: var(--target-small);
+  height: var(--target-small);
+  font-size: 26px;
+  line-height: 1;
+  background: #fff;
+  border: 3px solid var(--color-border);
+  border-radius: 50%;
+  cursor: pointer;
+}
+.mic-btn:active { background: #e3f2fd; }
+.mic-btn:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
 .amount-field {
   display: flex;
   align-items: center;
@@ -457,6 +482,57 @@ h2 {
   100% { transform: scale(1); }
 }
 .picker-total.pop { animation: pop 150ms ease-out; }
+
+/* ---------- speak dialog ---------- */
+.speak {
+  width: min(92vw, 360px);
+  margin: auto;
+  padding: 20px;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+.speak::backdrop { background: rgba(0, 0, 0, 0.45); }
+.speak-title {
+  margin: 0 0 8px;
+  font-size: 26px;
+}
+.speak-hint {
+  margin: 0 0 14px;
+  font-size: 17px;
+  color: var(--color-muted);
+}
+.speak-input {
+  width: 100%;
+  min-height: var(--target);
+  padding: 8px 14px;
+  font-family: inherit;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-text);
+  background: #fff;
+  border: 3px solid var(--color-border);
+  border-radius: var(--radius);
+}
+.speak-input:focus {
+  border-color: var(--color-primary);
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
+.speak-heard {
+  min-height: 30px;
+  margin: 12px 0 16px;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-primary-dark);
+}
+.speak-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+.speak-actions .done-btn { min-height: var(--target); }
 
 button:focus-visible,
 .note-btn:focus-visible,

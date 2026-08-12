@@ -2,6 +2,7 @@
 // Empty or unreadable rows simply count as $0 — never a validation error.
 
 import { parseToCents, sum } from "./money.js";
+import { openSpeak } from "./speak.js";
 
 let listEl;
 let handlers = {};
@@ -87,6 +88,17 @@ function render() {
       handlers.onChange();
     });
 
+    const speak = document.createElement("button");
+    speak.type = "button";
+    speak.className = "mic-btn";
+    speak.textContent = "🎤";
+    speak.setAttribute("aria-label", `Say the price of thing ${i + 1}`);
+    speak.addEventListener("click", () =>
+      openSpeak((text) => {
+        input.value = text;
+        input.dispatchEvent(new Event("input"));
+      }));
+
     const remove = document.createElement("button");
     remove.type = "button";
     remove.className = "remove-btn";
@@ -95,7 +107,7 @@ function render() {
     remove.addEventListener("click", () => removeItem(item.id));
 
     label.append(prefix, input);
-    li.append(label, remove);
+    li.append(label, speak, remove);
     listEl.append(li);
   });
 }
