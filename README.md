@@ -80,6 +80,30 @@ account and the secret is:
 When releasing a new version, bump the `CACHE` version string in
 `public/sw.js` so installed apps pick up the new files on next launch.
 
+## Sharing
+
+- `public/img/og-card.png` (1200×630) is the Open Graph / Twitter
+  `summary_large_image` card referenced from `public/index.html`. It contains a
+  QR code for <https://simplify.whiz.coach/> **and** the URL as readable text,
+  so a screenshot of the link preview is still scannable and typeable.
+- `public/img/qr-poster.png` (1000×1240) is a standalone QR for printed
+  handouts or posters.
+- Both are generated offline (no third-party QR service) with `segno` +
+  `Pillow`; the generator lives in `tools/make-qr.py`. Re-run it after changing
+  the URL or wording:
+
+  ```sh
+  python3 -m pip install segno pillow && python3 tools/make-qr.py
+  ```
+
+- `og:image` deliberately points at the `.web.app` origin, which is always
+  reachable by crawlers even if custom-domain DNS is mid-change. After sharing,
+  re-scrape with the [Facebook Sharing Debugger][fb] or [X Card Validator][x]
+  to clear their caches.
+
+[fb]: https://developers.facebook.com/tools/debug/
+[x]: https://cards-dev.twitter.com/validator
+
 ## Platform notes
 
 - The money inputs use `type="text"` + `inputmode="decimal"`, so the numeric
