@@ -1,6 +1,6 @@
 {
-  "name": "Can I Afford It?",
-  "short_name": "Afford It",
+  "name": "Simplify",
+  "short_name": "Simplify",
   "description": "Check if you have enough money to buy what you want.",
   "start_url": "/",
   "scope": "/",
