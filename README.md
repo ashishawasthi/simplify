@@ -45,24 +45,20 @@ or with the Firebase emulator: `firebase emulators:start --only hosting`.
 
 ## Deploy to Firebase Hosting
 
-One-time setup:
+The Firebase project is `simplify-special` (set in `.firebaserc` and the
+deploy workflow).
 
-1. Create a Firebase project at <https://console.firebase.google.com> and
-   put its project ID in `.firebaserc` (replacing `YOUR_FIREBASE_PROJECT_ID`).
-2. Manual deploys: `npm i -g firebase-tools`, `firebase login`, then
+Manual deploys: `npm i -g firebase-tools`, `firebase login`, then
 
-   ```sh
-   firebase deploy --only hosting
-   ```
+```sh
+firebase deploy --only hosting
+```
 
 Automatic deploys (GitHub Actions, `.github/workflows/deploy.yml`) run on
-every push to `main`. They need:
-
-1. A repository **variable** `FIREBASE_PROJECT_ID` set to your project ID
-   (Settings → Secrets and variables → Actions → Variables).
-2. A repository **secret** `FIREBASE_SERVICE_ACCOUNT` containing a service
-   account JSON key with the *Firebase Hosting Admin* role. The easiest way
-   to create both the account and the secret is:
+every push to `main`. One-time setup: a repository **secret**
+`FIREBASE_SERVICE_ACCOUNT` containing a service account JSON key with the
+*Firebase Hosting Admin* role. The easiest way to create both the account
+and the secret is:
 
    ```sh
    firebase init hosting:github
