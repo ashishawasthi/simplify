@@ -16,6 +16,13 @@ these things?"*
 - **The answer** — a big, always-visible green "Yes! You have enough" or
   red "Not enough", with the money left over or how much more is needed.
 
+A step-by-step **user guide** lives at [/guide.html](public/guide.html)
+(linked from the landing page, opens in a new tab). It covers basic use,
+dictating amounts with the keyboard microphone, and adding the app to the
+home screen on iPhone and Android. Its screenshots are in
+`public/img/guide/`; both the page and images are precached by the service
+worker so the guide works offline too.
+
 No framework, no build step, no account, no analytics — nothing leaves the
 device. Works offline once installed (PWA).
 

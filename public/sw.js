@@ -1,9 +1,13 @@
 // Versioned precache, cache-first. Bump CACHE on every deploy so the next
 // launch picks up new files; firebase.json serves this file with no-cache.
-const CACHE = "afford-v2";
+const CACHE = "afford-v3";
 const ASSETS = [
   "/",
   "/index.html",
+  "/guide.html",
+  "/img/guide/screen-yes.png",
+  "/img/guide/screen-no.png",
+  "/img/guide/screen-picker.png",
   "/css/styles.css",
   "/js/app.js",
   "/js/money.js",

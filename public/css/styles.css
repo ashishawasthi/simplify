@@ -199,6 +199,27 @@ h2 {
 }
 .items-total strong { font-size: var(--font-amount); }
 
+/* ---------- footer: link to the user guide ---------- */
+.app-footer {
+  margin: 28px 0 8px;
+  text-align: center;
+}
+.guide-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--target-small);
+  padding: 10px 20px;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--color-primary-dark);
+  background: #f5f9ff;
+  border: 2px solid var(--color-primary);
+  border-radius: var(--radius);
+  text-decoration: none;
+}
+
 /* ---------- result panel ---------- */
 .result {
   position: fixed;
