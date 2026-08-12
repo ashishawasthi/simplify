@@ -1,10 +1,12 @@
 // Versioned precache, cache-first. Bump CACHE on every deploy so the next
 // launch picks up new files; firebase.json serves this file with no-cache.
-const CACHE = "afford-v3";
+// "/guide" (not "/guide.html"): Hosting cleanUrls 301s the .html form, and a
+// cached redirected response breaks offline navigations.
+const CACHE = "afford-v4";
 const ASSETS = [
   "/",
   "/index.html",
-  "/guide.html",
+  "/guide",
   "/img/guide/screen-yes.png",
   "/img/guide/screen-no.png",
   "/img/guide/screen-picker.png",

@@ -16,8 +16,9 @@ these things?"*
 - **The answer** — a big, always-visible green "Yes! You have enough" or
   red "Not enough", with the money left over or how much more is needed.
 
-A step-by-step **user guide** lives at [/guide.html](public/guide.html)
-(linked from the landing page, opens in a new tab). It covers basic use,
+A step-by-step **user guide** lives at [/guide](public/guide.html)
+(served without the `.html` suffix because of Hosting's `cleanUrls`; linked
+from the landing page, opens in a new tab). It covers basic use,
 dictating amounts with the keyboard microphone, and adding the app to the
 home screen on iPhone and Android. Its screenshots are in
 `public/img/guide/`; both the page and images are precached by the service
