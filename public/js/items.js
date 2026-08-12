@@ -9,9 +9,18 @@ let handlers = {};
 let items = []; // { id, value } — value is the raw text the user typed
 let nextId = 1;
 
-export function initItems(list, { onChange, onRemove }) {
+export function initItems(list, { onChange, onRemove, onClear }) {
   listEl = list;
-  handlers = { onChange, onRemove };
+  handlers = { onChange, onRemove, onClear };
+}
+
+export function lastItemHasValue() {
+  const last = items[items.length - 1];
+  return !!last && last.value.trim() !== "";
+}
+
+export function anyItemHasValue() {
+  return items.some((it) => it.value.trim() !== "");
 }
 
 export function setItems(arr) {
@@ -93,15 +102,39 @@ function render() {
     speak.className = "mic-btn";
     speak.textContent = "🎤";
     speak.setAttribute("aria-label", `Say the price of thing ${i + 1}`);
-    speak.hidden = input.value.trim() !== "";
     speak.addEventListener("click", () =>
       openSpeak((text) => {
         input.value = text;
         input.dispatchEvent(new Event("input"));
       }));
-    input.addEventListener("input", () => {
-      speak.hidden = input.value.trim() !== "";
+
+    const clear = document.createElement("button");
+    clear.type = "button";
+    clear.className = "clear-btn";
+    clear.textContent = "✕";
+    clear.setAttribute("aria-label", `Clear the price of thing ${i + 1}`);
+    clear.addEventListener("click", () => {
+      const prev = item.value;
+      input.value = "";
+      item.value = "";
+      syncFieldButtons();
+      handlers.onChange();
+      speak.focus(); // this button just hid itself; don't strand focus
+      handlers.onClear({ value: prev }, () => {
+        item.value = prev;
+        render();
+        handlers.onChange();
+      });
     });
+
+    // exactly one of 🎤 / ✕ is showing, decided by whether the box has anything
+    const syncFieldButtons = () => {
+      const filled = input.value.trim() !== "";
+      speak.hidden = filled;
+      clear.hidden = !filled;
+    };
+    syncFieldButtons();
+    input.addEventListener("input", syncFieldButtons);
 
     const remove = document.createElement("button");
     remove.type = "button";
@@ -113,7 +146,7 @@ function render() {
     const wrap = document.createElement("div");
     wrap.className = "amount-wrap";
     label.append(prefix, input);
-    wrap.append(label, speak);
+    wrap.append(label, speak, clear);
     li.append(wrap, remove);
     listEl.append(li);
   });

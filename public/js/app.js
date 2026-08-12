@@ -1,7 +1,8 @@
 // Entry point: owns the app state, wires the three zones together.
 
 import { parseToCents, formatCents, sum } from "./money.js";
-import { initItems, setItems, getItems, itemsTotalCents, hasAnyPrice, addItem, restoreItem } from "./items.js";
+import { initItems, setItems, getItems, itemsTotalCents, hasAnyPrice, addItem, restoreItem,
+         lastItemHasValue, anyItemHasValue } from "./items.js";
 import { initResult, renderResult } from "./result.js";
 import { initPicker, openPicker } from "./note-picker.js";
 import { initSpeak, openSpeak } from "./speak.js";
@@ -17,6 +18,9 @@ const state = {
 
 const moneyInput = $("money-input");
 const speakMoneyBtn = $("speak-money");
+const clearMoneyBtn = $("clear-money");
+const startOverBtn = $("start-over");
+const addItemBtn = $("add-item");
 const moneyChip = $("money-chip");
 const itemsTotalEl = $("items-total");
 const toast = $("toast");
@@ -30,6 +34,9 @@ initItems($("items-list"), {
   onRemove: (item, index) => {
     showToast(`Took away ${formatCents(parseToCents(item.value) ?? 0)}`, () =>
       restoreItem(item, index));
+  },
+  onClear: (item, undo) => {
+    showToast(`Cleared ${formatCents(parseToCents(item.value) ?? 0)}`, undo);
   },
 });
 
@@ -97,16 +104,30 @@ initSpeak({
   cancel: $("speak-cancel"),
 });
 
-$("speak-money").addEventListener("click", () =>
+speakMoneyBtn.addEventListener("click", () =>
   openSpeak((text) => {
     moneyInput.value = text;
     // run the normal typing path: sets state, drops stale picked notes
     moneyInput.dispatchEvent(new Event("input"));
   }));
 
+clearMoneyBtn.addEventListener("click", () => {
+  const before = snapshot();
+  state.moneyValue = "";
+  state.moneySource = "typed";
+  state.pickedNotes = [];
+  moneyInput.value = "";
+  update();
+  // this button just hid itself; hand focus to the 🎤 that took its place
+  // rather than the input, whose keypad would bury the mic on mobile
+  speakMoneyBtn.focus();
+  showToast(`Cleared ${formatCents(parseToCents(before.moneyValue) ?? 0)}`, () =>
+    restore(before));
+});
+
 $("add-item").addEventListener("click", addItem);
 
-$("start-over").addEventListener("click", () => {
+startOverBtn.addEventListener("click", () => {
   const before = snapshot();
   state.moneyValue = "";
   state.moneySource = "typed";
@@ -114,6 +135,7 @@ $("start-over").addEventListener("click", () => {
   moneyInput.value = "";
   setItems([]);
   update();
+  speakMoneyBtn.focus(); // start-over hides itself once everything is empty
   showToast("Everything cleared", () => restore(before));
 });
 
@@ -145,8 +167,15 @@ function update() {
   const moneyCents = parseToCents(state.moneyValue);
   itemsTotalEl.textContent = formatCents(itemsTotalCents());
   moneyChip.hidden = state.moneySource !== "notes";
-  // the mic only offers itself while the box is empty
-  speakMoneyBtn.hidden = moneyInput.value.trim() !== "";
+
+  // 🎤 while the money box is empty, ✕ once it holds something
+  const moneyFilled = moneyInput.value.trim() !== "";
+  speakMoneyBtn.hidden = moneyFilled;
+  clearMoneyBtn.hidden = !moneyFilled;
+  // nothing entered anywhere yet means nothing to start over from
+  startOverBtn.hidden = !moneyFilled && !anyItemHasValue();
+  // one empty row at a time: fill it before another can be added
+  addItemBtn.hidden = !lastItemHasValue();
   renderResult({
     moneyCents: moneyCents ?? 0,
     hasMoney: moneyCents != null,

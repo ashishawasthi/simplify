@@ -120,9 +120,11 @@ h2 {
   flex: 1;
 }
 
-/* voice entry: inside every money box, only while the box is empty — once a
-   number is in, it disappears so it can't read as a "now press this" step */
-.mic-btn {
+/* One slot at the box's right end, always filled by exactly one of these:
+   🎤 while the box is empty (speak instead of type), ✕ once it has a number
+   (wipe it). Neither can read as "press this to continue". */
+.mic-btn,
+.clear-btn {
   position: absolute;
   top: 50%;
   right: 6px;
@@ -136,8 +138,15 @@ h2 {
   border-radius: 50%;
   cursor: pointer;
 }
-.mic-btn:active { background: #e3f2fd; }
-.mic-btn:focus-visible {
+.clear-btn {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--color-muted);
+}
+.mic-btn:active,
+.clear-btn:active { background: #e3f2fd; }
+.mic-btn:focus-visible,
+.clear-btn:focus-visible {
   outline: 3px solid var(--color-primary);
   outline-offset: 2px;
 }
@@ -147,7 +156,10 @@ h2 {
   align-items: center;
   gap: 8px;
   min-height: var(--target);
-  padding: 0 16px;
+  /* right padding reserves the 🎤/✕ slot: overflowing text clips at the
+     padding box, so shrinking the field is what actually keeps long
+     amounts out from under the button */
+  padding: 0 66px 0 16px;
   background: #fff;
   border: 3px solid var(--color-border);
   border-radius: var(--radius);
