@@ -19,6 +19,7 @@ const state = {
 const moneyInput = $("money-input");
 const speakMoneyBtn = $("speak-money");
 const clearMoneyBtn = $("clear-money");
+const openPickerBtn = $("open-picker");
 const clearAllBtn = $("clear-all");
 const clearAllWrap = document.querySelector(".clear-all-wrap");
 const addItemBtn = $("add-item");
@@ -70,7 +71,9 @@ initPicker(
         moneyInput.value = state.moneyValue;
       }
       update();
-      $("open-picker").focus();
+      // 💵 hides itself once the box is filled, so land on the ✕ that
+      // replaced it rather than letting focus fall to the page body
+      (openPickerBtn.hidden ? clearMoneyBtn : openPickerBtn).focus();
     },
   },
 );
@@ -93,7 +96,7 @@ moneyInput.addEventListener("blur", () => {
   }
 });
 
-$("open-picker").addEventListener("click", () => {
+openPickerBtn.addEventListener("click", () => {
   openPicker(state.moneySource === "notes" ? state.pickedNotes : []);
 });
 
@@ -173,6 +176,8 @@ function update() {
   const moneyFilled = moneyInput.value.trim() !== "";
   speakMoneyBtn.hidden = moneyFilled;
   clearMoneyBtn.hidden = !moneyFilled;
+  // 💵 is another way to fill an empty box, so it goes with the 🎤
+  openPickerBtn.hidden = moneyFilled;
   // nothing entered anywhere yet means nothing to clear
   clearAllWrap.hidden = !moneyFilled && !anyItemHasValue();
   // one empty row at a time: fill it before another can be added

@@ -95,6 +95,9 @@ h2 {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  /* always tall enough for the 💵 button, which comes and goes with the
+     money box being empty — the heading must not move when it does */
+  min-height: calc(var(--target) + 12px);
 }
 .zone-head h2 { margin-bottom: 12px; }
 
