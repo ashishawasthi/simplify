@@ -87,13 +87,16 @@ const TENS = {
 // dollars-plus-cents rule puts split numbers back together where it applies).
 function wordsToDigits(s) {
   const out = [];
-  let cur = null;
+  let done = 0;   // thousands groups already banked
+  let cur = null; // the part being built right now
   const flush = () => {
-    if (cur != null) out.push(String(cur));
+    if (cur != null || done) out.push(String(done + (cur ?? 0)));
+    done = 0;
     cur = null;
   };
-  for (const tok of s.split(/\s+/)) {
-    const word = tok.replace(/-/g, ""); // "twenty-five"
+  // split on hyphens as well as spaces, so "twenty-five" is two number words
+  for (const word of s.split(/[\s-]+/)) {
+    if (word === "") continue;
     if (word in TENS) {
       // a tens word never continues a small number: "twelve fifty" is 12 | 50
       if (cur != null && cur % 100 !== 0) flush();
@@ -104,12 +107,15 @@ function wordsToDigits(s) {
     } else if (word === "hundred") {
       cur = (cur ?? 1) * 100;
     } else if (word === "thousand") {
-      cur = (cur ?? 1) * 1000;
+      // bank it: multiplying the whole accumulator would let a later
+      // "hundred" rescale the thousands too ("one thousand two hundred")
+      done += (cur ?? 1) * 1000;
+      cur = null;
     } else if (word === "and" || word === "a") {
       continue; // "one hundred and five", "a hundred"
     } else {
       flush();
-      out.push(tok);
+      out.push(word);
     }
   }
   flush();
