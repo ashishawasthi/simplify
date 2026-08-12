@@ -7,6 +7,22 @@ let panel, icon, headline, subline, float;
 
 export function initResult(els) {
   ({ panel, icon, headline, subline, float } = els);
+  pinFloatToVisualViewport();
+}
+
+// position:fixed anchors to the *layout* viewport, which on iOS is not what
+// the user is looking at: with the keyboard up, or mid rubber-band scroll, the
+// visual viewport pans around inside it and a "fixed" badge slides off screen.
+// Re-offsetting by the gap between the two keeps it against the real top edge.
+function pinFloatToVisualViewport() {
+  const vv = window.visualViewport;
+  if (!vv) return;
+  const place = () => {
+    float.style.transform = `translateX(-50%) translateY(${Math.max(0, vv.offsetTop)}px)`;
+  };
+  vv.addEventListener("scroll", place);
+  vv.addEventListener("resize", place);
+  place();
 }
 
 export function renderResult({ moneyCents, hasMoney, itemsCents, hasPrices }) {

@@ -314,8 +314,12 @@ h2 {
   box-shadow: 0 0 0 5px var(--color-bg), 0 3px 10px rgba(0, 0, 0, 0.25);
   z-index: 40;
 }
-.result-float.is-yes { background: var(--color-yes-bg); border-color: var(--color-yes-text); }
-.result-float.is-no  { background: var(--color-no-bg);  border-color: var(--color-no-text); }
+/* The ring reads as the colour of the answer, so it needs to be plainly green
+   or red at a glance. The panel's text colours are too dark for that at 3px —
+   they look near-black — so these are a step brighter, still clearing the 3:1
+   non-text contrast floor against their own fill. */
+.result-float.is-yes { background: var(--color-yes-bg); border-color: #2e7d32; }
+.result-float.is-no  { background: var(--color-no-bg);  border-color: #c62828; }
 
 /* ---------- result panel ---------- */
 .result {
