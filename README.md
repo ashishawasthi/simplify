@@ -85,8 +85,13 @@ account and the secret is:
    (or create the service account manually in Google Cloud IAM and paste
    its JSON key into the secret).
 
-When releasing a new version, bump the `CACHE` version string in
-`public/sw.js` so installed apps pick up the new files on next launch.
+**Before merging any change to `main`**, check whether `CACHE` in
+`public/sw.js` needs bumping. The service worker is cache-first: without a new
+`CACHE` string, already-installed apps keep serving the old HTML/CSS/JS
+indefinitely after deploy, even though the raw files on the server are new.
+Bump it for any change to `public/` — HTML, CSS, JS, or a precached image —
+skip it only for changes that don't touch `public/` at all (e.g. `README.md`,
+`tools/`).
 
 ## Sharing
 
