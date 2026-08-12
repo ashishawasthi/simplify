@@ -92,6 +92,9 @@
     figure img {
       width: 100%;
       max-width: 300px;
+      /* the width/height attributes reserve layout space; without this the
+         attribute height would win over the scaled-down CSS width */
+      height: auto;
       border: 3px solid var(--color-border);
       border-radius: var(--radius);
     }
