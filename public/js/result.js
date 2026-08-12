@@ -3,10 +3,10 @@
 
 import { formatCents } from "./money.js";
 
-let panel, icon, headline, subline;
+let panel, icon, headline, subline, float;
 
 export function initResult(els) {
-  ({ panel, icon, headline, subline } = els);
+  ({ panel, icon, headline, subline, float } = els);
 }
 
 export function renderResult({ moneyCents, hasMoney, itemsCents, hasPrices }) {
@@ -39,4 +39,14 @@ function show(stateClass, iconChar, head, sub) {
   icon.textContent = iconChar;
   headline.textContent = head;
   subline.innerHTML = sub;
+
+  // mirror a real verdict at the top of the screen; the neutral hints stay
+  // bottom-only because the bare icon can't carry their meaning
+  const isVerdict = stateClass !== "is-neutral";
+  float.hidden = !isVerdict;
+  if (isVerdict) {
+    float.classList.remove("is-yes", "is-no");
+    float.classList.add(stateClass);
+    float.textContent = iconChar;
+  }
 }

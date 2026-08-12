@@ -8,6 +8,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 URL = "https://simplify.whiz.coach/"
 URL_LABEL = "simplify.whiz.coach"
+APP_NAME = "Simplify"          # the app; "Can I afford it?" is only its first page
 TITLE = "Can I afford it?"
 TAGLINE = "Check if you have enough money to buy what you want."
 
@@ -72,48 +73,45 @@ def wrap(draw, text, fnt, max_w):
 
 
 def make_og_card(path):
-    """1200x630 Open Graph / Twitter summary_large_image card."""
+    """1200x630 Open Graph / Twitter summary_large_image card.
+
+    Everything is centred on purpose. WhatsApp — the main way this link gets
+    shared — thumbnails a card by cropping the middle square (here x 285..915)
+    and throws the rest away, so a QR sitting off to one side is exactly the
+    part that disappears. Name, QR and URL therefore all live inside that
+    middle square; the wide margins are only ever seen on the platforms that
+    render the full 1.91:1 card.
+    """
     W, H = 1200, 630
+    safe_x0, safe_x1 = (W - H) // 2, (W + H) // 2   # the square WhatsApp keeps
     img = Image.new("RGB", (W, H), WHITE)
     d = ImageDraw.Draw(img)
 
     # Top accent bar in the app's theme colour.
-    d.rectangle([0, 0, W, 14], fill=PRIMARY)
+    d.rectangle([0, 0, W, 12], fill=PRIMARY)
 
-    # --- Right: QR on a bordered white tile ---
-    tile = 420
-    tile_x, tile_y = W - tile - 70, (H - tile) // 2 + 7
+    cx = W // 2
+
+    def centred(text, fnt, y, fill):
+        d.text((cx - d.textlength(text, font=fnt) / 2, y), text, font=fnt, fill=fill)
+
+    centred(APP_NAME, bold(46), 24, PRIMARY)
+
+    # QR on a bordered white tile, sized as large as the square crop allows
+    # once the name above and the URL below have their room.
+    tile, tile_y = 450, 88
+    tile_x = cx - tile // 2
     d.rounded_rectangle([tile_x, tile_y, tile_x + tile, tile_y + tile],
                         radius=24, fill=WHITE, outline=PRIMARY, width=4)
-    qr = qr_image(URL, module_px=8, quiet=2)
-    qr_size = tile - 56
-    qr = qr.resize((qr_size, qr_size), Image.NEAREST)
-    img.paste(qr, (tile_x + 28, tile_y + 28))
+    qr_size = tile - 52
+    qr = qr_image(URL, module_px=8, quiet=2).resize((qr_size, qr_size), Image.NEAREST)
+    img.paste(qr, (tile_x + 26, tile_y + 26))
 
-    cap = bold(24)
-    cap_text = "Scan to open"
-    d.text((tile_x + (tile - d.textlength(cap_text, font=cap)) / 2, tile_y + tile + 20),
-           cap_text, font=cap, fill=MUTED)
+    # Readable URL, so a preview that is screenshotted or never scanned still
+    # tells the reader where to go.
+    centred(URL_LABEL, bold(32), tile_y + tile + 14, PRIMARY_DARK)
 
-    # --- Left: title, tagline, URL ---
-    x = 70
-    y = 150
-    t = bold(76)
-    d.text((x, y), TITLE, font=t, fill=PRIMARY)
-    y += 100
-
-    tag = regular(32)
-    for line in wrap(d, TAGLINE, tag, tile_x - x - 60):
-        d.text((x, y), line, font=tag, fill=MUTED)
-        y += 44
-
-    y += 34
-    u = bold(38)
-    url_w = d.textlength(URL_LABEL, font=u)
-    d.rounded_rectangle([x - 18, y - 14, x + url_w + 18, y + 54],
-                        radius=12, fill="#e8f0fe")
-    d.text((x, y), URL_LABEL, font=u, fill=PRIMARY_DARK)
-
+    assert safe_x0 <= tile_x and tile_x + tile <= safe_x1, "QR escapes the square crop"
     img.save(path, "PNG", optimize=True)
     return img.size
 

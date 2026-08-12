@@ -94,6 +94,12 @@ When releasing a new version, bump the `CACHE` version string in
   `summary_large_image` card referenced from `public/index.html`. It contains a
   QR code for <https://simplify.whiz.coach/> **and** the URL as readable text,
   so a screenshot of the link preview is still scannable and typeable.
+  The app name, QR and URL are all centred inside the middle 630×630 square,
+  because WhatsApp — the main sharing route — crops a preview to that square
+  and discards the rest. Keep anything that must survive inside it. The
+  `og:image` URL carries a `?v=` cache-buster: scrapers key their cached copy
+  on the full URL, so bump it whenever the card is redrawn, or WhatsApp and
+  Facebook will keep serving the old picture.
 - `public/img/qr-poster.png` (1000×1240) is a standalone QR for printed
   handouts or posters.
 - Both are generated offline (no third-party QR service) with `segno` +

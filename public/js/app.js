@@ -47,6 +47,7 @@ initResult({
   icon: $("result-icon"),
   headline: $("result-headline"),
   subline: $("result-subline"),
+  float: $("result-float"),
 });
 
 initPicker(

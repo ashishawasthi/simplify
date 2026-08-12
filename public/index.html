@@ -10,25 +10,29 @@
 
   <!-- Social sharing preview. The card image carries a QR code for the site
        plus the URL in plain text, so a screenshot of the preview is scannable.
+       The QR sits dead-centre: WhatsApp thumbnails a card by keeping only its
+       middle square, so anything off to one side is the part that vanishes.
        og:image must be absolute; it points at the .web.app origin because that
-       one is always reachable by crawlers regardless of custom-domain DNS. -->
+       one is always reachable by crawlers regardless of custom-domain DNS.
+       The ?v= is a cache-buster — scrapers key their stored copy on the whole
+       URL, so re-drawing the card needs a new one to actually reach anybody. -->
   <meta property="og:type" content="website">
-  <meta property="og:site_name" content="Can I Afford It?">
+  <meta property="og:site_name" content="Simplify">
   <meta property="og:url" content="https://simplify.whiz.coach/">
-  <meta property="og:title" content="Can I Afford It?">
+  <meta property="og:title" content="Simplify">
   <meta property="og:description" content="Check if you have enough money to buy what you want. A simple, offline-friendly money app for special-needs users.">
-  <meta property="og:image" content="https://simplify-special.web.app/img/og-card.png">
+  <meta property="og:image" content="https://simplify-special.web.app/img/og-card.png?v=2">
   <meta property="og:image:type" content="image/png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="Can I afford it? — QR code linking to simplify.whiz.coach">
+  <meta property="og:image:alt" content="Simplify — QR code linking to simplify.whiz.coach">
   <meta property="og:locale" content="en_SG">
 
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Can I Afford It?">
+  <meta name="twitter:title" content="Simplify">
   <meta name="twitter:description" content="Check if you have enough money to buy what you want. A simple, offline-friendly money app for special-needs users.">
-  <meta name="twitter:image" content="https://simplify-special.web.app/img/og-card.png">
-  <meta name="twitter:image:alt" content="Can I afford it? — QR code linking to simplify.whiz.coach">
+  <meta name="twitter:image" content="https://simplify-special.web.app/img/og-card.png?v=2">
+  <meta name="twitter:image:alt" content="Simplify — QR code linking to simplify.whiz.coach">
 
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -92,6 +96,12 @@
       </a>
     </footer>
   </main>
+
+  <!-- Floating mirror of the verdict icon, pinned top-center so the answer
+       stays visible while the keyboard covers the bottom panel. Icon only;
+       the panel below carries the words, and it alone talks to screen
+       readers, so this stays aria-hidden. -->
+  <span id="result-float" class="result-float" hidden aria-hidden="true"></span>
 
   <!-- Zone 3: the answer, always visible -->
   <section id="result" class="result is-neutral" role="status" aria-live="polite">
