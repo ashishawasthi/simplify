@@ -7,6 +7,7 @@ const ASSETS = [
   "/",
   "/index.html",
   "/guide",
+  "/img/guide/screen-money.png",
   "/img/guide/screen-yes.png",
   "/img/guide/screen-no.png",
   "/img/guide/screen-picker.png",
