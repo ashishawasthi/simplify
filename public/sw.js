@@ -2,7 +2,7 @@
 // launch picks up new files; firebase.json serves this file with no-cache.
 // "/guide" (not "/guide.html"): Hosting cleanUrls 301s the .html form, and a
 // cached redirected response breaks offline navigations.
-const CACHE = "afford-v5";
+const CACHE = "afford-v6";
 const ASSETS = [
   "/",
   "/index.html",
@@ -28,7 +28,12 @@ const ASSETS = [
 
 self.addEventListener("install", (e) => {
   e.waitUntil(
-    caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting())
+    caches.open(CACHE)
+      // bypass the HTTP cache — a CDN edge can still be serving a stale
+      // response for the previous deploy right after this one goes live,
+      // and addAll()'s default fetch would happily bake that in forever.
+      .then((c) => Promise.all(ASSETS.map((url) => fetch(url, { cache: "reload" }).then((r) => c.put(url, r)))))
+      .then(() => self.skipWaiting())
   );
 });
 
