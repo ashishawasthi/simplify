@@ -2,6 +2,9 @@
 
 Simplify workflows for special needs.
 
+**Live:** <https://simplify.whiz.coach/> (custom domain) —
+also at <https://simplify-special.web.app/>
+
 **Can I Afford It?** is a simple, static progressive web app that helps
 special-needs users answer one question: *"Do I have enough money to buy
 these things?"*
@@ -46,7 +49,10 @@ or with the Firebase emulator: `firebase emulators:start --only hosting`.
 ## Deploy to Firebase Hosting
 
 The Firebase project is `simplify-special` (set in `.firebaserc` and the
-deploy workflow).
+deploy workflow). The live site is served at
+<https://simplify-special.web.app/>, with the custom domain
+<https://simplify.whiz.coach/> mapped to the same Hosting site (added under
+**Hosting → Custom domains** in the Firebase console).
 
 Manual deploys: `npm i -g firebase-tools`, `firebase login`, then
 
@@ -54,11 +60,15 @@ Manual deploys: `npm i -g firebase-tools`, `firebase login`, then
 firebase deploy --only hosting
 ```
 
-Automatic deploys (GitHub Actions, `.github/workflows/deploy.yml`) run on
-every push to `main`. One-time setup: a repository **secret**
-`FIREBASE_SERVICE_ACCOUNT` containing a service account JSON key with the
-*Firebase Hosting Admin* role. The easiest way to create both the account
-and the secret is:
+Automatic deploys (`.github/workflows/firebase-hosting-merge.yml`) run on
+every merge/push to `main` and publish to the `live` channel, so both URLs
+update together. Pull requests get a temporary preview channel URL
+(`.github/workflows/firebase-hosting-pull-request.yml`).
+
+One-time setup: a repository **secret**
+`FIREBASE_SERVICE_ACCOUNT_SIMPLIFY_SPECIAL` containing a service account JSON
+key with the *Firebase Hosting Admin* role. The easiest way to create both the
+account and the secret is:
 
    ```sh
    firebase init hosting:github
