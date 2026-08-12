@@ -47,7 +47,13 @@
   <main>
     <!-- Zone 1: money the user has -->
     <section class="zone" aria-labelledby="money-heading">
-      <h2 id="money-heading"><span class="zone-icon" aria-hidden="true">💰</span> My money</h2>
+      <div class="zone-head">
+        <h2 id="money-heading"><span class="zone-icon" aria-hidden="true">💰</span> My money</h2>
+        <button id="open-picker" class="icon-btn" type="button"
+                aria-label="Tap my notes and coins" title="Tap my notes and coins">
+          <span aria-hidden="true">💵</span>
+        </button>
+      </div>
       <div class="money-row">
         <label class="amount-field" for="money-input">
           <span class="dollar-prefix" aria-hidden="true">$</span>
@@ -56,9 +62,6 @@
         </label>
       </div>
       <p id="money-chip" class="chip" hidden><span aria-hidden="true">💵</span> from my notes and coins</p>
-      <button id="open-picker" class="big-btn" type="button">
-        <span aria-hidden="true">💵</span> Tap my notes and coins
-      </button>
     </section>
 
     <!-- Zone 2: item prices -->

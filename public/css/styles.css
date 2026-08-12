@@ -81,6 +81,38 @@ h2 {
 }
 .zone-icon { font-size: 30px; }
 
+/* Heading row: title on the left, its optional action button on the right. */
+.zone-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.zone-head h2 { margin-bottom: 12px; }
+
+/* Secondary action, deliberately not a primary-looking button: typing the
+   amount is the main path, so this must not read as "press me to continue". */
+.icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: var(--target);
+  height: var(--target);
+  margin-bottom: 12px;
+  font-size: 30px;
+  line-height: 1;
+  background: #fff;
+  border: 3px solid var(--color-border);
+  border-radius: 50%;
+  cursor: pointer;
+}
+.icon-btn:active { background: #e3f2fd; }
+.icon-btn:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
 /* ---------- money input ---------- */
 .amount-field {
   display: flex;
@@ -125,25 +157,6 @@ h2 {
   background: #e3f2fd;
   border-radius: 999px;
 }
-
-.big-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  width: 100%;
-  min-height: 72px;
-  margin-top: 14px;
-  font-family: inherit;
-  font-size: 24px;
-  font-weight: 700;
-  color: #fff;
-  background: var(--color-primary);
-  border: none;
-  border-radius: var(--radius);
-  cursor: pointer;
-}
-.big-btn:active { background: var(--color-primary-dark); }
 
 /* ---------- items list ---------- */
 .items-list {
