@@ -39,9 +39,13 @@
 
   <header class="app-header">
     <h1>Can I afford it?</h1>
-    <button id="clear-all" class="ghost-btn" type="button">
-      <span aria-hidden="true">🔄</span> Clear all
-    </button>
+    <div class="clear-all-wrap">
+      <span class="clear-all-label" aria-hidden="true">Start over</span>
+      <button id="clear-all" class="clear-btn" type="button"
+              aria-label="Start over: clear everything">
+        <span aria-hidden="true">✕</span>
+      </button>
+    </div>
   </header>
 
   <main>

@@ -20,6 +20,7 @@ const moneyInput = $("money-input");
 const speakMoneyBtn = $("speak-money");
 const clearMoneyBtn = $("clear-money");
 const clearAllBtn = $("clear-all");
+const clearAllWrap = document.querySelector(".clear-all-wrap");
 const addItemBtn = $("add-item");
 const moneyChip = $("money-chip");
 const itemsTotalEl = $("items-total");
@@ -173,7 +174,7 @@ function update() {
   speakMoneyBtn.hidden = moneyFilled;
   clearMoneyBtn.hidden = !moneyFilled;
   // nothing entered anywhere yet means nothing to clear
-  clearAllBtn.hidden = !moneyFilled && !anyItemHasValue();
+  clearAllWrap.hidden = !moneyFilled && !anyItemHasValue();
   // one empty row at a time: fill it before another can be added
   addItemBtn.hidden = !lastItemHasValue();
   renderResult({
