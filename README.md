@@ -124,7 +124,9 @@ When releasing a new version, bump the `CACHE` version string in
   available), and `js/speak.js` parses the dictated text — digits, "10
   dollars 50 cents", word numbers like "twelve fifty" — into a clean amount.
   (The Web Speech API was rejected because it doesn't work in installed
-  home-screen PWAs on iOS.)
+  home-screen PWAs on iOS.) See
+  [docs/voice-input.md](docs/voice-input.md) for how this works end to end,
+  and for the parser's known gaps.
 - `<dialog>` requires iOS ≥ 15.4 / modern Android.
 - Haptic tick on note taps uses `navigator.vibrate` (not supported on iOS;
   silently skipped).
