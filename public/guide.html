@@ -182,6 +182,17 @@
       height: auto;
     }
 
+    /* Leaves the guide for a manufacturer's own page, so it is a plain link
+       rather than one of the blue buttons — but still a full-size tap target. */
+    a.help-link {
+      /* inline-block, not flex: the text wraps to two lines on a phone, and a
+         centred flex item would leave the 🔗 stranded beside the middle of it */
+      display: inline-block;
+      padding: 14px 0;
+      font-weight: 700;
+      color: var(--color-primary-dark);
+    }
+
     a.back-link,
     a.open-app {
       display: inline-flex;
@@ -321,9 +332,10 @@
     </p>
 
     <figure>
-      <img src="/img/guide/screen-speak.png" width="750" height="1624"
-        alt="The Tap microphone on keyboard, then say window on top of the app. A text box shows the words ten dollars fifty, and below it the app says: That is $10.50. There is a round close button in the top right corner and a Done button.">
-      <figcaption>Say the amount, check it, then tap ✔ Done</figcaption>
+      <img src="/img/guide/mic-on-keyboard.png" width="750" height="1566"
+        alt="An Android phone with the Tap microphone on keyboard, then say window open and the keyboard showing underneath. A blue circle marks the microphone: the round button at the right end of the row of small buttons just above the letters.">
+      <figcaption>The microphone is on the <strong>keyboard</strong> — here it is
+        circled in blue</figcaption>
     </figure>
 
     <svg class="illustration" viewBox="0 0 320 240" role="img"
@@ -356,24 +368,11 @@
       <text x="244" y="228" text-anchor="middle" font-size="14" font-weight="bold" fill="#1a1a1a">⬆ iPhone: here</text>
     </svg>
 
-    <figure>
-      <img src="/img/guide/mic-on-keyboard.png" width="750" height="1566"
-        alt="An Android phone with the Tap microphone on keyboard, then say window open and the keyboard showing underneath. The microphone is the round button at the top right of the keyboard, in the row of small buttons above the letters.">
-      <figcaption>On this Android phone the microphone is the round button at the
-        top right of the keyboard</figcaption>
-    </figure>
-
-    <p><strong>No microphone on your keyboard?</strong> The microphone belongs to
-      the keyboard, not to this app. Different keyboards put it in different
-      places, and some keep it switched off.</p>
-
-    <p>The first time you tap it, your phone may ask whether the keyboard can use
-      the microphone. Tap <strong>While using the app</strong>. If you still
-      cannot find a microphone, it can be switched on in your keyboard's own
-      settings — or you can just type the number instead.</p>
-
     <div class="callout tip">💡 It is okay to say it your own way —
       “ten fifty”, “10 dollars and 50 cents” and “$10.50” all work.</div>
+
+    <p>Cannot see a microphone on your keyboard?
+      <a href="#no-microphone">There is help at the end of this guide</a>.</p>
 
     <!-- ============================================================ -->
     <h2><span class="step-icon" aria-hidden="true">📱</span> Put the app on your home screen</h2>
@@ -430,6 +429,64 @@
 
     <div class="callout tip">💡 The app remembers your numbers. Count your
       money at home, then check the answer at the shop — no internet needed.</div>
+
+    <!-- ============================================================ -->
+    <h2 id="no-microphone"><span class="step-icon" aria-hidden="true">🎤</span> No microphone on your keyboard?</h2>
+
+    <p>The microphone belongs to your keyboard, not to this app. Find your
+      keyboard below and follow the steps.</p>
+
+    <div class="platform">
+      <h3>Gboard (most Android phones)</h3>
+      <ol class="steps">
+        <li>Look at the row of small buttons just above the letters. Tap the
+          round <strong>microphone</strong> at the right end.</li>
+        <li>If it is not there, open your phone's <strong>Settings</strong>.
+          Tap <strong>Apps</strong>, then <strong>Gboard</strong>, then
+          <strong>Permissions</strong>, then <strong>Microphone</strong>.
+          Tap <strong>Allow</strong>.</li>
+      </ol>
+      <a class="help-link" href="https://support.google.com/gboard/answer/2781851" target="_blank" rel="noopener">
+        <span aria-hidden="true">🔗</span> Google's help page for Gboard
+      </a>
+    </div>
+
+    <div class="platform">
+      <h3>Samsung keyboard</h3>
+      <ol class="steps">
+        <li>Look at the row of small buttons just above the letters. Tap the
+          <strong>microphone</strong>.</li>
+        <li>If you cannot see that row, <strong>press and hold the comma
+            key</strong> next to the space bar.</li>
+        <li>To switch it on, open <strong>Settings</strong>. Tap
+          <strong>General management</strong>, then <strong>Samsung Keyboard
+            settings</strong>, then <strong>Voice input</strong>.</li>
+      </ol>
+      <a class="help-link" href="https://www.samsung.com/us/support/answer/ANS10001592/" target="_blank" rel="noopener">
+        <span aria-hidden="true">🔗</span> Samsung's help page for the keyboard
+      </a>
+    </div>
+
+    <div class="platform">
+      <h3>Microsoft SwiftKey</h3>
+      <ol class="steps">
+        <li>Tap the <strong>microphone</strong> on the row above the letters, or
+          <strong>press and hold the comma key</strong>.</li>
+        <li>To switch it on, open the <strong>SwiftKey</strong> app. Tap
+          <strong>Rich input</strong>, then <strong>Voice input key</strong>.</li>
+      </ol>
+      <a class="help-link"
+        href="https://support.microsoft.com/en-us/topic/how-do-i-use-voice-to-text-with-microsoft-swiftkey-keyboard-b56f06e5-dda3-4edd-9b2f-0e6404806b2f"
+        target="_blank" rel="noopener">
+        <span aria-hidden="true">🔗</span> Microsoft's help page for SwiftKey
+      </a>
+    </div>
+
+    <p>The first time you tap the microphone, your phone may ask whether the
+      keyboard can listen. Tap <strong>While using the app</strong>.</p>
+
+    <div class="callout tip">💡 You never have to use the microphone. Typing the
+      number always works.</div>
 
     <!-- ============================================================ -->
     <h2><span class="step-icon" aria-hidden="true">🔒</span> Your money stays private</h2>

@@ -24,17 +24,10 @@ home screen on iPhone and Android. Its screenshots are in
 `public/img/guide/`; both the page and images are precached by the service
 worker so the guide works offline too.
 
-Those screenshots are the one part of the docs no code review catches when it
-goes stale, so `screen-speak.png` is captured from the running app rather than
-by hand. Re-run it after any change to the speak dialog:
-
-```sh
-node tools/shoot-guide.mjs speak
-```
-
-It needs only Node 22 and Chrome — it serves `public/` and drives a headless
-Chrome over the DevTools Protocol, and refuses to write the file if the app
-didn't reach the state being photographed.
+`mic-on-keyboard.png` is a real Android screenshot (dialog plus the phone's own
+keyboard, with the microphone key ringed in `--color-primary`), so it has to be
+retaken on a device — the keyboard belongs to Android, not to the page, and no
+headless capture can include it.
 
 No framework, no build step, no account, no analytics — nothing leaves the
 device. Works offline once installed (PWA).
