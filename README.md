@@ -24,6 +24,18 @@ home screen on iPhone and Android. Its screenshots are in
 `public/img/guide/`; both the page and images are precached by the service
 worker so the guide works offline too.
 
+Those screenshots are the one part of the docs no code review catches when it
+goes stale, so `screen-speak.png` is captured from the running app rather than
+by hand. Re-run it after any change to the speak dialog:
+
+```sh
+node tools/shoot-guide.mjs speak
+```
+
+It needs only Node 22 and Chrome — it serves `public/` and drives a headless
+Chrome over the DevTools Protocol, and refuses to write the file if the app
+didn't reach the state being photographed.
+
 No framework, no build step, no account, no analytics — nothing leaves the
 device. Works offline once installed (PWA).
 
