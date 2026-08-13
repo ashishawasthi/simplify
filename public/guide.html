@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="en-SG">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -27,7 +28,11 @@
       --radius: 16px;
       --gap: 16px;
     }
-    * { box-sizing: border-box; }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
       font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -36,40 +41,61 @@
       color: var(--color-text);
       background: var(--color-bg);
     }
+
     main {
       max-width: 520px;
       margin: 0 auto;
       padding: 0 var(--gap) 48px;
     }
+
     header.guide-header {
       max-width: 520px;
       margin: 0 auto;
       padding: 16px var(--gap) 0;
     }
-    h1 { font-size: 30px; margin: 0 0 4px; }
-    .subtitle { color: var(--color-muted); margin: 0 0 8px; font-size: 20px; }
+
+    h1 {
+      font-size: 30px;
+      margin: 0 0 4px;
+    }
+
+    .subtitle {
+      color: var(--color-muted);
+      margin: 0 0 8px;
+      font-size: 20px;
+    }
+
     h2 {
       font-size: 26px;
       margin: 40px 0 12px;
       padding-top: 24px;
       border-top: 3px solid var(--color-neutral-bg);
     }
-    .step-icon { font-size: 30px; }
-    p { margin: 12px 0; }
+
+    .step-icon {
+      font-size: 30px;
+    }
+
+    p {
+      margin: 12px 0;
+    }
+
     ol.steps {
       margin: 12px 0;
       padding-left: 0;
       list-style: none;
       counter-reset: step;
     }
-    ol.steps > li {
+
+    ol.steps>li {
       counter-increment: step;
       position: relative;
       padding-left: 56px;
       margin-bottom: 20px;
       min-height: 44px;
     }
-    ol.steps > li::before {
+
+    ol.steps>li::before {
       content: counter(step);
       position: absolute;
       left: 0;
@@ -85,10 +111,12 @@
       align-items: center;
       justify-content: center;
     }
+
     figure {
       margin: 20px 0;
       text-align: center;
     }
+
     figure img {
       width: 100%;
       max-width: 300px;
@@ -98,33 +126,54 @@
       border: 3px solid var(--color-border);
       border-radius: var(--radius);
     }
+
     figcaption {
       font-size: 18px;
       color: var(--color-muted);
       margin-top: 8px;
     }
+
     .callout {
       border-radius: var(--radius);
       padding: 16px;
       margin: 16px 0;
       font-weight: 600;
     }
-    .callout.yes { background: var(--color-yes-bg); color: var(--color-yes-text); }
-    .callout.no  { background: var(--color-no-bg);  color: var(--color-no-text); }
-    .callout.tip { background: var(--color-neutral-bg); color: var(--color-text); }
+
+    .callout.yes {
+      background: var(--color-yes-bg);
+      color: var(--color-yes-text);
+    }
+
+    .callout.no {
+      background: var(--color-no-bg);
+      color: var(--color-no-text);
+    }
+
+    .callout.tip {
+      background: var(--color-neutral-bg);
+      color: var(--color-text);
+    }
+
     .platform {
       border: 3px solid var(--color-border);
       border-radius: var(--radius);
       padding: 16px;
       margin: 20px 0;
     }
-    .platform h3 { font-size: 24px; margin: 0 0 8px; }
+
+    .platform h3 {
+      font-size: 24px;
+      margin: 0 0 8px;
+    }
+
     .inline-icon {
       display: inline-block;
       vertical-align: -6px;
       width: 28px;
       height: 28px;
     }
+
     .illustration {
       display: block;
       margin: 16px auto;
@@ -132,7 +181,9 @@
       width: 100%;
       height: auto;
     }
-    a.back-link, a.open-app {
+
+    a.back-link,
+    a.open-app {
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -147,12 +198,22 @@
       border-radius: var(--radius);
       text-decoration: none;
     }
-    a.back-link:active, a.open-app:active { background: var(--color-primary-dark); }
+
+    a.back-link:active,
+    a.open-app:active {
+      background: var(--color-primary-dark);
+    }
+
     @media (prefers-reduced-motion: no-preference) {
-      a.back-link, a.open-app { transition: background 0.15s; }
+
+      a.back-link,
+      a.open-app {
+        transition: background 0.15s;
+      }
     }
   </style>
 </head>
+
 <body>
 
   <header class="guide-header">
@@ -162,33 +223,35 @@
 
   <main>
     <p>This app answers one question: <strong>do I have enough money to buy
-    what I want?</strong> It is free, private, and works without internet.</p>
+        what I want?</strong> It is free, private, and works without internet.</p>
 
     <!-- ============================================================ -->
     <h2><span class="step-icon" aria-hidden="true">💰</span> 1. Put in your money</h2>
 
     <p>Tap the <strong>My money</strong> box at the top and type how much
-    money you have. That is all you need to do — the answer works itself
-    out at the bottom of the screen.</p>
+      money you have. That is all you need to do — the answer works itself
+      out at the bottom of the screen.</p>
 
     <figure>
       <img src="/img/guide/screen-money.png" width="718" height="320"
-           alt="The My money part of the app. The heading says My money, with a round button showing bank notes at its right. Below is an empty money box with a small round microphone button inside its right end.">
-      <figcaption>Type your money in the box. The round 💵 button is for counting notes and coins. The 🎤 inside the box is for saying the amount. Both only show while the box is empty.</figcaption>
+        alt="The My money part of the app. The heading says My money, with a round button showing bank notes at its right. Below is an empty money box with a small round microphone button inside its right end.">
+      <figcaption>Type your money in the box. The round 💵 button is for counting notes and coins. The 🎤 inside the box
+        is for saying the amount. Both only show while the box is empty.</figcaption>
     </figure>
 
     <p>Not sure how much you have? Tap the round <strong>💵</strong> button
-    next to <strong>My money</strong>. Then tap a picture for each note and
-    coin in your wallet. The app adds them up for you. Tap
-    <strong>✔ Done</strong> when you finish.</p>
+      next to <strong>My money</strong>. Then tap a picture for each note and
+      coin in your wallet. The app adds them up for you. Tap
+      <strong>✔ Done</strong> when you finish.
+    </p>
 
     <p>The <strong>💵</strong> button only shows while the money box is
-    empty. To count your notes again, tap the <strong>✕</strong> in the
-    box first.</p>
+      empty. To count your notes again, tap the <strong>✕</strong> in the
+      box first.</p>
 
     <figure>
       <img src="/img/guide/screen-picker.png" width="750" height="1624"
-           alt="The money picker screen. Tapped money shows at the top: a $5 note, a $10 note and a 5 cent coin, making $15.05. Below are big pictures of notes to tap.">
+        alt="The money picker screen. Tapped money shows at the top: a $5 note, a $10 note and a 5 cent coin, making $15.05. Below are big pictures of notes to tap.">
       <figcaption>Tap one picture for each note and coin you have</figcaption>
     </figure>
 
@@ -196,122 +259,128 @@
     <h2><span class="step-icon" aria-hidden="true">🛒</span> 2. Add the things you want to buy</h2>
 
     <p>Under <strong>Things I want to buy</strong>, type the price of the
-    thing you want. The price is on the tag or the shelf.</p>
+      thing you want. The price is on the tag or the shelf.</p>
 
     <p>Want more than one thing? Tap <strong>＋ Add another thing</strong>
-    and type the next price. That button only appears once the last price
-    box has something in it, so you never end up with empty boxes.</p>
+      and type the next price. That button only appears once the last price
+      box has something in it, so you never end up with empty boxes.</p>
 
     <!-- ============================================================ -->
     <h2><span class="step-icon" aria-hidden="true">✅</span> 3. Read the answer</h2>
 
     <p>The answer is always at the bottom of the screen. It updates by
-    itself — you do not need to press anything.</p>
+      itself — you do not need to press anything.</p>
 
     <div class="callout yes">✅ Green means YES — you have enough money.
-    It also shows how much money you will have left.</div>
+      It also shows how much money you will have left.</div>
 
     <figure>
       <img src="/img/guide/screen-yes.png" width="750" height="1624"
-           alt="The app showing $50 of money and two things costing $4.50 and $12.90. A green panel at the bottom says: Yes! You have enough. Money left: $32.60.">
+        alt="The app showing $50 of money and two things costing $4.50 and $12.90. A green panel at the bottom says: Yes! You have enough. Money left: $32.60.">
       <figcaption>Green: you can buy it</figcaption>
     </figure>
 
     <div class="callout no">✋ Red means NOT ENOUGH — it shows how much
-    more money you need.</div>
+      more money you need.</div>
 
     <figure>
       <img src="/img/guide/screen-no.png" width="750" height="1624"
-           alt="The app showing $10 of money and two things costing $4.50 and $12.90. A red panel at the bottom says: Not enough. You need $7.40 more.">
+        alt="The app showing $10 of money and two things costing $4.50 and $12.90. A red panel at the bottom says: Not enough. You need $7.40 more.">
       <figcaption>Red: you need more money</figcaption>
     </figure>
 
     <p>Made a mistake in one box? Tap the <strong>✕</strong> inside that
-    box to empty it. To clear everything at once, tap the round
-    <strong>✕</strong> next to <strong>Start over</strong> at the top.
-    Either way a <strong>Put it back</strong> button appears for a few
-    seconds, in case
-    you did not mean to.</p>
+      box to empty it. To clear everything at once, tap the round
+      <strong>✕</strong> next to <strong>Start over</strong> at the top.
+      Either way a <strong>Put it back</strong> button appears for a few
+      seconds, in case
+      you did not mean to.
+    </p>
 
     <!-- ============================================================ -->
     <h2><span class="step-icon" aria-hidden="true">🎤</span> Speak instead of typing</h2>
 
     <p>You do not have to type. Every <strong>empty</strong> money box
-    shows a <strong>🎤</strong> button inside it. You can say the money
-    out loud.</p>
+      shows a <strong>🎤</strong> button inside it. You can say the money
+      out loud.</p>
 
     <ol class="steps">
       <li>Tap the <strong>🎤</strong> inside an empty money box.
-          A small <strong>Tap 🎤, say your money</strong> window opens,
-          and the keyboard appears.</li>
+        A small <strong>Tap microphone on keyboard, then say</strong> window
+        opens, and the keyboard appears.</li>
       <li>Tap the <strong>microphone 🎤</strong> button on the keyboard.</li>
       <li>Say the amount. For example: <strong>“ten dollars fifty”</strong>.</li>
       <li>The window shows the money it heard. Tap <strong>✔ Done</strong>
-          and the number goes into the box.</li>
+        and the number goes into the box.</li>
     </ol>
 
     <p>Once a number is in the box, the <strong>🎤</strong> turns into a
-    <strong>✕</strong>. Want to say a new amount? Tap the
-    <strong>✕</strong> to empty the box and the <strong>🎤</strong>
-    comes back.</p>
+      <strong>✕</strong>. Want to say a new amount? Tap the
+      <strong>✕</strong> to empty the box and the <strong>🎤</strong>
+      comes back.
+    </p>
 
     <figure>
       <img src="/img/guide/screen-speak.png" width="750" height="1624"
-           alt="The Tap microphone, say your money window on top of the app. It says: Tap the microphone on your keyboard, then say the amount. A text box shows the words ten dollars fifty, and below it the app says: That is $10.50. There are Cancel and Done buttons.">
+        alt="The Tap microphone on keyboard, then say window on top of the app. A text box shows the words ten dollars fifty, and below it the app says: That is $10.50. There is a round close button in the top right corner and a Done button.">
       <figcaption>Say the amount, check it, then tap ✔ Done</figcaption>
     </figure>
 
     <svg class="illustration" viewBox="0 0 320 240" role="img"
-         aria-label="Drawing of a phone keyboard. On iPhone the microphone button is at the bottom right, next to the space bar. On Android it is at the top right of the keyboard.">
+      aria-label="Drawing of a phone keyboard. On iPhone the microphone button is at the bottom right, next to the space bar. On Android it is at the top right of the keyboard.">
       <text x="298" y="18" text-anchor="end" font-size="14" font-weight="bold" fill="#1a1a1a">Android: here ⬇</text>
-      <rect x="10" y="28" width="300" height="178" rx="14" fill="#eeeeee" stroke="#757575" stroke-width="3"/>
+      <rect x="10" y="28" width="300" height="178" rx="14" fill="#eeeeee" stroke="#757575" stroke-width="3" />
       <!-- suggestion strip -->
-      <rect x="22" y="40" width="200" height="28" rx="6" fill="#ffffff" stroke="#bbbbbb" stroke-width="2"/>
+      <rect x="22" y="40" width="200" height="28" rx="6" fill="#ffffff" stroke="#bbbbbb" stroke-width="2" />
       <!-- Android mic (top right) -->
-      <rect x="232" y="40" width="66" height="28" rx="6" fill="#1565c0"/>
+      <rect x="232" y="40" width="66" height="28" rx="6" fill="#1565c0" />
       <g transform="translate(265,54)">
-        <rect x="-4" y="-9" width="8" height="12" rx="4" fill="#ffffff"/>
-        <path d="M -8 -2 a 8 8 0 0 0 16 0" fill="none" stroke="#ffffff" stroke-width="2.5"/>
-        <line x1="0" y1="6" x2="0" y2="9" stroke="#ffffff" stroke-width="2.5"/>
+        <rect x="-4" y="-9" width="8" height="12" rx="4" fill="#ffffff" />
+        <path d="M -8 -2 a 8 8 0 0 0 16 0" fill="none" stroke="#ffffff" stroke-width="2.5" />
+        <line x1="0" y1="6" x2="0" y2="9" stroke="#ffffff" stroke-width="2.5" />
       </g>
       <!-- key rows -->
       <g fill="#ffffff" stroke="#bbbbbb" stroke-width="2">
-        <rect x="22" y="78" width="276" height="24" rx="5"/>
-        <rect x="36" y="108" width="248" height="24" rx="5"/>
-        <rect x="54" y="138" width="212" height="24" rx="5"/>
+        <rect x="22" y="78" width="276" height="24" rx="5" />
+        <rect x="36" y="108" width="248" height="24" rx="5" />
+        <rect x="54" y="138" width="212" height="24" rx="5" />
       </g>
       <!-- bottom row: space bar + iPhone mic -->
-      <rect x="54" y="168" width="160" height="26" rx="6" fill="#ffffff" stroke="#bbbbbb" stroke-width="2"/>
-      <rect x="222" y="168" width="44" height="26" rx="6" fill="#1565c0"/>
+      <rect x="54" y="168" width="160" height="26" rx="6" fill="#ffffff" stroke="#bbbbbb" stroke-width="2" />
+      <rect x="222" y="168" width="44" height="26" rx="6" fill="#1565c0" />
       <g transform="translate(244,181)">
-        <rect x="-4" y="-8" width="8" height="11" rx="4" fill="#ffffff"/>
-        <path d="M -8 -2 a 8 8 0 0 0 16 0" fill="none" stroke="#ffffff" stroke-width="2.5"/>
-        <line x1="0" y1="6" x2="0" y2="8" stroke="#ffffff" stroke-width="2.5"/>
+        <rect x="-4" y="-8" width="8" height="11" rx="4" fill="#ffffff" />
+        <path d="M -8 -2 a 8 8 0 0 0 16 0" fill="none" stroke="#ffffff" stroke-width="2.5" />
+        <line x1="0" y1="6" x2="0" y2="8" stroke="#ffffff" stroke-width="2.5" />
       </g>
       <text x="244" y="228" text-anchor="middle" font-size="14" font-weight="bold" fill="#1a1a1a">⬆ iPhone: here</text>
     </svg>
 
     <div class="callout tip">💡 It is okay to say it your own way —
-    “ten fifty”, “10 dollars and 50 cents” and “$10.50” all work.</div>
+      “ten fifty”, “10 dollars and 50 cents” and “$10.50” all work.</div>
 
     <!-- ============================================================ -->
     <h2><span class="step-icon" aria-hidden="true">📱</span> Put the app on your home screen</h2>
 
     <p>Add the app to your phone's home screen. Then it opens with one tap,
-    like a normal app — <strong>even without internet</strong>.</p>
+      like a normal app — <strong>even without internet</strong>.</p>
 
     <div class="platform">
       <h3>iPhone or iPad (Safari)</h3>
       <ol class="steps">
         <li>Open <strong>simplify.whiz.coach</strong> in the
-          <strong>Safari</strong> app.</li>
+          <strong>Safari</strong> app.
+        </li>
         <li>Tap the <strong>Share</strong> button
-          <svg class="inline-icon" viewBox="0 0 28 28" role="img" aria-label="Share icon: a square with an arrow pointing up">
-            <rect x="5" y="10" width="18" height="14" rx="3" fill="none" stroke="#1565c0" stroke-width="2.5"/>
-            <line x1="14" y1="17" x2="14" y2="3" stroke="#1565c0" stroke-width="2.5"/>
-            <path d="M 9 8 L 14 3 L 19 8" fill="none" stroke="#1565c0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <svg class="inline-icon" viewBox="0 0 28 28" role="img"
+            aria-label="Share icon: a square with an arrow pointing up">
+            <rect x="5" y="10" width="18" height="14" rx="3" fill="none" stroke="#1565c0" stroke-width="2.5" />
+            <line x1="14" y1="17" x2="14" y2="3" stroke="#1565c0" stroke-width="2.5" />
+            <path d="M 9 8 L 14 3 L 19 8" fill="none" stroke="#1565c0" stroke-width="2.5" stroke-linecap="round"
+              stroke-linejoin="round" />
           </svg>
-          — the square with the arrow, at the bottom of the screen.</li>
+          — the square with the arrow, at the bottom of the screen.
+        </li>
         <li>Scroll down and tap <strong>Add to Home Screen</strong>.</li>
         <li>Tap <strong>Add</strong>.</li>
       </ol>
@@ -321,31 +390,36 @@
       <h3>Android (Chrome)</h3>
       <ol class="steps">
         <li>Open <strong>simplify.whiz.coach</strong> in the
-          <strong>Chrome</strong> app.</li>
+          <strong>Chrome</strong> app.
+        </li>
         <li>Tap the <strong>menu</strong> button
-          <svg class="inline-icon" viewBox="0 0 28 28" role="img" aria-label="Menu icon: three dots on top of each other">
-            <circle cx="14" cy="6" r="2.6" fill="#1565c0"/>
-            <circle cx="14" cy="14" r="2.6" fill="#1565c0"/>
-            <circle cx="14" cy="22" r="2.6" fill="#1565c0"/>
+          <svg class="inline-icon" viewBox="0 0 28 28" role="img"
+            aria-label="Menu icon: three dots on top of each other">
+            <circle cx="14" cy="6" r="2.6" fill="#1565c0" />
+            <circle cx="14" cy="14" r="2.6" fill="#1565c0" />
+            <circle cx="14" cy="22" r="2.6" fill="#1565c0" />
           </svg>
-          — the three dots at the top right.</li>
+          — the three dots at the top right.
+        </li>
         <li>Tap <strong>Add to Home screen</strong> (or
-          <strong>Install app</strong>).</li>
+          <strong>Install app</strong>).
+        </li>
         <li>Tap <strong>Add</strong> (or <strong>Install</strong>).</li>
       </ol>
     </div>
 
     <p>Now look at your home screen. Tap the new
-    <strong>Simplify</strong> icon any time.</p>
+      <strong>Simplify</strong> icon any time.
+    </p>
 
     <div class="callout tip">💡 The app remembers your numbers. Count your
-    money at home, then check the answer at the shop — no internet needed.</div>
+      money at home, then check the answer at the shop — no internet needed.</div>
 
     <!-- ============================================================ -->
     <h2><span class="step-icon" aria-hidden="true">🔒</span> Your money stays private</h2>
 
     <p>Everything stays on your phone. Nothing is sent anywhere. There is no
-    account and no sign-in.</p>
+      account and no sign-in.</p>
 
     <p style="text-align:center; margin-top: 32px;">
       <a class="open-app" href="/">
@@ -355,4 +429,5 @@
   </main>
 
 </body>
+
 </html>

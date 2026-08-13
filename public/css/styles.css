@@ -536,7 +536,11 @@ h2 {
 
 /* ---------- speak dialog ---------- */
 .speak {
-  width: min(92vw, 360px);
+  position: relative;
+  /* max-width overrides the UA default (100% - 6px - 2em), which would
+     otherwise cap the sheet well below this width on a phone */
+  width: min(94vw, 420px);
+  max-width: none;
   margin: auto;
   padding: 20px;
   border: none;
@@ -545,14 +549,33 @@ h2 {
   color: var(--color-text);
 }
 .speak::backdrop { background: rgba(0, 0, 0, 0.45); }
+/* Same circle as every other round button in the app, so it reads as "a small
+   action" and stays as easy to hit. The title reserves room for it rather than
+   flowing under it. */
+.speak-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: var(--target-small);
+  height: var(--target-small);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--color-muted);
+  background: #fff;
+  border: 3px solid var(--color-border);
+  border-radius: 50%;
+  cursor: pointer;
+}
+.speak-close:active { background: #e3f2fd; }
 .speak-title {
-  margin: 0 0 8px;
+  margin: 0 74px 8px 0;
   font-size: 26px;
 }
-.speak-hint {
-  margin: 0 0 14px;
-  font-size: 17px;
-  color: var(--color-muted);
+.mic-icon {
+  width: 1.05em;
+  height: 1.05em;
+  vertical-align: -0.15em;
 }
 .speak-input {
   width: 100%;

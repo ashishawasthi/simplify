@@ -106,7 +106,7 @@ initSpeak({
   input: $("speak-input"),
   heard: $("speak-heard"),
   done: $("speak-done"),
-  cancel: $("speak-cancel"),
+  close: $("speak-close"),
 });
 
 speakMoneyBtn.addEventListener("click", () =>

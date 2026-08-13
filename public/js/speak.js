@@ -18,7 +18,7 @@ export function initSpeak(elements) {
     }
   });
   els.done.addEventListener("click", finish);
-  els.cancel.addEventListener("click", () => els.dialog.close());
+  els.close.addEventListener("click", () => els.dialog.close());
 }
 
 // cb receives the amount as field text, e.g. "12.50"
