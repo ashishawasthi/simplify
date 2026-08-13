@@ -70,7 +70,21 @@
       margin: 40px 0 12px;
       padding-top: 24px;
       border-top: 3px solid var(--color-neutral-bg);
+      scroll-margin-top: 12px; /* breathing room when a #link jumps here */
     }
+
+    /* Every h2/h3 has an id, so any section can be linked or bookmarked on
+       its own. The 🔗 makes that discoverable — padding pads its tap target
+       well past the glyph itself without shoving the heading text around. */
+    .anchor-link {
+      display: inline-block;
+      margin-left: 2px;
+      padding: 18px 14px;
+      font-size: 0.55em;
+      text-decoration: none;
+      opacity: 0.6;
+    }
+    .anchor-link:active { opacity: 1; }
 
     .step-icon {
       font-size: 30px;
@@ -165,6 +179,7 @@
     .platform h3 {
       font-size: 24px;
       margin: 0 0 8px;
+      scroll-margin-top: 12px;
     }
 
     .inline-icon {
@@ -237,7 +252,8 @@
         what I want?</strong> It is free, private, and works without internet.</p>
 
     <!-- ============================================================ -->
-    <h2><span class="step-icon" aria-hidden="true">💰</span> 1. Put in your money</h2>
+    <h2 id="put-in-your-money"><span class="step-icon" aria-hidden="true">💰</span> 1. Put in your money
+      <a class="anchor-link" href="#put-in-your-money" aria-label="Link to this section">🔗</a></h2>
 
     <p>Tap the <strong>My money</strong> box at the top and type how much
       money you have. That is all you need to do — the answer works itself
@@ -267,7 +283,8 @@
     </figure>
 
     <!-- ============================================================ -->
-    <h2><span class="step-icon" aria-hidden="true">🛒</span> 2. Add the things you want to buy</h2>
+    <h2 id="add-things-to-buy"><span class="step-icon" aria-hidden="true">🛒</span> 2. Add the things you want to buy
+      <a class="anchor-link" href="#add-things-to-buy" aria-label="Link to this section">🔗</a></h2>
 
     <p>Under <strong>Things I want to buy</strong>, type the price of the
       thing you want. The price is on the tag or the shelf.</p>
@@ -277,7 +294,8 @@
       box has something in it, so you never end up with empty boxes.</p>
 
     <!-- ============================================================ -->
-    <h2><span class="step-icon" aria-hidden="true">✅</span> 3. Read the answer</h2>
+    <h2 id="read-the-answer"><span class="step-icon" aria-hidden="true">✅</span> 3. Read the answer
+      <a class="anchor-link" href="#read-the-answer" aria-label="Link to this section">🔗</a></h2>
 
     <p>The answer is always at the bottom of the screen. It updates by
       itself — you do not need to press anything.</p>
@@ -309,7 +327,8 @@
     </p>
 
     <!-- ============================================================ -->
-    <h2><span class="step-icon" aria-hidden="true">🎤</span> Speak instead of typing</h2>
+    <h2 id="speak-instead-of-typing"><span class="step-icon" aria-hidden="true">🎤</span> Speak instead of typing
+      <a class="anchor-link" href="#speak-instead-of-typing" aria-label="Link to this section">🔗</a></h2>
 
     <p>You do not have to type. Every <strong>empty</strong> money box
       shows a <strong>🎤</strong> button inside it. You can say the money
@@ -375,13 +394,15 @@
       <a href="#no-microphone">There is help at the end of this guide</a>.</p>
 
     <!-- ============================================================ -->
-    <h2><span class="step-icon" aria-hidden="true">📱</span> Put the app on your home screen</h2>
+    <h2 id="home-screen"><span class="step-icon" aria-hidden="true">📱</span> Put the app on your home screen
+      <a class="anchor-link" href="#home-screen" aria-label="Link to this section">🔗</a></h2>
 
     <p>Add the app to your phone's home screen. Then it opens with one tap,
       like a normal app — <strong>even without internet</strong>.</p>
 
     <div class="platform">
-      <h3>iPhone or iPad (Safari)</h3>
+      <h3 id="iphone-safari">iPhone or iPad (Safari)
+        <a class="anchor-link" href="#iphone-safari" aria-label="Link to this section">🔗</a></h3>
       <ol class="steps">
         <li>Open <strong>simplify.whiz.coach</strong> in the
           <strong>Safari</strong> app.
@@ -402,7 +423,8 @@
     </div>
 
     <div class="platform">
-      <h3>Android (Chrome)</h3>
+      <h3 id="android-chrome">Android (Chrome)
+        <a class="anchor-link" href="#android-chrome" aria-label="Link to this section">🔗</a></h3>
       <ol class="steps">
         <li>Open <strong>simplify.whiz.coach</strong> in the
           <strong>Chrome</strong> app.
@@ -431,13 +453,15 @@
       money at home, then check the answer at the shop — no internet needed.</div>
 
     <!-- ============================================================ -->
-    <h2 id="no-microphone"><span class="step-icon" aria-hidden="true">🎤</span> No microphone on your keyboard?</h2>
+    <h2 id="no-microphone"><span class="step-icon" aria-hidden="true">🎤</span> No microphone on your keyboard?
+      <a class="anchor-link" href="#no-microphone" aria-label="Link to this section">🔗</a></h2>
 
     <p>The microphone belongs to your keyboard, not to this app. Find your
       keyboard below and follow the steps.</p>
 
     <div class="platform">
-      <h3>Gboard (most Android phones)</h3>
+      <h3 id="gboard">Gboard (most Android phones)
+        <a class="anchor-link" href="#gboard" aria-label="Link to this section">🔗</a></h3>
       <ol class="steps">
         <li>Look at the row of small buttons just above the letters. Tap the
           round <strong>microphone</strong> at the right end.</li>
@@ -452,7 +476,8 @@
     </div>
 
     <div class="platform">
-      <h3>Samsung keyboard</h3>
+      <h3 id="samsung-keyboard">Samsung keyboard
+        <a class="anchor-link" href="#samsung-keyboard" aria-label="Link to this section">🔗</a></h3>
       <ol class="steps">
         <li>Look at the row of small buttons just above the letters. Tap the
           <strong>microphone</strong>.</li>
@@ -468,7 +493,8 @@
     </div>
 
     <div class="platform">
-      <h3>Microsoft SwiftKey</h3>
+      <h3 id="swiftkey">Microsoft SwiftKey
+        <a class="anchor-link" href="#swiftkey" aria-label="Link to this section">🔗</a></h3>
       <ol class="steps">
         <li>Tap the <strong>microphone</strong> on the row above the letters, or
           <strong>press and hold the comma key</strong>.</li>
@@ -489,7 +515,8 @@
       number always works.</div>
 
     <!-- ============================================================ -->
-    <h2><span class="step-icon" aria-hidden="true">🔒</span> Your money stays private</h2>
+    <h2 id="privacy"><span class="step-icon" aria-hidden="true">🔒</span> Your money stays private
+      <a class="anchor-link" href="#privacy" aria-label="Link to this section">🔗</a></h2>
 
     <p>Everything stays on your phone. Nothing is sent anywhere. There is no
       account and no sign-in.</p>
