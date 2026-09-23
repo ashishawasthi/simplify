@@ -161,6 +161,7 @@
 }
 #tool-now-next .nn-now .nn-words { font-size: 36px; }
 #tool-now-next .nn-now .nn-words.is-long { font-size: 30px; }
+#tool-now-next .nn-now .nn-words.is-longer { font-size: 26px; }
 
 /* ✔ Done: the one big button, under Now */
 #tool-now-next .nn-done {
@@ -216,6 +217,7 @@
 }
 #tool-now-next .nn-next .nn-words { font-size: 28px; }
 #tool-now-next .nn-next .nn-words.is-long { font-size: 23px; }
+#tool-now-next .nn-next .nn-words.is-longer { font-size: 20px; }
 
 /* After the last card: one calm green card */
 #tool-now-next .nn-all-done {
@@ -248,12 +250,14 @@
   }
   #tool-now-next .nn-now .nn-words { font-size: 40px; }
   #tool-now-next .nn-now .nn-words.is-long { font-size: 34px; }
+  #tool-now-next .nn-now .nn-words.is-longer { font-size: 30px; }
   #tool-now-next .nn-next .nn-pic img {
     width: 104px;
     height: 104px;
   }
   #tool-now-next .nn-next .nn-words { font-size: 32px; }
   #tool-now-next .nn-next .nn-words.is-long { font-size: 26px; }
+  #tool-now-next .nn-next .nn-words.is-longer { font-size: 22px; }
 }
 
 /* ---------- My day ---------- */
