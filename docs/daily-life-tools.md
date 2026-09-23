@@ -127,7 +127,7 @@ accounts, small. Effort: S (days), M (a week or two), L (more — usually drawin
 | **Now and next** | NOW big on top, NEXT below, each a picture + 1–3 words; an adult queues up to 8 cards. The student taps Done; NEXT moves up. The same list shows as **My day** (a strip of the whole day), with a "Changed" card so a change is announced, not hidden. | 5 / 5 | M |
 | **Show a card** | Big cards to show someone: LTA's own wording ("May I have a seat please?", "Please alert me when I am approaching my stop"), "I cannot talk now, I can point or type", and a card for the parent ("My child is overwhelmed. Please give us space. We are OK."). Full-screen, flip to face the person opposite, landscape-friendly, speak on tap. | 5 / 4 | M |
 | **Steps** | One step per screen: a picture, 2–4 words, progress dots, a big Next, Back to undo, "All done" pointing back to the task. Starts with 2–3 decks (wash hands, return the tray, pay by card or QR); "fewer steps" merges mastered ones. | 5 / 4 | M engine + L drawings |
-| **My class** | The coach's latest post, one page at a time (photo, a few words, Next) — the coach platform, [section 8](#8-coach-platform-my-class) | 4 / 3 | L |
+| **My class** | The coach's latest published page, one screen at a time (markdown with pictures, Next) — the coach platform, [section 8](#8-coach-platform-my-class) | 4 / 3 | L |
 
 ### Next
 
@@ -182,17 +182,20 @@ puberty and hygiene for teens, body safety, water safety, cross the road (Green 
 
 ## 8. Coach platform (My class)
 
-whiz.coach is a platform for coaches and learners; simplify.whiz.coach gets its own, much smaller one for coaches of
-autistic learners. A coach makes very simple content — a few pages, each a photo and a few words — and every
-learner in the class sees it on their own phone or the class iPad, offline too.
+whiz.coach is a platform for coaches and learners, and its content pipeline is deliberately large (dozens of agents,
+narrated storyboards, question banks, validation — see its whitepaper, *From Syllabus to Course*). simplify.whiz.coach
+gets the opposite: a coach writes **one simple page in markdown**, uploads pictures and places them in the page, and
+can type an instruction ("make this simpler", "write a picture story about going to the dentist with my 4 pictures")
+for AI to create or update the markdown. Every learner in the class sees the latest published page on their own phone
+or the class iPad, offline too.
 
 ### Roles and flows
 
 | Who | Signs in? | Can do |
 |---|---|---|
-| **Admin** (the owner) | Yes (Google) | Approve or decline each coach **for each class**, after checking they really are a trustworthy coach of that class; suspend a coach; remove any post |
-| **Coach** | Yes (Google, any Google account — Gmail or a Google account made on a school address) | Ask for a new class, or ask to join a colleague's class; once approved, post to that class and print its QR code |
-| **Learner** | **Never** | Subscribe once by scanning the class QR code (or typing its code on the set-up page); open **My class** to see the **latest post only** |
+| **Admin** (the owner) | Yes (Google) | Approve or decline each coach **for each class**, after checking they really are a trustworthy coach of that class; suspend a coach; take down a page; set monthly limits |
+| **Coach** | Yes (Google, any Google account — Gmail or a Google account made on a school address) | Ask for a new class, or ask to join a colleague's class; once approved, write and publish that class's page, upload pictures, give AI instructions, print the class QR code |
+| **Learner** | **Never** | Subscribe once by scanning the class QR code (or typing its code on the set-up page); open **My class** to see the **latest published page only** |
 
 1. A coach signs in, fills in who they are (name, organisation, how the admin can check), and asks for a class
    ("3 Kindness") or to join one by its code.
@@ -201,40 +204,75 @@ learner in the class sees it on their own phone or the class iPad, offline too.
    easy to guess.
 3. The coach prints the class's QR poster. The QR opens `https://simplify.whiz.coach/#join=K7M3RQP9T`; the app asks
    "Is this your class?" with the class name, and remembers it. The fragment never reaches a server.
-4. The coach writes a post: 1–6 pages, each a photo (resized in the coach's browser, EXIF/GPS dropped) and a few words,
-   plus one optional link. Every post screen carries the warning: **what you post is public — anyone with the class
-   code can see it, so never post pictures of students or any private or sensitive information.** Coaches are the
-   experts for their learners and decide what to post; there is no consent tick box.
-5. Publishing replaces the class's latest post. Learners see only that one, a page at a time with a big Next; the coach
-   keeps older posts to publish again.
+4. The coach writes in a **markdown editor**: a plain text box, a live preview in exactly the learners' look, and a few
+   buttons for the handful of formats that are allowed. **Pictures** are uploaded to the class's picture shelf
+   (resized in the coach's browser to at most 1600 px, which also drops EXIF and GPS) and placed in the page as
+   `![words](pictures/<id>.jpg)`.
+5. **AI instructions.** A box under the editor — "Tell the helper what to write or change" — sends the instruction, the
+   current markdown and the shelf's picture list to a server function, which returns a new version of the markdown. It
+   replaces the editor's text as a draft (Undo brings the old text back). The helper writes to the rules in section 5
+   (short literal sentences, plain Singapore English, one idea per screen, pictures only from the shelf, no names of
+   learners). **Nothing reaches learners until the coach presses Publish.**
+6. **Publish** makes the page the class's latest content; learners see only that one. The coach keeps other pages as
+   drafts to publish later.
+
+Every editor screen carries the warning: **what you publish is public — anyone with the class code can see it, so
+never put pictures of students or any private or sensitive information in it.** Coaches are the experts for their
+learners and decide what to publish; there is no consent tick box.
+
+### The markdown learners see
+
+| Write | Learners see |
+|---|---|
+| `# Title`, `## Heading` | Big headings |
+| Plain lines, `**bold**`, `*italic*` | Large, short paragraphs |
+| `- item`, `1. item` | Lists with big bullets or numbers |
+| `![words](pictures/<id>.jpg)` | A picture from the class's shelf, full width (the words are its description for screen readers) |
+| `[words](https://…)` | One big button naming the site; opens only on a tap; https only |
+| `---` | **Next screen**: the page is shown one screen at a time with big Next and Back buttons |
+
+Anything else is shown as plain text. The learner app renders this subset with its own small parser straight into
+page elements (text only, never HTML), so a page can't run a script or load anything from anywhere else; a picture
+that isn't on the class's shelf is simply not shown.
 
 ### Where things live
 
 - Firebase project `simplify-special`, on the **Blaze** plan (Cloud Storage for Firebase needs Blaze since
-  3 Feb 2026), with a budget alert. Firestore in **asia-southeast1** (Singapore) and a Storage bucket in the same
-  region. Firebase Authentication itself runs in US data centres (coaches' and the admin's sign-in data only).
+  3 Feb 2026, and so do Cloud Functions), with a budget alert. Firestore in **asia-southeast1** (Singapore) and a
+  Storage bucket in the same region. Firebase Authentication itself runs in US data centres (coaches' and the admin's
+  sign-in data only).
+- **AI instructions** go through one Cloud Function in asia-southeast1. It checks that the caller is an approved,
+  unsuspended coach of that class, counts their instructions for the month against a limit the admin sets (default 200
+  a month — each is a fraction of a cent, the limit is there to stop misuse), calls Gemini (`gemini-3.7-flash`, the
+  model whiz.coach uses, through Vertex AI with the `@google/genai` SDK), and checks the answer before returning it
+  (only the allowed markdown, only pictures on the shelf, a length limit). Like whiz.coach, it uses Gemini's `global`
+  endpoint, so the model may run outside Singapore; what it sees is the coach's instruction and page, never anything
+  about learners.
 - A second Hosting site for the coach app (`simplify-coach`, to be served at coach.simplify.whiz.coach). The coach site
   loads the Firebase SDK; the learner app does not — it reads the class with one plain HTTPS request.
 - Built on its own, not inside the whiz.coach platform: that platform's data is in the US, its classes need signed-in
   learners, its coach role can read the user directory, and its security rules deploy as one large shared file.
   Ideas reused from it: Google sign-in, admin-switched roles, browser-side photo resizing, image URLs restricted to the
-  project's own bucket.
+  project's own bucket, the Gemini model and SDK conventions, and — for the future videos — its Gemini Omni wiring.
 
 | Data | Readable by | Written by |
 |---|---|---|
 | `admins/{uid}` | that admin | the owner, in the console |
-| `coaches/{uid}` — name, organisation, note | that coach, admins | that coach (own profile only) |
+| `coaches/{uid}` — name, organisation, note | that coach, admins | that coach (own profile only); admins suspend |
 | `requests/{id}` — new class or join class, pending / approved / declined | that coach, admins | coach creates; admin decides |
-| `classes/{code}` — name, latest post, updated | **anyone with the exact code** (get only, no listing), while active | that class's approved coaches (post); admins (create, suspend) |
+| `classes/{code}` — name, the latest published page (title, markdown, when, by whom) | **anyone with the exact code** (get only, no listing), while active | that class's approved coaches (publish); admins (create, suspend, take down) |
 | `classCoaches/{code}` — the class's coach uids | its coaches, admins | admins |
-| `classes/{code}/posts/{id}` — older posts | its coaches | its coaches |
-| Storage `classes/{code}/{post}/{n}.jpg` | anyone with the exact path (no listing) | that class's approved coaches; images only, size-capped |
+| `classes/{code}/pages/{id}` — drafts and older pages | its coaches, admins | its coaches |
+| `classes/{code}/pictures/{id}` — the picture shelf (words, file) | its coaches, admins | its coaches |
+| `usage/{uid}_{month}` — AI instructions used this month | that coach, admins | the Cloud Function only |
+| `config/limits` — monthly limits | admins, the Cloud Function | admins |
+| Storage `classes/{code}/pictures/{id}.jpg` | anyone with the exact path (no listing) | that class's approved coaches; images only, size-capped |
 
 ### Learner app changes
 
-- **My class** tile at the top of the menu once a class is set; the latest post one page at a time; "Updated Tue 8:05";
-  offline shows the saved copy; nothing yet shows "Nothing from your coach yet" — never an error.
-- Words are shown as text only (no HTML); a link is one big button naming the site and opens only on a tap, https only.
+- **My class** tile at the top of the menu once a class is set; the latest page one screen at a time; "Updated Tue
+  8:05"; offline shows the saved copy (pictures included); nothing yet shows "Nothing from your coach yet" — never an
+  error.
 - The app sends only the class code (and, like any website, the device's internet address) — nothing a learner types
   or taps. The CSP gains `connect-src` for Firestore and Storage and `img-src blob:`; everything else stays offline.
 - The privacy page and README change from "nothing is sent anywhere" to "nothing leaves the device unless My class is
@@ -244,19 +282,42 @@ learner in the class sees it on their own phone or the class iPad, offline too.
 
 | Risk | Mitigation |
 |---|---|
-| A coach account is taken over and posts something harmful | Admin approval per class; a coach reaches only their own classes; admin can suspend and remove posts; learners see only the latest post, so a bad post is replaced by the next one; coaches asked to turn on 2-Step Verification |
-| The QR code is photographed and shared | A new code can be issued (devices set up again); the public warning keeps private information out of posts |
-| Costs on Blaze (reads, downloads) | Learner devices check at most on opening and every 10 minutes; images cached on the device; a budget alert; App Check later if needed |
+| A coach account is taken over and publishes something harmful | Admin approval per class; a coach reaches only their own classes; admin can suspend a coach and take a page down; learners see only the latest page, so a bad page is replaced by the next one; coaches asked to turn on 2-Step Verification |
+| The AI writes something wrong or unsuitable | It only ever produces a draft in the coach's editor; the coach reads it and presses Publish; the function strips anything outside the markdown subset and any picture not on the shelf |
+| AI or storage costs on Blaze | A monthly AI limit per coach, checked on the server; learner devices check for a new page at most on opening and every 10 minutes; pictures cached on the device; a budget alert (it warns, it does not cap) |
+| The QR code is photographed and shared | A new code can be issued (devices set up again); the public warning keeps private information out of pages |
 | iPad: the QR opens Safari, whose data is separate from the home-screen app | The code is printed under the QR and can be typed on the set-up page inside the app |
 | School-managed devices block Google's APIs | Ask the school to allow `firestore.googleapis.com` and `firebasestorage.googleapis.com` |
 | Google sign-in fails inside WhatsApp or Telegram's built-in browser | The coach guide says to open the coach link in Chrome or Safari |
 | PDPA | Holding a school's content makes the owner its data intermediary: a short written agreement with each organisation (purpose, Singapore storage, retention, deletion on request, breach notice). Pilot with an SSA-run SPED school (MOE schools follow public-sector rules). |
 
+### Future: short educational videos with Gemini Omni
+
+Planned, not built. A coach asks for a short clip ("hands being washed at a sink, step by step") and places it in a
+page like a picture, `![words](videos/<id>.mp4)`.
+
+- **Model.** Gemini Omni Flash (`gemini-omni-flash-preview`, a preview model) through the Vertex AI Interactions API
+  in `@google/genai`, the way whiz.coach has wired it (`functions/src/services/omni-video.ts` there): 3–10-second
+  clips, about US$0.10 per second of video (so about US$1 a clip), `background` mode so no function waits on a
+  render. As a preview it is served from `us-central1` only: generation runs in the US, and the finished clip is
+  stored in the class's Singapore bucket. whiz.coach uses Omni for *edits* and keeps it switched off, so whether it
+  generates a clip from text alone on this project must be checked before building; Veo 3.1 Fast is the fallback for
+  longer clips (US$6–18 a render in whiz.coach's measurements).
+- **Credits.** Each coach gets a monthly allowance of video seconds set by the admin (for example 60 seconds — about
+  six clips, about US$6). The function reserves the seconds before it starts a render and returns them if it fails;
+  a ledger per coach per month (`credits/{uid}_{month}`); the coach sees what is left before asking.
+- **Two checks before learners see anything**, borrowed from whiz.coach and made simpler: the coach sees the exact
+  request and its cost in credits before spending them, and a finished clip stays private until the coach approves
+  it; only then can it go on a published page.
+- **For learners.** No autoplay and no sound until tapped; big play and replay buttons; clips cached for offline use
+  like pictures; the CSP gains `media-src` for the bucket. People in clips are generic, never a real learner's
+  likeness, and the same public warning applies.
+
 ### Put off
 
 Microsoft sign-in (if a school needs it), App Check, several classes per device, content for one learner, read
-receipts or analytics, learner replies, push notifications, video uploads, a parent view, a class-wide tool list that
-sets each device's menu.
+receipts or analytics, learner replies, push notifications, a parent view, a class-wide tool list that sets each
+device's menu, and the videos above.
 
 ## 9. Technical notes for adding tools
 
@@ -296,12 +357,15 @@ sets each device's menu.
 | 2026-09-23 | First release adds **Wait, I need, Now and next (My day), Show a card, Steps** | One tool per core need; all offline with no security-header change; builds the shared parts later tools reuse |
 | 2026-09-23 | Design for **both** picture users and readers: pictures + 1–3 words by default, an adult can set a device to pictures-only | Covers minimally-speaking children and teens who read |
 | 2026-09-23 | Menu: **group headings + an adult hides unused tools per device** | Keeps each child's menu short and one level deep |
-| 2026-09-23 | **Coach platform pilot with photos**: coaches approved by an admin for each class; only coaches upload; learners subscribe once by QR code and see only the latest post of their class | whiz.coach is a coaches-and-learners platform; simplify.whiz.coach mirrors it for coaches of autistic learners (section 8) |
-| 2026-09-23 | **Blaze plan with a Cloud Storage bucket** in Singapore for photos, Firestore in Singapore for classes and posts | Full-size photos; pilot cost is cents a month; a budget alert warns (it does not cap) |
+| 2026-09-23 | **Coach platform pilot with photos**: coaches approved by an admin for each class; only coaches upload; learners subscribe once by QR code and see only the latest content of their class | whiz.coach is a coaches-and-learners platform; simplify.whiz.coach mirrors it for coaches of autistic learners (section 8) |
+| 2026-09-23 | **Blaze plan with a Cloud Storage bucket** in Singapore for photos, Firestore in Singapore for classes and pages | Full-size photos; pilot cost is cents a month; a budget alert warns (it does not cap) |
 | 2026-09-23 | **Trust coaches** with what they post; show a clear warning that posts are public — never pictures of students or private or sensitive information | Coaches are responsible for their learners and are the experts |
 | 2026-09-23 | Sign in with **Google, any Google account** (Gmail or one made on a school address); Microsoft later if a school needs it | Most Singapore SPED operators checked use Microsoft 365, so Gmail-only would shut many coaches out |
 | 2026-09-23 | A **random class code** in the QR, the class name only a label | Learners read without signing in, so the code is the only lock; names collide and are guessable |
 | 2026-09-23 | **Standalone** in `simplify-special`, not inside the whiz.coach platform | Singapore data location, learners without accounts, narrow coach permissions, separate rules and deploys |
+| 2026-09-23 | Coach content is **one simple markdown page**: a markdown editor, pictures uploaded to the class and placed in the page, `---` for the next screen; learners see the latest published page | The coach interface stays very simple — the opposite of whiz.coach's generation pipeline |
+| 2026-09-23 | **AI instructions** create or update the markdown (Gemini through a Cloud Function that checks the coach and a monthly limit); the coach reviews every draft and publishes | Coaches say what they want in their own words; nothing reaches learners without the coach |
+| Future | **Short educational videos with Gemini Omni**, with a monthly video-credit allowance per coach | Section 8, "Future" |
 
 ## Sources
 
@@ -351,6 +415,11 @@ _Checked 2026-09-23._
 - Changi Airport, invisible disabilities — https://www.changiairport.com/en/at-changi/special-assistance/invisible-disability.html
 - PDPC, children's personal data in the digital environment (Mar 2024) — https://www.pdpc.gov.sg/organisations/regulations-decisions/regulatory-guidance/advisory-guidelines-on-the-pdpa-for-childrens-personal-data-in-the-digital-environment
 - PDPC, advisory guidelines for the education sector (Apr 2024) — https://www.pdpc.gov.sg/-/media/files/pdpc/pdf-files/advisory-guidelines/advisory-guidelines-for-education-sector_25-apr-2024.pdf
+
+**whiz.coach (internal documentation in the whiz.coach repository, not public)**
+- *From Syllabus to Course: Multi-Agent Generation and Validation at whiz.coach* (whitepaper)
+- *AI Model Configuration* — Gemini model ids, `@google/genai`, thinking levels, `global` location
+- *Coach-Initiated Topic Video* — Veo 3.1 and Gemini Omni Flash (`gemini-omni-flash-preview`), costs, `us-central1`, review gates
 
 **Platform**
 - Firebase pricing — https://firebase.google.com/pricing
