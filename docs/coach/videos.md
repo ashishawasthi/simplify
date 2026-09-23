@@ -98,6 +98,8 @@ A `ready` clip is **private to the class's coaches**. **Watch it** fetches the d
 | Make | one video credit, reserved before Omni is called |
 | Make pressed again on the same plan | none (the same video comes back) |
 | The start fails, or the render fails, breaks or takes over 30 minutes | **refunded**, once only (`failVideo` in a transaction), to the month it came from (`usageMonth`) |
+
+Seen on the live project on 2026-09-23: two of three real renders with the same kind of request finished in about 3 minutes (the finished MP4 is 1280×720, 8 s, H.264 High + AAC, about 3.1 MB, moov atom first); one stayed `in_progress` at Gemini for over 30 minutes and was marked `failed` with its credit returned, exactly as above. Omni is a preview model, so an occasional stalled render is expected — the coach presses Make again. A render that finishes after being marked failed is not collected (and was still paid for). A plan is used up by its render: `startVideo` refuses the same `planId` twice ("Plan the video again").
 | Discarding a finished clip, ready or approved | **not refunded**: it was made and paid for |
 
 Months are Singapore months. The admin sets the limit (see [admin and approvals](/coach/admin-and-approvals.md#monthly-limits)), and the unit cost is in [costs and limits](/operations/costs-and-limits.md).
