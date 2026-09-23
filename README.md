@@ -1,28 +1,51 @@
-# simplify — Can I Afford It?
+# simplify — Can I buy?
 
 Simplify workflows for special needs.
 
-**Live:** <https://simplify.whiz.coach/> (custom domain) —
-also at <https://simplify-special.web.app/>
+**Live:** <https://simplify.whiz.coach/> — the address people use, and the
+only one to share or link to. Every absolute URL in the app and guide
+(canonical, Open Graph, the QR codes, the guide's instructions) uses it; links
+between pages stay relative so they also work offline and in PR previews.
+(The same site answers at Firebase's own `simplify-special.web.app` too, but
+that is a separate origin: numbers saved there don't carry over.)
 
-**Can I Afford It?** is a simple, static progressive web app that helps
+**Can I buy?** is a simple, static progressive web app that helps
 special-needs users answer one question: *"Do I have enough money to buy
 these things?"*
 
 - **My money** — type an amount, dictate it with the mobile keyboard's
   microphone, or tap pictures of Singapore notes and coins to count cash
-  visually.
+  visually (each picture shows how many times it was tapped, e.g. ×2).
 - **Things I want to buy** — add any number of prices.
-- **The answer** — a big, always-visible green "Yes! You have enough" or
-  red "Not enough", with the money left over or how much more is needed.
+- **The answer** — a big, always-visible green "Can buy" or red "Cannot
+  buy", with the money left over or how much more is needed. An empty money
+  box counts as $0, so a price alone already gives an answer.
 
-A step-by-step **user guide** lives at [/guide](public/guide.html)
-(served without the `.html` suffix because of Hosting's `cleanUrls`; linked
-from the landing page, opens in a new tab). It covers basic use,
-dictating amounts with the keyboard microphone, and adding the app to the
-home screen on iPhone and Android. Its screenshots are in
-`public/img/guide/`; both the page and images are precached by the service
-worker so the guide works offline too.
+The **user guide** is a short topic menu at [/guide](public/guide.html) with
+one small page per topic under [/guide/](public/guide/) — `can-i-buy`,
+`notes-and-coins`, `speak`, `home-screen`, `updates`, `no-microphone`,
+`privacy` — so nobody has to read a long page to find one answer. Pages are
+served without `.html` (Hosting `cleanUrls`), share `public/css/guide.css`,
+and start and end with a "← Help menu" link. The app's footer links to the
+menu (new tab). Screenshots are in `public/img/guide/`; every page and image
+is precached by the service worker, so the guide works offline too.
+
+The guide was once a single page whose sections were shared as
+`/guide#<section>` links; `public/js/guide-links.js` forwards those to the
+section's new page. A new topic page needs a button on the menu, an entry in
+`ASSETS` in `public/sw.js`, and — if it replaces an old section — a line in
+`guide-links.js`.
+
+Update the guide **after** a change has been tested locally, never
+alongside it, so its words and pictures describe what actually ships. The
+screenshots come from the running app, one scene per run:
+
+```sh
+for s in yes no picker; do node tools/shoot-guide.mjs $s; done
+```
+
+(Node 22 and Chrome, nothing to install; each scene checks the app reached
+the expected state before writing the PNG.)
 
 `mic-on-keyboard.png` is a real Android screenshot (dialog plus the phone's own
 keyboard, with the microphone key ringed in `--color-primary`), so it has to be
@@ -37,6 +60,7 @@ device. Works offline once installed (PWA).
 - One screen, one question — no navigation, menus, or settings.
 - Touch targets 56–96&nbsp;px with generous spacing.
 - Never a validation error — bad input is prevented or forgiven, not rejected.
+  A blank box counts as $0 rather than leaving the answer waiting.
 - Every state uses color + icon + plain words together (works for
   color-blind users and non-readers); WCAG AAA contrast.
 - Big type, plain language, at most a few words per label.
@@ -57,15 +81,20 @@ python3 -m http.server -d public 8080
 # then open http://localhost:8080
 ```
 
-or with the Firebase emulator: `firebase emulators:start --only hosting`.
+or with the Firebase emulator: `firebase emulators:start --only hosting`
+(this one also applies the `firebase.json` headers).
+
+The service worker serves everything cache-first, so a reload won't show an
+edit to a file it has already cached. While developing, tick "Update on
+reload" under DevTools → Application → Service workers.
 
 ## Deploy to Firebase Hosting
 
 The Firebase project is `simplify-special` (set in `.firebaserc` and the
-deploy workflow). The live site is served at
-<https://simplify-special.web.app/>, with the custom domain
-<https://simplify.whiz.coach/> mapped to the same Hosting site (added under
-**Hosting → Custom domains** in the Firebase console).
+deploy workflow). The live site is <https://simplify.whiz.coach/>, a custom
+domain mapped to the Hosting site (added under **Hosting → Custom domains**
+in the Firebase console); Firebase's default
+`https://simplify-special.web.app/` serves the same files.
 
 Manual deploys: `npm i -g firebase-tools`, `firebase login`, then
 
@@ -96,7 +125,44 @@ account and the secret is:
 indefinitely after deploy, even though the raw files on the server are new.
 Bump it for any change to `public/` — HTML, CSS, JS, or a precached image —
 skip it only for changes that don't touch `public/` at all (e.g. `README.md`,
-`tools/`).
+`tools/`). A new file under `public/` also has to be added to `ASSETS`, or it
+won't work offline.
+
+### How an update reaches people already using the app
+
+Opening the app (a page load) makes the browser fetch `sw.js`; a changed
+`CACHE` installs the new files in the background and the new worker takes
+over. The page already on screen is still the old one, so on its own the
+change would only show on the *following* open — and switching back to the
+app from the app switcher (common on Android and iPad) isn't an open at all.
+`public/js/update.js` closes both gaps:
+
+- it reloads into the new version as soon as one takes over, if the screen
+  hasn't been touched since the app opened or came to the front; otherwise
+  the next time the app goes to the background — never while the picker or
+  speak window is open;
+- when the app comes back to the front (at most every 10 minutes) it asks the
+  browser to check for a new version, so an app left open for days updates
+  too;
+- `storage.flush()` runs before that reload and whenever the app is hidden, so
+  the last number typed survives.
+
+Devices still running a version from before `update.js` existed need two opens
+to pick up the first version that has it.
+
+`firebase.json` serves `sw.js`, the manifest, HTML, JS and CSS with
+`Cache-Control: no-cache` (ETags make the recheck a cheap 304), so a browser
+without the service worker can never mix old and new modules. Header rules
+that set the same key are resolved by order — the later rule wins — which is
+why the broad globs come first. Images keep `max-age=3600`.
+
+Every response also carries a Content-Security-Policy (same-origin only; no
+inline script and no inline styles — the guide's CSS lives in
+`css/guide.css`, and JS only sets styles through the DOM, which is allowed),
+`X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer` and a
+`Permissions-Policy` that turns off camera, microphone and location — voice
+entry uses the keyboard's own dictation, never the page. To check headers
+locally: `firebase serve --only hosting --port 5050`.
 
 ## Sharing
 
@@ -120,10 +186,10 @@ skip it only for changes that don't touch `public/` at all (e.g. `README.md`,
   python3 -m pip install segno pillow && python3 tools/make-qr.py
   ```
 
-- `og:image` deliberately points at the `.web.app` origin, which is always
-  reachable by crawlers even if custom-domain DNS is mid-change. After sharing,
-  re-scrape with the [Facebook Sharing Debugger][fb] or [X Card Validator][x]
-  to clear their caches.
+- `og:image` points at <https://simplify.whiz.coach/>, like every other
+  absolute URL. After changing it or the card, re-scrape with the
+  [Facebook Sharing Debugger][fb] or [X Card Validator][x] to clear their
+  caches.
 
 [fb]: https://developers.facebook.com/tools/debug/
 [x]: https://cards-dev.twitter.com/validator

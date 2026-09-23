@@ -1,0 +1,312 @@
+/* The user guide: a short topic menu at /guide and one small page per topic
+   under /guide/. Same design tokens as the app: big type, big targets, AAA
+   contrast. */
+:root {
+  --color-bg: #ffffff;
+  --color-text: #1a1a1a;
+  --color-muted: #444444;
+  --color-primary: #1565c0;
+  --color-primary-dark: #0d47a1;
+  --color-yes-bg: #e8f5e9;
+  --color-yes-text: #1b5e20;
+  --color-no-bg: #fdecea;
+  --color-no-text: #b71c1c;
+  --color-neutral-bg: #eeeeee;
+  --color-border: #757575;
+  --radius: 16px;
+  --gap: 16px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 22px;
+  line-height: 1.5;
+  color: var(--color-text);
+  background: var(--color-bg);
+}
+
+main {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 0 var(--gap) 48px;
+}
+
+header.guide-header {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 16px var(--gap) 0;
+}
+
+h1 {
+  font-size: 30px;
+  margin: 0 0 4px;
+}
+/* a topic page's title sits under the "← Help menu" button, not at the top */
+main > h1:first-child {
+  margin-top: 20px;
+}
+
+.subtitle {
+  color: var(--color-muted);
+  margin: 0 0 8px;
+  font-size: 20px;
+}
+
+h2 {
+  font-size: 26px;
+  margin: 40px 0 12px;
+  padding-top: 24px;
+  border-top: 3px solid var(--color-neutral-bg);
+  scroll-margin-top: 12px; /* breathing room when a #link jumps here */
+}
+
+/* Every h2/h3 has an id, so any section can be linked or bookmarked on
+   its own. The 🔗 makes that discoverable — padding pads its tap target
+   well past the glyph itself without shoving the heading text around. */
+.anchor-link {
+  display: inline-block;
+  margin-left: 2px;
+  padding: 18px 14px;
+  font-size: 0.55em;
+  text-decoration: none;
+  opacity: 0.6;
+}
+.anchor-link:active { opacity: 1; }
+
+.step-icon {
+  font-size: 30px;
+}
+
+p {
+  margin: 12px 0;
+}
+
+ol.steps {
+  margin: 12px 0;
+  padding-left: 0;
+  list-style: none;
+  counter-reset: step;
+}
+
+ol.steps>li {
+  counter-increment: step;
+  position: relative;
+  padding-left: 56px;
+  margin-bottom: 20px;
+  min-height: 44px;
+}
+
+ol.steps>li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: #fff;
+  font-weight: 700;
+  font-size: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+figure {
+  margin: 20px 0;
+  text-align: center;
+}
+
+figure img {
+  width: 100%;
+  max-width: 300px;
+  /* the width/height attributes reserve layout space; without this the
+     attribute height would win over the scaled-down CSS width */
+  height: auto;
+  border: 3px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+figcaption {
+  font-size: 18px;
+  color: var(--color-muted);
+  margin-top: 8px;
+}
+
+.callout {
+  border-radius: var(--radius);
+  padding: 16px;
+  margin: 16px 0;
+  font-weight: 600;
+}
+
+.callout.yes {
+  background: var(--color-yes-bg);
+  color: var(--color-yes-text);
+}
+
+.callout.no {
+  background: var(--color-no-bg);
+  color: var(--color-no-text);
+}
+
+.callout.tip {
+  background: var(--color-neutral-bg);
+  color: var(--color-text);
+}
+
+.platform {
+  border: 3px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin: 20px 0;
+}
+
+.platform h3 {
+  font-size: 24px;
+  margin: 0 0 8px;
+  scroll-margin-top: 12px;
+}
+
+.inline-icon {
+  display: inline-block;
+  vertical-align: -6px;
+  width: 28px;
+  height: 28px;
+}
+
+.illustration {
+  display: block;
+  margin: 16px auto;
+  max-width: 320px;
+  width: 100%;
+  height: auto;
+}
+
+/* Leaves the guide for a manufacturer's own page, so it is a plain link
+   rather than one of the big buttons — but still a full-size tap target. */
+a.help-link {
+  /* inline-block, not flex: the text wraps to two lines on a phone, and a
+     centred flex item would leave the 🔗 stranded beside the middle of it */
+  display: inline-block;
+  padding: 14px 0;
+  font-weight: 700;
+  color: var(--color-primary-dark);
+}
+
+/* ---------- the topic menu (/guide) ---------- */
+/* One big button per topic, the same shape as the app's own buttons, so
+   the guide reads as a short list to pick from rather than a long page. */
+.group-label {
+  margin: 28px 0 10px;
+  padding: 0;
+  border: none;
+  font-size: 20px;
+  color: var(--color-muted);
+}
+
+.topics {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+a.topic {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 72px;
+  padding: 12px 16px;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--color-text);
+  text-decoration: none;
+  background: #fff;
+  border: 3px solid var(--color-border);
+  border-radius: var(--radius);
+}
+a.topic::after {
+  content: "›";
+  margin-left: auto;
+  padding-left: 8px;
+  font-size: 34px;
+  line-height: 1;
+  color: var(--color-muted);
+}
+a.topic:active { background: #e3f2fd; }
+
+.topic-icon {
+  flex: none;
+  width: 36px;
+  font-size: 30px;
+  text-align: center;
+}
+
+/* ---------- moving around ---------- */
+/* "← Help menu" at the top of every topic page, and again at its end next
+   to "Open the app": quieter than the blue button, still easy to hit. */
+a.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 56px;
+  padding: 8px 20px;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-primary-dark);
+  text-decoration: none;
+  background: #fff;
+  border: 3px solid var(--color-border);
+  border-radius: 999px;
+}
+a.back-link:active { background: #e3f2fd; }
+
+.page-end {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 36px;
+}
+
+a.open-app {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 56px;
+  padding: 12px 24px;
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--color-primary);
+  border-radius: var(--radius);
+  text-decoration: none;
+}
+
+a.open-app:active {
+  background: var(--color-primary-dark);
+}
+
+a:focus-visible {
+  outline: 4px solid var(--color-primary);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a.open-app,
+  a.back-link,
+  a.topic {
+    transition: background 0.15s;
+  }
+}

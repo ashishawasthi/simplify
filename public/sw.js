@@ -1,12 +1,22 @@
 // Versioned precache, cache-first. Bump CACHE on every deploy so the next
 // launch picks up new files; firebase.json serves this file with no-cache.
-// "/guide" (not "/guide.html"): Hosting cleanUrls 301s the .html form, and a
-// cached redirected response breaks offline navigations.
-const CACHE = "afford-v31";
+// js/update.js reloads an open page into the new version once it takes over.
+// Pages are listed by their clean URLs ("/", "/guide", "/guide/speak"), never
+// as ".html": Hosting cleanUrls 301s the .html forms, and a cached redirected
+// response breaks offline navigations.
+const CACHE = "afford-v32";
 const ASSETS = [
   "/",
-  "/index.html",
   "/guide",
+  "/guide/can-i-buy",
+  "/guide/notes-and-coins",
+  "/guide/speak",
+  "/guide/home-screen",
+  "/guide/updates",
+  "/guide/no-microphone",
+  "/guide/privacy",
+  "/css/guide.css",
+  "/js/guide-links.js",
   "/img/guide/screen-money.png",
   "/img/guide/mic-on-keyboard.png",
   "/img/guide/screen-yes.png",
@@ -21,6 +31,7 @@ const ASSETS = [
   "/js/items.js",
   "/js/result.js",
   "/js/storage.js",
+  "/js/update.js",
   "/manifest.webmanifest",
   "/favicon.svg",
   "/img/icons/icon-192.png",
