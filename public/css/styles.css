@@ -526,13 +526,47 @@ h2 {
 .coin-btn svg { display: block; width: 100%; height: 100%; }
 .coin-btn:active svg { transform: scale(0.94); }
 
+/* ×N on a note or coin: how many of it are in the count so far. Pinned to
+   the picture's corner so it is read at the moment of tapping. */
+.note-btn,
+.coin-btn {
+  position: relative;
+  font-family: inherit;
+}
+.count-badge {
+  position: absolute;
+  /* far enough out to clear a coin's numeral, still inside the grid gap */
+  top: -14px;
+  right: -14px;
+  min-width: 44px;
+  height: 44px;
+  padding: 0 9px;
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 44px;
+  text-align: center;
+  color: #fff;
+  background: var(--color-text);
+  border-radius: 999px;
+  /* the white ring keeps it apart from every note and coin colour */
+  box-shadow: 0 0 0 3px var(--color-bg);
+  pointer-events: none;
+}
+/* a note's numeral is nowhere near its corner, and a full-width note
+   leaves only the page gutter on its right */
+.note-btn .count-badge {
+  top: -10px;
+  right: -8px;
+}
+
 /* tap feedback: quick pop on the picker total */
 @keyframes pop {
   0% { transform: scale(1); }
   50% { transform: scale(1.12); }
   100% { transform: scale(1); }
 }
-.picker-total.pop { animation: pop 150ms ease-out; }
+.picker-total.pop,
+.count-badge.pop { animation: pop 150ms ease-out; }
 
 /* ---------- speak dialog ---------- */
 .speak {

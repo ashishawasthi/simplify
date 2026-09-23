@@ -13,8 +13,8 @@
        plus the URL in plain text, so a screenshot of the preview is scannable.
        The QR sits dead-centre: WhatsApp thumbnails a card by keeping only its
        middle square, so anything off to one side is the part that vanishes.
-       og:image must be absolute; it points at the .web.app origin because that
-       one is always reachable by crawlers regardless of custom-domain DNS.
+       og:image must be absolute, and like every link people see it uses
+       simplify.whiz.coach, the address they actually visit.
        The ?v= is a cache-buster — scrapers key their stored copy on the whole
        URL, so re-drawing the card needs a new one to actually reach anybody. -->
   <meta property="og:type" content="website">
@@ -23,7 +23,7 @@
   <meta property="og:title" content="Simplify">
   <meta property="og:description"
     content="Check if you have enough money to buy what you want. A simple, offline-friendly money app for special-needs users.">
-  <meta property="og:image" content="https://simplify-special.web.app/img/og-card.png?v=2">
+  <meta property="og:image" content="https://simplify.whiz.coach/img/og-card.png?v=2">
   <meta property="og:image:type" content="image/png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
@@ -34,7 +34,7 @@
   <meta name="twitter:title" content="Simplify">
   <meta name="twitter:description"
     content="Check if you have enough money to buy what you want. A simple, offline-friendly money app for special-needs users.">
-  <meta name="twitter:image" content="https://simplify-special.web.app/img/og-card.png?v=2">
+  <meta name="twitter:image" content="https://simplify.whiz.coach/img/og-card.png?v=2">
   <meta name="twitter:image:alt" content="Simplify — QR code linking to simplify.whiz.coach">
 
   <link rel="manifest" href="/manifest.webmanifest">
@@ -46,7 +46,7 @@
 <body>
 
   <header class="app-header">
-    <h1>Can I afford it?</h1>
+    <h1>Can I buy?</h1>
     <div id="clear-all-wrap" class="labelled-btn">
       <span class="labelled-btn-text" aria-hidden="true">Start over</span>
       <button id="clear-all" class="round-btn" type="button" aria-label="Start over: clear everything">
@@ -88,7 +88,7 @@
       <h2 id="items-heading"><span class="zone-icon" aria-hidden="true">🛒</span> Things I want to buy</h2>
       <ul id="items-list" class="items-list"></ul>
       <button id="add-item" class="add-btn" type="button">
-        <span aria-hidden="true">＋</span> Add another thing
+        <span aria-hidden="true">＋</span> Add item
       </button>
       <p class="items-total">Things cost: <strong id="items-total">$0</strong></p>
     </section>
