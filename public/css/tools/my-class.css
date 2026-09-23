@@ -1,1 +1,445 @@
-/* My class (js/tools/my-class.js): styles go here, each inside #tool-my-class. */
+/* My class (js/tools/my-class.js), and the two places it reaches outside
+   #tool-my-class: its tile on the menu, and its section on the set-up page
+   (js/class-setup.js, #class-setup-slot). The page itself (class-markdown.js,
+   classes cm-…) is styled inside any .class-page, so the coach's preview can
+   link this file and show exactly what learners see; its colours fall back
+   to the app's own where a page has no tokens. */
+
+/* ---------- the tile on the menu: "My class" over the class's name ---------- */
+#menu li[data-tool="my-class"] .my-class-tile-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+#menu li[data-tool="my-class"] .my-class-tile-name {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--color-muted);
+  overflow-wrap: anywhere;
+}
+
+/* ---------- the reader ---------- */
+#tool-my-class .mc-meta {
+  margin: -6px 0 16px;
+  font-size: 18px;
+  line-height: 1.35;
+  color: var(--color-muted);
+}
+#tool-my-class .mc-class-name { font-weight: 700; }
+
+/* Tall enough that Back and Next sit at the bottom of the screen on every
+   screen of the page, short or long: they never move. */
+#tool-my-class .mc-screen {
+  min-height: calc(100dvh - 300px);
+  outline: none;
+}
+/* pictures only: the screen's title steps aside, so the page starts higher */
+html[data-pictures-only] #tool-my-class .mc-screen { min-height: calc(100dvh - 244px); }
+
+/* A picture or video still on its way, or needing the internet: a quiet
+   frame in its place, never an error colour. */
+#tool-my-class .mc-file-frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 0 18px;
+  aspect-ratio: 4 / 3;
+  max-height: 55vh;
+  background: #eeeeee;
+  border-radius: 16px;
+}
+#tool-my-class .mc-file-frame.is-video { aspect-ratio: 16 / 9; }
+#tool-my-class .mc-file-note {
+  padding: 12px;
+  font-size: 20px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--color-muted);
+}
+
+/* No class, or nothing from the coach yet */
+#tool-my-class .mc-note {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 8px;
+  text-align: center;
+}
+#tool-my-class .mc-note-picture { display: block; width: 96px; height: 96px; }
+#tool-my-class .mc-note-words {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+#tool-my-class .mc-note-more {
+  margin: 0;
+  font-size: 20px;
+  color: var(--color-muted);
+}
+
+/* Where in the page, then Back and Next — held at the bottom of the screen
+   while the page scrolls under them. */
+#tool-my-class .mc-nav {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+  grid-template-areas: "where where" "back next";
+  gap: 10px 12px;
+  margin-top: 12px;
+  padding: 10px 0 calc(12px + env(safe-area-inset-bottom));
+  background: var(--color-bg);
+  border-top: 3px solid #e0e0e0;
+}
+#tool-my-class .mc-where {
+  grid-area: where;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 16px;
+}
+#tool-my-class .mc-dots {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+#tool-my-class .mc-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #bdbdbd;
+}
+/* this screen: bigger and dark, not colour alone */
+#tool-my-class .mc-dot.is-here {
+  width: 16px;
+  height: 16px;
+  background: var(--color-primary-dark);
+}
+#tool-my-class .mc-count {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-muted);
+}
+#tool-my-class .mc-count:empty { display: none; }
+
+#tool-my-class .mc-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 72px;
+  padding: 8px 14px;
+  font-family: inherit;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.1;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+#tool-my-class .mc-btn-icon { font-size: 26px; line-height: 1; }
+#tool-my-class .mc-back {
+  grid-area: back;
+  color: var(--color-text);
+  background: #fff;
+  border: 3px solid var(--color-border);
+}
+#tool-my-class .mc-back:not(:disabled):active { background: #e3f2fd; }
+/* the first screen: Back stays where it is, faded, so Next doesn't move */
+#tool-my-class .mc-back:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+/* white on #0d47a1 is 8.6:1; on #1b5e20 ("All done") 7.9:1 */
+#tool-my-class .mc-next {
+  grid-area: next;
+  color: #fff;
+  background: var(--color-primary-dark);
+  border: 3px solid var(--color-primary-dark);
+}
+#tool-my-class .mc-next.is-done {
+  background: var(--color-yes-text);
+  border-color: var(--color-yes-text);
+}
+#tool-my-class .mc-next:active { filter: brightness(1.15); }
+
+/* ---------- the coach's page: learners' look, here and in a preview ---------- */
+.class-page {
+  font-size: 24px;
+  line-height: 1.45;
+  color: var(--color-text, #1a1a1a);
+  overflow-wrap: anywhere;
+}
+.class-page .cm-heading {
+  margin: 0 0 14px;
+  line-height: 1.2;
+  font-weight: 800;
+}
+.class-page .cm-h1 { font-size: 30px; }
+.class-page .cm-h2 { font-size: 26px; }
+.class-page .cm-p { margin: 0 0 16px; }
+.class-page .cm-list {
+  margin: 0 0 16px;
+  padding-left: 1.5em;
+}
+.class-page .cm-list li { margin: 0 0 8px; padding-left: 4px; }
+.class-page .cm-list li::marker {
+  font-weight: 800;
+  color: var(--color-primary-dark, #0d47a1);
+}
+.class-page strong { font-weight: 800; }
+
+.class-page .cm-picture {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 55vh;
+  margin: 0 0 18px;
+  object-fit: contain;
+  background: #f5f5f5;
+  border-radius: 16px;
+}
+
+.class-page .cm-video {
+  position: relative;
+  margin: 0 0 18px;
+  overflow: hidden;
+  background: #000;
+  border-radius: 16px;
+}
+.class-page .cm-video video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  max-height: 55vh;
+  background: #000;
+}
+/* the big ▶ over the middle, until the video has played */
+.class-page .cm-video-play {
+  position: absolute;
+  inset: 0;
+  width: 96px;
+  height: 96px;
+  margin: auto;
+  padding: 0 0 0 8px;
+  font-size: 44px;
+  line-height: 1;
+  color: #fff;
+  background: var(--color-primary-dark, #0d47a1);
+  border: 4px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+}
+
+.class-page .cm-link {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 72px;
+  margin: 0 0 18px;
+  padding: 12px 16px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--color-primary-dark, #0d47a1);
+  text-decoration: none;
+  background: #f5f9ff;
+  border: 3px solid var(--color-primary-dark, #0d47a1);
+  border-radius: 16px;
+}
+.class-page .cm-link:active { background: #e3f2fd; }
+.class-page .cm-link:focus-visible,
+.class-page .cm-youtube-card:focus-visible,
+.class-page .cm-video-play:focus-visible {
+  outline: 4px solid var(--color-primary, #1565c0);
+  outline-offset: 3px;
+}
+.class-page .cm-link-icon { flex: none; font-size: 28px; }
+.class-page .cm-link-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+/* #444 on #f5f9ff is 9.4:1 */
+.class-page .cm-link-host {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-muted, #444444);
+}
+
+.class-page .cm-youtube { margin: 0 0 18px; }
+.class-page .cm-youtube-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  min-height: 96px;
+  padding: 14px 16px;
+  font-family: inherit;
+  font-size: 24px;
+  line-height: 1.2;
+  text-align: left;
+  color: var(--color-text, #1a1a1a);
+  background: #fff;
+  border: 3px solid var(--color-border, #757575);
+  border-radius: 16px;
+  cursor: pointer;
+}
+.class-page .cm-youtube-card:active { background: #f5f5f5; }
+.class-page .cm-youtube-icon {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  padding-left: 5px;
+  font-size: 30px;
+  color: #fff;
+  background: var(--color-text, #1a1a1a);
+  border-radius: 50%;
+}
+.class-page .cm-youtube-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.class-page .cm-youtube-words { font-weight: 800; }
+.class-page .cm-youtube-note {
+  font-size: 18px;
+  color: var(--color-muted, #444444);
+}
+.class-page .cm-youtube-card.is-offline .cm-youtube-note {
+  font-weight: 700;
+  color: var(--color-text, #1a1a1a);
+}
+.class-page .cm-youtube-frame {
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: #000;
+  border-radius: 16px;
+}
+.class-page .cm-youtube-frame iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+/* ---------- the set-up page's class section (js/class-setup.js) ---------- */
+#class-setup-slot .cs-current,
+#class-setup-slot .cs-find,
+#class-setup-slot .cs-ask {
+  padding: 16px;
+  background: #f5f9ff;
+  border: 3px solid #bbdefb;
+  border-radius: var(--radius);
+}
+#class-setup-slot .cs-name {
+  margin: 2px 0 2px;
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+#class-setup-slot .cs-code {
+  margin: 0 0 14px;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--color-muted);
+}
+#class-setup-slot .cs-note { margin: 0 0 14px; }
+#class-setup-slot .cs-question {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 800;
+}
+#class-setup-slot .cs-label {
+  display: block;
+  margin: 0 0 2px;
+  font-size: 22px;
+  font-weight: 800;
+}
+#class-setup-slot .cs-hint { margin: 0 0 12px; }
+#class-setup-slot .cs-input {
+  display: block;
+  width: 100%;
+  min-height: 72px;
+  padding: 8px 16px;
+  font-family: inherit;
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text);
+  background: #fff;
+  border: 3px solid var(--color-border);
+  border-radius: var(--radius);
+}
+#class-setup-slot .cs-input:focus {
+  border-color: var(--color-primary);
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
+/* what the box found, or didn't: plain words, never red */
+#class-setup-slot .cs-status {
+  margin: 12px 0 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+#class-setup-slot .cs-status:empty { margin: 0; }
+
+#class-setup-slot .cs-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 12px;
+}
+#class-setup-slot .cs-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 64px;
+  padding: 8px 20px;
+  font-family: inherit;
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--color-text);
+  background: #fff;
+  border: 3px solid var(--color-border);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+#class-setup-slot .cs-btn:active { background: #e3f2fd; }
+#class-setup-slot .cs-btn-icon { font-size: 24px; line-height: 1; }
+#class-setup-slot .cs-btn-icon img { display: block; width: 32px; height: 32px; }
+#class-setup-slot .cs-actions .cs-btn { flex: 1 1 140px; }
+#class-setup-slot .cs-yes {
+  color: #fff;
+  background: var(--color-yes-text);
+  border-color: var(--color-yes-text);
+}
+#class-setup-slot .cs-yes:active { background: #2e7d32; }
+#class-setup-slot .cs-open {
+  width: 100%;
+  margin: 0 0 4px;
+  color: #fff;
+  background: var(--color-primary-dark);
+  border-color: var(--color-primary-dark);
+}
+#class-setup-slot .cs-open:active { background: var(--color-primary); }
+#class-setup-slot .cs-retry,
+#class-setup-slot .cs-keep {
+  width: 100%;
+  margin-top: 12px;
+}

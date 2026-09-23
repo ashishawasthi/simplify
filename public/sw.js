@@ -147,6 +147,13 @@ self.addEventListener("activate", (e) => {
 
 self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
+  // Not this worker's to answer, so the browser fetches them as if it
+  // weren't here: other sites (My class reads its page and pictures from
+  // Google's servers, and js/class-data.js keeps its own copy), the coach
+  // app (/coach/, never cached for learners) and Firebase's reserved /__/.
+  const { origin, pathname } = new URL(e.request.url);
+  if (origin !== self.location.origin) return;
+  if (pathname === "/coach" || pathname.startsWith("/coach/") || pathname.startsWith("/__/")) return;
   e.respondWith(
     caches.open(CACHE)
       .then((c) => c.match(e.request, { ignoreSearch: true }))
