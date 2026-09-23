@@ -6,7 +6,8 @@ import { initItems, setItems, getItems, itemsTotalCents, hasAnyPrice, addItem, r
 import { initResult, renderResult } from "./result.js";
 import { initPicker, openPicker } from "./note-picker.js";
 import { initSpeak, openSpeak } from "./speak.js";
-import { load, save } from "./storage.js";
+import { load, save, flush } from "./storage.js";
+import { initUpdates } from "./update.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -219,8 +220,9 @@ toastUndo.addEventListener("click", () => {
 
 restore(load() || { items: [{ value: "" }] });
 
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("/sw.js").catch(() => {
-    // offline support is a bonus, never a blocker
-  });
-}
+// a phone may kill a backgrounded app without warning, so save first
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) flush();
+});
+
+initUpdates();

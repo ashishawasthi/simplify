@@ -3,6 +3,7 @@
 
 const KEY = "afford-it-v1";
 let saveTimer = null;
+let pending = null; // latest state not yet written
 
 export function load() {
   try {
@@ -14,12 +15,20 @@ export function load() {
 }
 
 export function save(state) {
+  pending = state;
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
-    try {
-      localStorage.setItem(KEY, JSON.stringify(state));
-    } catch {
-      // storage full or blocked — the app still works, just without memory
-    }
-  }, 200);
+  saveTimer = setTimeout(flush, 200);
+}
+
+// Write now instead of after the debounce: the page is about to reload or
+// may be killed in the background, and the last keystroke must survive.
+export function flush() {
+  clearTimeout(saveTimer);
+  if (pending == null) return;
+  try {
+    localStorage.setItem(KEY, JSON.stringify(pending));
+  } catch {
+    // storage full or blocked — the app still works, just without memory
+  }
+  pending = null;
 }
