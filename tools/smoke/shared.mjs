@@ -18,7 +18,7 @@ const HELPERS = `
 // voices decides what the device has.
 const fakeSpeech = (voices, { late = false } = {}) => `
   window.spoken = [];
-  window.said = () => window.spoken.filter((s) => s !== "cancel");
+  window.said = () => window.spoken.filter((s) => s !== "cancel" && s.text !== "");
   window.voiceList = ${late ? "[]" : JSON.stringify(voices)};
   window.lateVoices = ${JSON.stringify(voices)};
   const synth = new EventTarget();
@@ -38,6 +38,26 @@ const fakeSpeech = (voices, { late = false } = {}) => `
   };
   window.pageHidden = false;
   Object.defineProperty(Document.prototype, "hidden", { configurable: true, get: () => window.pageHidden });
+`;
+
+// A stand-in for playing the recorded voice (headless Chrome won't play
+// without a real tap): play() writes down the clip's path — "(muted)" when it
+// is only being woken — and ends it a moment later. fail: clips that won't play.
+const fakeAudio = ({ fail = false } = {}) => `
+  window.played = [];
+  window.paused = 0;
+  HTMLMediaElement.prototype.play = function () {
+    const clip = new URL(this.src).pathname;
+    if (${fail}) {
+      setTimeout(() => this.dispatchEvent(new Event("error")), 0);
+      return Promise.reject(new DOMException("no clip", "NotSupportedError"));
+    }
+    window.played.push(this.muted ? clip + " (muted)" : clip);
+    if (!this.muted) setTimeout(() => this.dispatchEvent(new Event("ended")), 0);
+    return Promise.resolve();
+  };
+  HTMLMediaElement.prototype.pause = function () { window.paused++; };
+  window.clipFor = async (text) => (await import("/js/voice-clips.js")).CLIPS[text];
 `;
 
 const VOICES = [
@@ -104,15 +124,113 @@ export default [
     expect: inPage(() => spoken.at(-2)?.text === "Please give us space" && spoken.at(-1) === "cancel"),
   },
   {
-    name: "say-aloud: no speech on the device — canSpeak() false, say() does nothing",
+    name: "say-aloud: no voice on the device — the clips still play; words with no clip can't be said",
     path: "/",
-    init: HELPERS + `Object.defineProperty(window, "speechSynthesis", { configurable: true, get: () => undefined });`,
+    init: HELPERS + fakeAudio() + `Object.defineProperty(window, "speechSynthesis", { configurable: true, get: () => undefined });`,
     setup: run(async () => {
       const { canSpeak, say } = await import("/js/say-aloud.js");
-      if (canSpeak()) throw new Error("canSpeak() is true with no speech");
+      if (!canSpeak()) throw new Error("canSpeak() is false with the clips there");
+      if (canSpeak("Help") || !canSpeak("I need help")) throw new Error("canSpeak(what) is wrong");
       await say("Help");
+      if (played.length) throw new Error("played something for words with no clip");
+      await say("I need help");
+      window.helpClip = await clipFor("I need help");
     }),
-    expect: "true",
+    expect: inPage(() => played.join() === helpClip),
+  },
+
+  // ---------- say-aloud.js: the recorded voice ----------
+  {
+    name: "say-aloud: a card's fixed words play their recorded clip, not the device's voice",
+    path: "/",
+    init: HELPERS + fakeSpeech(VOICES) + fakeAudio(),
+    setup: run(async () => {
+      const { say } = await import("/js/say-aloud.js");
+      await say("  I need   help ");
+      window.helpClip = await clipFor("I need help");
+    }),
+    expect: inPage(() => /^\/audio\/voice\/[0-9a-f]{12}\.mp3$/.test(helpClip) && played.join() === helpClip &&
+      said().length === 0),
+  },
+  {
+    name: "say-aloud: a clip, then typed words in the device's voice — one after the other, woken in the tap",
+    path: "/",
+    init: HELPERS + fakeSpeech(VOICES) + fakeAudio(),
+    setup: run(async () => {
+      const { say } = await import("/js/say-aloud.js");
+      window.order = [];
+      const synth = speechSynthesis;
+      const speak = synth.speak.bind(synth);
+      synth.speak = (u) => {
+        order.push(u.text === "" ? "wake" : `voice: ${u.text}`);
+        speak(u);
+      };
+      const play = HTMLMediaElement.prototype.play;
+      HTMLMediaElement.prototype.play = function () {
+        order.push(`clip: ${new URL(this.src).pathname}`);
+        return play.call(this);
+      };
+      window.patientClip = await clipFor("Please be patient with me.");
+      await say(["Please be patient with me.", "Bishan Interchange"]);
+    }),
+    expect: inPage(() => order.join(" | ") === `wake | clip: ${patientClip} | voice: Bishan Interchange`),
+  },
+  {
+    name: "say-aloud: typed words, then a clip — the clip woken (muted) in the tap, played after",
+    path: "/",
+    init: HELPERS + fakeSpeech(VOICES) + fakeAudio(),
+    setup: run(async () => {
+      const { say } = await import("/js/say-aloud.js");
+      window.thanksClip = await clipFor("Your care is greatly appreciated. Thank you!");
+      await say(["Bishan Interchange", "Your care is greatly appreciated. Thank you!"]);
+    }),
+    expect: inPage(() => played.join(" | ") === `${thanksClip} (muted) | ${thanksClip}` &&
+      said().map((s) => s.text).join() === "Bishan Interchange"),
+  },
+  {
+    name: "say-aloud: a clip that can't play — its words in the device's voice instead",
+    path: "/",
+    init: HELPERS + fakeSpeech(VOICES) + fakeAudio({ fail: true }),
+    setup: run(async () => {
+      const { say } = await import("/js/say-aloud.js");
+      await say("I need water");
+    }),
+    expect: inPage(() => said().map((s) => `${s.text} / ${s.voice}`).join() === "I need water / Singapore"),
+  },
+  {
+    name: "say-aloud: stop() quiets a clip too, and the next say() starts afresh",
+    path: "/",
+    init: HELPERS + fakeSpeech(VOICES) + `
+      window.played = [];
+      window.paused = 0;
+      HTMLMediaElement.prototype.play = function () { played.push(new URL(this.src).pathname); return Promise.resolve(); };
+      HTMLMediaElement.prototype.pause = function () { paused++; this.dispatchEvent(new Event("pause")); };
+    `,
+    setup: run(async () => {
+      const { say, stop } = await import("/js/say-aloud.js");
+      const first = say("I need help"); // a clip that never ends by itself
+      await pause(50);
+      stop();
+      await first; // settles once cut off
+      window.cutOff = true;
+      window.pausedBefore = paused;
+      say("I need water");
+      await pause(50);
+      window.pageHidden = true;
+      document.dispatchEvent(new Event("visibilitychange"));
+    }),
+    expect: inPage(() => cutOff && pausedBefore >= 1 && played.length === 2 && paused > pausedBefore &&
+      spoken.includes("cancel")),
+  },
+  {
+    name: "say-aloud: words in another language never play an English clip",
+    path: "/",
+    init: HELPERS + fakeSpeech([...VOICES, { name: "Malay", lang: "ms-MY", localService: true }]) + fakeAudio(),
+    setup: run(async () => {
+      const { say } = await import("/js/say-aloud.js");
+      await say([{ text: "I need help", lang: "ms" }]);
+    }),
+    expect: inPage(() => played.length === 0 && said().map((s) => s.voice).join() === "Malay"),
   },
 
   // ---------- show-card.js ----------
@@ -177,11 +295,11 @@ export default [
     init: HELPERS + fakeSpeech(VOICES),
     setup: run(async () => {
       const { openCard } = await import("/js/show-card.js");
-      openCard({ words: "May I have a seat please?", lines: ["Thank you"] });
+      openCard({ words: "Can I sit here, please?", lines: ["Thank you"] });
       document.querySelector('.card-btn[aria-label^="Speak"]').click();
     }),
     expect: inPage(() => said().map((s) => `${s.text} / ${s.voice}`).join(" | ") ===
-      "May I have a seat please? / Singapore | Thank you / Singapore"),
+      "Can I sit here, please? / Singapore | Thank you / Singapore"),
   },
   {
     name: "show-card: a line in another language — marked with it, read by a voice for it (not Cantonese)",
@@ -189,13 +307,13 @@ export default [
     init: HELPERS + fakeSpeech([...VOICES, ...CHINESE]),
     setup: run(async () => {
       const { openCard } = await import("/js/show-card.js");
-      openCard({ words: "May I have a seat please?", lines: [{ text: "请给我一个座位", lang: "zh-SG" }, "Thank you"] });
+      openCard({ words: "Can I sit here, please?", lines: [{ text: "请给我一个座位", lang: "zh-SG" }, "Thank you"] });
       document.querySelector('.card-btn[aria-label^="Speak"]').click();
     }),
     expect: inPage(() => {
       const lines = [...document.querySelectorAll(".card-lines p")];
       return said().map((s) => `${s.text} / ${s.voice} / ${s.lang}`).join(" | ") ===
-          "May I have a seat please? / Singapore / en-SG | 请给我一个座位 / Mandarin / zh-CN | Thank you / Singapore / en-SG" &&
+          "Can I sit here, please? / Singapore / en-SG | 请给我一个座位 / Mandarin / zh-CN | Thank you / Singapore / en-SG" &&
         lines[0].lang === "zh-SG" && !lines[1].hasAttribute("lang") &&
         !document.querySelector(".card-words").hasAttribute("lang");
     }),
@@ -206,10 +324,10 @@ export default [
     init: HELPERS + fakeSpeech(VOICES),
     setup: run(async () => {
       const { openCard } = await import("/js/show-card.js");
-      openCard({ words: "May I have a seat please?", lines: [{ text: "请给我一个座位", lang: "zh-SG" }, "Thank you"] });
+      openCard({ words: "Can I sit here, please?", lines: [{ text: "请给我一个座位", lang: "zh-SG" }, "Thank you"] });
       document.querySelector('.card-btn[aria-label^="Speak"]').click();
     }),
-    expect: inPage(() => said().map((s) => s.text).join(" | ") === "May I have a seat please? | Thank you"),
+    expect: inPage(() => said().map((s) => s.text).join(" | ") === "Can I sit here, please? | Thank you"),
   },
   {
     name: "show-card: a choice on the card closes it, then runs; the promise gives the choice",

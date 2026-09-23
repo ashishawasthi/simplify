@@ -28,7 +28,7 @@ const HELPERS = `
 // writes down what it was asked to say — said(): without the cancels.
 const fakeSpeech = `
   window.spoken = [];
-  window.said = () => window.spoken.filter((s) => s !== "cancel");
+  window.said = () => window.spoken.filter((s) => s !== "cancel" && s.text !== "");
   const synth = new EventTarget();
   Object.assign(synth, {
     paused: false,
@@ -41,6 +41,20 @@ const fakeSpeech = `
   window.SpeechSynthesisUtterance = class {
     constructor(text) { this.text = text; this.lang = ""; this.voice = null; this.rate = 1; }
   };
+`;
+
+// A stand-in for playing the recorded voice (headless Chrome won't play
+// without a real tap): the clips' paths, in the order they were played.
+const fakeAudio = `
+  window.played = [];
+  HTMLMediaElement.prototype.play = function () {
+    if (!this.muted) {
+      played.push(new URL(this.src).pathname);
+      setTimeout(() => this.dispatchEvent(new Event("ended")), 0);
+    }
+    return Promise.resolve();
+  };
+  window.clipFor = async (text) => (await import("/js/voice-clips.js")).CLIPS[text];
 `;
 
 // this device's settings before the app starts: the whole device, or only
@@ -104,18 +118,39 @@ export default [
     }),
   },
   {
-    name: "Speak says the card — its words and its line — only when tapped",
+    name: "Speak: LTA's words in the recorded voice, then the stop name in the device's own — only when tapped",
     path: "/#show-card",
-    init: HELPERS + fakeSpeech + cardSettings({ stop: "Bishan Interchange" }),
+    init: HELPERS + fakeSpeech + fakeAudio + cardSettings({ stop: "Bishan Interchange" }),
     setup: run(async () => {
       card("bell").click();
       await pause(300);
-      if (said().length) throw new Error("it spoke before Speak was tapped");
+      if (said().length || played.length) throw new Error("it spoke before Speak was tapped");
       document.querySelector('.card-btn[aria-label^="Speak"]').click();
+      window.bellClip = await clipFor("Please alert me when I am approaching my stop.");
     }),
-    expect: inPage(() => said().map((s) => s.text).join(" | ") ===
-        "Please alert me when I am approaching my stop. | My stop: Bishan Interchange" &&
+    expect: inPage(() => !!bellClip && played.join() === bellClip &&
+      said().map((s) => s.text).join(" | ") === "My stop: Bishan Interchange" &&
       lines().join() === "My stop: Bishan Interchange"),
+  },
+  {
+    name: "Speak: every card and its chosen second line play recorded clips",
+    path: "/#show-card",
+    init: HELPERS + fakeSpeech + fakeAudio + cardSettings({ disclose: "autistic" }),
+    setup: run(async () => {
+      window.want = [];
+      for (const id of ["seat", "cannot-talk", "please", "space", "thank-you"]) {
+        card(id).click();
+        await pause(400);
+        document.querySelector('.card-btn[aria-label^="Speak"]').click();
+        await pause(100);
+        want.push(await clipFor(sheet().querySelector(".card-words").textContent));
+        for (const line of lines()) want.push(await clipFor(line));
+        document.querySelector('.card-btn[aria-label="Close the card"]').click();
+        await pause(50);
+      }
+    }),
+    expect: inPage(() => want.length === 6 && want.every(Boolean) && new Set(want).size === 6 &&
+      played.join() === want.join() && said().length === 0),
   },
   {
     name: "My stop with no stop set up: LTA's words alone, no empty line",
