@@ -83,13 +83,14 @@ Each is one Node file with no runner and no dependencies unless the table says s
 |---|---|---|
 | `test-assets.mjs` | every file under `public/` (bar the coach app and the few it names, such as `og-card.png`) is in `ASSETS` in `public/sw.js`, every `ASSETS` entry exists, pages by clean URL | Node |
 | `test-class.mjs` | the class markdown parser (`public/js/class-markdown.js`), class codes and the Firestore reading in `public/js/class-data.js` (stand-in `fetch` and localStorage), and `sw.js` leaving class files, `/coach/` and `/__/` alone | Node |
-| `test-coach.mjs` | the coach app's pure parts: class codes, the editor toolbar, dates and the Singapore month, picture sizes, spotting an in-app browser | Node |
+| `test-coach.mjs` | the coach app's pure parts: class codes, the editor toolbar, dates and the Singapore month, picture sizes, spotting an in-app browser, institutions (search, grouping, which screen a coach gets) | Node |
 | `test-functions.mjs` | the six callables in `functions/index.js` with fake models: who may call, write / ask / decline, the free answer for an empty instruction, monthly limits (also under parallel calls), refunds, the Singapore month, the page check, plan → start → check → approve / discard; first runs `copy-class-markdown.mjs --check` | Firebase CLI, Java, `npm ci --prefix functions`; starts Auth, Firestore, Storage and Functions emulators itself |
 | `test-i-need.mjs` | I need's cards, settings, sentences and body map, pinned word for word | Node |
 | `test-money.mjs` | the money maths (`money.js`) and every money tool's wording (`answers.js`), including the original change requests' own examples | Node |
 | `test-now-next.mjs` | Now and next's list rules (`now-next-list.js`) | Node |
 | `test-pictures.mjs` | `public/js/pictures.js` against `public/img/pic/`: each file's safety and shape, the size budget, the Noto licence notices | Node |
 | `test-rules.mjs` | `firestore.rules` and `storage.rules`, case by case, over the emulators' REST APIs with unsigned test tokens | Firebase CLI, Java; starts Auth, Firestore and Storage emulators itself |
+| `test-seed.mjs` | `tools/seed-institutions.mjs` with the real `tools/seed/institutions.json` (a dry run writes nothing, a second run changes nothing, a retired entry stays retired, a bad file writes nothing) and `tools/migrate-coaches.mjs` (dry run, then approved / pending, then nothing on a second run) | Firebase CLI, Java; starts the Firestore emulator itself (8331, hub 4431) |
 | `test-show-card.mjs` | Show a card's wording, pictures and settings (`show-card-cards.js`) | Node |
 | `test-speak.mjs` | the dictation parser `speechToCents()` | Node |
 | `test-steps.mjs` | the Steps decks word for word, the rules every deck keeps, Next / Back / Fewer steps, the 30-minute start again | Node |
@@ -118,7 +119,7 @@ It needs Node 22 and Chrome and nothing else. It serves `public/` itself (or `SM
 | Scene file | Covers |
 |---|---|
 | `app.mjs` | the menu, routing, the money tools, the set-up page and device settings, the update reload, and every guide scene in `tools/guide-scenes.mjs` still reaching its state |
-| `coach.mjs` | the coach app's screens and flows with `public/coach/js/cloud.js` swapped for an in-memory stand-in: sign-in, About you, classes, editor and preview, Publish, AI helper, picture and video shelves, YouTube, the QR poster, the admin screen |
+| `coach.mjs` | the coach app's screens and flows with `public/coach/js/cloud.js` swapped for an in-memory stand-in: sign-in, About you and its institution picker, waiting for approval (and approval arriving live), not approved, making a class, editor and preview, Publish, AI helper, picture and video shelves, YouTube, the QR poster, the admin screen (coach approvals, join requests, institutions) |
 | `i-need.mjs` | I need |
 | `my-class.mjs` | the My class tile, the reader and the set-up page's class section |
 | `now-next.mjs` | Now and next and My day |
@@ -127,7 +128,7 @@ It needs Node 22 and Chrome and nothing else. It serves `public/` itself (or `SM
 | `steps.mjs` | Steps |
 | `wait.mjs` | Wait, with stand-ins for wake lock, vibration, sound and a movable clock |
 
-No smoke scene reaches the internet or an emulator, which is how they live with the CSP: `my-class.mjs` sets `simplify-class-emulator` to `on` and replaces `fetch()` in the page with a stand-in that answers the class document and makes its pictures and videos, and `coach.mjs` serves a fake `cloud.js` through DevTools request interception. The real `cloud.js` against the emulators is only tried by hand, as above.
+No smoke scene reaches the internet or an emulator, which is how they live with the CSP: `my-class.mjs` sets `simplify-class-emulator` to `on` and replaces `fetch()` in the page with a stand-in that answers the class document and makes its pictures and videos, and `coach.mjs` serves a fake `cloud.js` through DevTools request interception. The real `cloud.js` against the emulators is only tried by hand, as above — or by a throwaway script that starts the emulators on ports of its own, serves `public/` with the plain static server, sets `simplify-coach-emulators`, and drives two headless Chrome contexts through the Auth emulator's Google popup (its "Add new account" form).
 
 ## Docs check
 

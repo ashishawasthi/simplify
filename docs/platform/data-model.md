@@ -1,7 +1,7 @@
 ---
 type: System Reference
 title: Data Model
-description: Every piece of stored data and its shape — the learner app's localStorage keys and Cache Storage, the coach app's session and test keys, every Firestore collection and document with its fields and who reads and writes it, every Cloud Storage path, the declared indexes, and the class code format.
+description: Every piece of stored data and its shape — the learner app's localStorage keys and Cache Storage, the coach app's session and test keys, every Firestore collection and document (institutions, coaches and their approval, requests, classes …) with its fields and who reads and writes it, every Cloud Storage path, the declared indexes, and the class code format.
 tags: [data-model, localstorage, firestore, cloud-storage, class-code, indexes, schema]
 status: stable
 ---
@@ -81,22 +81,24 @@ Database `(default)` in project `simplify-special` (Firestore in asia-southeast1
 | Path | Fields | Read by | Written by |
 |---|---|---|---|
 | `admins/{uid}` | none needed (existence is the role) | that user (`get` only) | the owner, in the console |
-| `coaches/{uid}` | `name` (≤ 60), `org` (≤ 80), `note` (≤ 300), `email` (the sign-in email), `createdAt`, `suspended` (bool, set by an admin) | that coach; admins (and list) | the coach creates it and edits `name` / `org` / `note`; an admin sets only `suspended` |
-| `requests/{id}` | `uid`, `kind` (`"new-class"` \| `"join-class"`), `className` (≤ 30; required for new-class), `classCode` (join-class only), `org`, `note`, `status` (`pending` → `approved` \| `declined`), `createdAt`, `decidedAt`, `decidedBy`, `resultCode` | its coach (`get`, and list with `where("uid", "==", uid)`); admins | an active coach creates it `pending`; an admin decides it once |
-| `classes/{code}` | `name` (≤ 30), `org` (≤ 80), `status` (`active` \| `suspended`), `latest`, `createdAt`, `updatedAt` | **anyone, `get` by exact code while `active`**; its listed coaches even while suspended; admins (and list) | admins create it (on approving a request), pause it and take a page down; its coaches change only `latest` and `updatedAt` |
+| `institutions/{id}` | `name` (≤ 80), `org` (≤ 60), `type` (≤ 60), `area` (≤ 40), `active` (bool; `false` = retired), `updatedAt`; `id` 1–100 of `A–Z a–z 0–9 _ -` | anyone signed in (`get` and list) — never learners | admins create and edit (never delete); `tools/seed-institutions.mjs` seeds `tools/seed/institutions.json` |
+| `coaches/{uid}` | `name` (≤ 60), `institutions` (1–10 different institution ids), `note` (≤ 300), `email` (the sign-in email), `status` (`pending` → `approved` \| `declined`, set back to `pending` on an undo), `createdAt`; later `decidedAt`, `decidedBy` (set with `status` by an admin), `institutionsChangedAt` (when the coach last changed `institutions`), `suspended` (bool, set by an admin). Profiles from before 2026-09-24 may also hold a free-text `org` (≤ 80) | that coach; admins (and list) | the coach creates it `pending` and edits `name` / `note` / `institutions` (+ `institutionsChangedAt`); an admin sets `status` / `decidedAt` / `decidedBy`, or `suspended` |
+| `requests/{id}` | `uid`, `kind` (`"join-class"`), `classCode`, `note` (≤ 300), `status` (`pending` → `approved` \| `declined`), `createdAt`, `decidedAt`, `decidedBy`, `resultCode`. Older documents may be `kind: "new-class"` with `className` and `org` | its coach (`get`, and list with `where("uid", "==", uid)`); admins | an approved coach creates it `pending`; an admin decides it once |
+| `classes/{code}` | `name` (≤ 30), `institution` (an institution id), `status` (`active` \| `suspended`), `latest`, `createdAt`, `updatedAt`. Classes from before 2026-09-24 have a free-text `org` (≤ 80) instead of `institution` | **anyone, `get` by exact code while `active`**; its listed coaches even while suspended; an approved coach may `get` a code that does not exist (the check before making a class); admins (and list) | an approved coach creates it, with its `classCoaches`, for one of their own active institutions; admins pause it and take a page down; its coaches change only `latest` and `updatedAt` |
 | `classes/{code}.latest` | `null`, or `{ pageId, title (≤ 80), markdown (≤ 20,000), publishedAt, publishedBy }` | as the class | publish / unpublish by a class's coach; take-down by an admin |
 | `classes/{code}/pages/{pageId}` | `title` (≤ 80), `markdown` (≤ 20,000), `createdAt`, `createdBy`, `updatedAt`, `updatedBy`, `publishedAt` (when it was last published) | its coaches, admins | its coaches create, save and delete; admins delete |
 | `classes/{code}/pictures/{pictureId}` | `words` (≤ 80), `file` (`"pictures/<id>.jpg"`), `width`, `height` (1–1600), `createdAt`, `createdBy` | its coaches, admins | its coaches create it (after uploading the file), edit `words` and delete; admins delete |
 | `classes/{code}/videos/{videoId}` | `status` (`rendering` → `ready` → `approved`, or `failed`, or `discarded`), `prompt`, `words`, `seconds`, `planId`, `interactionId`, `usageMonth`, `createdBy`, `createdAt`, `updatedAt`; later `bytes`, `error`, `approvedBy`, `discardedBy` | its coaches, admins | functions only (`startVideo`, `checkVideo`, `approveVideo`, `discardVideo`); admins may delete |
 | `classes/{code}/videoPlans/{planId}` | `request`, `prompt`, `words`, `seconds`, `createdBy`, `createdAt`; `videoId` once started | nobody (no client access) | functions only (`planVideo`, `startVideo`) |
-| `classCoaches/{code}` | `uids` (≤ 50 coach uids) | a listed active coach (`get`); a listed signed-in user (list with `where("uids", "array-contains", uid)`); admins | admins |
+| `classCoaches/{code}` | `uids` (≤ 50 coach uids) | a listed approved coach (`get`); a listed signed-in user (list with `where("uids", "array-contains", uid)`); admins | an approved coach creates it as `[themself]`, only beside a new `classes/{code}` in the same transaction; admins add coaches (approving a join request) |
 | `usage/{uid}_{YYYY-MM}` | `flash`, `video`, `declined` (counts), `uid`, `month` | that coach (`get` their own months); admins (and list) | functions only |
 | `config/limits` | `flashPerMonth` (0–5,000, default 200), `videosPerMonth` (0–100, default 5), `updatedAt`, `updatedBy` | anyone signed in | admins |
 
 - The month in a `usage` id is the Singapore month (UTC+8), `monthKey()` in `functions/lib.js` and `sgMonthKey()` in `public/coach/js/format.js`. A missing `config/limits` doc, or a missing or invalid field, means the defaults. How the counters are used is in [AI models](/platform/ai-models.md#limits-and-counting).
 - A video keeps `usageMonth` so a refund goes back to the month its credit came from. Video states and the shelf are in [videos](/coach/videos.md).
 - Publishing is one batch: the page gets `publishedAt` and the class gets the new `latest`. Learners only ever read `classes/{code}`; drafts, pictures documents, videos documents and plans are never visible to them.
-- An admin's approval of a new class creates `classes/{code}` (`status: "active"`, `latest: null`) and `classCoaches/{code}` with the requester, and sets the request's `resultCode`, in one transaction ([admin and approvals](/coach/admin-and-approvals.md)).
+- An approved coach makes a class in one transaction: `classes/{code}` (`status: "active"`, `latest: null`, their chosen `institution`) and `classCoaches/{code}` = `{ uids: [coach] }` ([the coach app](/coach/coach-app.md#my-classes)). An admin's approval of a join request adds the coach to `classCoaches/{code}` and sets the request's `resultCode`, in one transaction ([admin and approvals](/coach/admin-and-approvals.md)).
+- "An approved coach" means `coaches/{uid}.status == "approved"` and `suspended` is not `true`; every class, page, picture, request, upload and callable needs it ([security](/platform/security.md)).
 
 ### Indexes
 
@@ -108,7 +110,7 @@ Bucket `simplify-special.firebasestorage.app` (asia-southeast1). Nothing can be 
 
 | Path | Read by | Written by | Notes |
 |---|---|---|---|
-| `classes/{code}/pictures/{id}.jpg` | anyone, exact path | a class's coach (create only: JPEG, under 2 MB, never overwrite); coach or admin deletes | resized in the coach's browser to at most 1600 px; uploaded with `Cache-Control: public, max-age=86400` |
+| `classes/{code}/pictures/{id}.jpg` | anyone, exact path | a class's approved coach (create only: JPEG, under 2 MB, never overwrite); coach or admin deletes | resized in the coach's browser to at most 1600 px; uploaded with `Cache-Control: public, max-age=86400` |
 | `classes/{code}/video-drafts/{id}.mp4` | a class's coaches | functions (`checkVideo`) | a finished clip awaiting approval; `private, max-age=0`; deleted on approve or discard |
 | `classes/{code}/videos/{id}.mp4` | anyone, exact path | functions (`approveVideo` copies the draft here) | `public, max-age=86400`; deleted on discard |
 
@@ -121,6 +123,6 @@ A class is identified by its code, the id of `classes/{code}` and `classCoaches/
 - **9 characters** from the 31-character alphabet `23456789ABCDEFGHJKMNPQRSTUVWXYZ` — no `0`, `1`, `I`, `L` or `O`, which are easily mixed up. About 2.6 × 10¹³ possible codes.
 - **Stored without dashes, shown in threes**: `K7M3RQP9T` is shown as `K7M-3RQ-P9T`.
 - **Typing is forgiven**: upper-cased, then every character outside the alphabet dropped (`"k7m-3rq p9t"` → `K7M3RQP9T`); the learner app also accepts a pasted `…/#join=<CODE>` link.
-- **Made by the admin's browser** when approving a new class (`newClassCode()` in `public/coach/js/class-code.js`), with `crypto.getRandomValues` and rejection sampling (bytes 248 and up are redrawn, so every character is equally likely), retried up to 5 times if the code is taken. The QR code opens `https://simplify.whiz.coach/#join=<CODE>`.
+- **Made by the coach's browser** when an approved coach makes a class (`newClassCode()` in `public/coach/js/class-code.js`), with `crypto.getRandomValues` and rejection sampling (bytes 248 and up are redrawn, so every character is equally likely), retried up to 5 times if the code is taken; the rules refuse a code that exists. The QR code opens `https://simplify.whiz.coach/#join=<CODE>`.
 
 The same alphabet and length are defined in four places that must agree: `public/coach/js/class-code.js`, `public/js/class-data.js` (`ALPHABET`, `CODE_LENGTH`), `functions/lib.js` (`ALPHABET`, with the length checked in `requireClassCoach`) and `isCode()` in `firestore.rules`.

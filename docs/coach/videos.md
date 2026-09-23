@@ -16,7 +16,7 @@ The "Videos" panel has a fold, **Make a short video**, with a **Describe the vid
 
 `planVideo` runs the same checks and gives the same shape as the [page helper](/coach/ai-helper.md):
 
-- `requireClassCoach` runs first: signed in, unsuspended profile, listed for the class, class active.
+- `requireClassCoach` runs first: signed in, a profile the admin approved and has not suspended, listed for the class, class active.
 - A request with fewer than 4 letters or digits gets a free fixed question ("What should the video show?", `EMPTY_PLAN_ANSWER`), with no model call and nothing counted.
 - Otherwise it reserves **one Flash request** from the same monthly allowance as the helper (200 by default). Then **one Gemini Flash call** (thinking level low, JSON mode against `PLAN_VIDEO_SCHEMA`) answers `write`, `ask` (up to 3 questions with 2–4 suggested answers) or `decline`. Every answer starts with "I understood: …".
 - A failed call is refunded: "The helper is not available right now … This request was not counted." A safety-withheld answer becomes a decline. A decline is counted.
@@ -110,7 +110,7 @@ Months are Singapore months. The admin sets the limit (see [admin and approvals]
 |---|---|---|
 | Firestore `classes/{code}/videos/{id}`: `status` (`rendering`, `ready`, `approved`, `failed`, `discarded`), `prompt`, `words`, `seconds`, `planId`, `interactionId`, `usageMonth`, `bytes`, `error`, `createdBy`, `approvedBy`, `discardedBy`, timestamps | the class's coaches (active class), admins | the functions only (admins may delete) |
 | Firestore `classes/{code}/videoPlans/{id}` | nobody (functions only) | the functions |
-| Storage `classes/{code}/video-drafts/{id}.mp4` (`Cache-Control: private, max-age=0`) | the class's coaches: listed and unsuspended (`storage.rules`) | the functions only |
+| Storage `classes/{code}/video-drafts/{id}.mp4` (`Cache-Control: private, max-age=0`) | the class's coaches: listed, approved and unsuspended (`storage.rules`) | the functions only |
 | Storage `classes/{code}/videos/{id}.mp4` (approved) | anyone with the exact path, never listed | the functions only |
 
 The full list of paths is in [data model](/platform/data-model.md).
