@@ -5,7 +5,7 @@
 // sent to the page as source): no network, no emulators, and every screen
 // and flow can be driven — sign-in, About you, My classes, the editor and
 // preview, Publish, the AI helper, the picture and video shelves, YouTube,
-// the QR poster and the admin screen. The real cloud.js is exercised against
+// the QR poster, waiting for approval, and the admin screen. The real cloud.js is exercised against
 // the Firebase emulators instead (see the report / e2e script in the
 // coach agent's notes).
 //
@@ -23,9 +23,17 @@ function fakeCloud() {
   const now = new Date();
   const S = (window.__fake = Object.assign({
     user: { uid: "coach-1", email: "coach@example.com", name: "Ms Tan" },
-    profiles: { "coach-1": { name: "Ms Tan", org: "Rainbow School", note: "Class teacher, 3 Kindness", email: "coach@example.com" } },
+    // tools/seed/institutions.json, as seeded
+    institutions: [
+      { id: "awwa-school-napiri", name: "AWWA School @ Napiri", org: "AWWA", type: "SPED school", area: "Hougang", active: true },
+      { id: "awwa-school-bedok", name: "AWWA School @ Bedok", org: "AWWA", type: "SPED school", area: "Bedok", active: true },
+      { id: "awwa-eic-hougang", name: "AWWA Early Intervention Centre @ Hougang", org: "AWWA", type: "Early intervention", area: "Hougang", active: true },
+      { id: "awwa-eic-fernvale-link", name: "AWWA Early Intervention Centre @ Fernvale Link", org: "AWWA", type: "Early intervention", area: "Sengkang", active: true },
+    ],
+    profiles: { "coach-1": { name: "Ms Tan", institutions: ["awwa-school-napiri"], note: "Class teacher, 3 Kindness", email: "coach@example.com",
+      status: "approved", createdAt: new Date(now - 30 * 86400000), decidedAt: new Date(now - 29 * 86400000) } },
     admins: [],
-    classes: { K7M3RQP9T: { name: "3 Kindness", org: "Rainbow School", status: "active", latest: null, createdAt: now } },
+    classes: { K7M3RQP9T: { name: "3 Kindness", institution: "awwa-school-napiri", status: "active", latest: null, createdAt: now } },
     coachesOf: { K7M3RQP9T: ["coach-1"] },
     requests: [],
     pages: { K7M3RQP9T: [] },
@@ -61,6 +69,7 @@ function fakeCloud() {
     return () => watchers.delete(w);
   }
   const cls = (code) => S.classes[code];
+  window.__fakeNotify = notify; // a scene changes __fake, then says so (the admin approving, elsewhere)
   const clip = () => URL.createObjectURL(new Blob([Uint8Array.from(atob(window.__sampleMp4), (c) => c.charCodeAt(0))], { type: "video/mp4" }));
 
   const api = {
@@ -84,21 +93,29 @@ function fakeCloud() {
       S.user = null;
       for (const fn of userFns) fn(null);
     },
-    getProfile: async (uid) => later(S.profiles[uid] ? { id: uid, ...copy(S.profiles[uid]) } : null),
-    async saveProfile(user, profile, { isNew }) {
-      S.calls.push({ name: "saveProfile", isNew, profile });
-      S.profiles[user.uid] = { ...(S.profiles[user.uid] ?? {}), ...profile, email: user.email };
+    watchProfile: (uid, cb) => watch(() => (S.profiles[uid] ? { id: uid, ...copy(S.profiles[uid]) } : null), cb),
+    async saveProfile(user, profile, { isNew, before }) {
+      S.calls.push({ name: "saveProfile", isNew, profile: copy(profile) });
+      const changed = !isNew && JSON.stringify(before?.institutions ?? []) !== JSON.stringify(profile.institutions);
+      S.profiles[user.uid] = { ...(S.profiles[user.uid] ?? {}), ...profile, email: user.email,
+        ...(isNew ? { status: "pending", createdAt: new Date() } : {}), ...(changed ? { institutionsChangedAt: new Date() } : {}) };
+      notify();
       return later();
     },
+    listInstitutions: async () => later(copy(S.institutions)),
     isAdmin: async (uid) => later(S.admins.includes(uid)),
     async myClasses(uid) {
       return later(Object.entries(S.coachesOf).filter(([, uids]) => uids.includes(uid))
         .map(([code]) => ({ id: code, ...copy(cls(code)) })));
     },
     myRequests: async (uid) => later(copy(S.requests.filter((r) => r.uid === uid))),
-    async askForNewClass(uid, data) {
-      S.requests.push({ id: id("r"), uid, kind: "new-class", status: "pending", createdAt: new Date(), ...data });
-      return later();
+    async createClass(uid, { name, institution }) {
+      S.calls.push({ name: "createClass", className: name, institution });
+      const { newClassCode } = await import("/coach/js/class-code.js");
+      const code = S.nextCode ?? newClassCode();
+      S.classes[code] = { name, institution, status: "active", latest: null, createdAt: new Date() };
+      S.coachesOf[code] = [uid];
+      return later(code);
     },
     async askToJoinClass(uid, data) {
       S.requests.push({ id: id("r"), uid, kind: "join-class", status: "pending", createdAt: new Date(), ...data });
@@ -233,17 +250,28 @@ function fakeCloud() {
     async approveRequest(req, adminUid) {
       S.calls.push({ name: "approveRequest", id: req.id });
       const r = S.requests.find((x) => x.id === req.id);
-      let code = r.classCode;
-      if (r.kind === "new-class") {
-        const { newClassCode } = await import("/coach/js/class-code.js");
-        code = newClassCode();
-        S.classes[code] = { name: r.className, org: r.org ?? "", status: "active", latest: null, createdAt: new Date() };
-        S.coachesOf[code] = [r.uid];
-      } else {
-        S.coachesOf[code].push(r.uid);
-      }
-      Object.assign(r, { status: "approved", resultCode: code, decidedBy: adminUid });
-      return later(code);
+      S.coachesOf[r.classCode].push(r.uid);
+      Object.assign(r, { status: "approved", resultCode: r.classCode, decidedBy: adminUid });
+      return later(r.classCode);
+    },
+    async decideCoach(uid, status, adminUid) {
+      S.calls.push({ name: "decideCoach", uid, status });
+      Object.assign(S.profiles[uid], { status, decidedAt: new Date(), decidedBy: adminUid });
+      notify();
+      return later();
+    },
+    async saveInstitution(iid, data) {
+      S.calls.push({ name: "saveInstitution", iid, data: copy(data) });
+      const newIid = iid ?? id("inst");
+      const at = S.institutions.findIndex((i) => i.id === newIid);
+      if (at >= 0) S.institutions[at] = { id: newIid, ...data };
+      else S.institutions.push({ id: newIid, ...data });
+      return later(newIid);
+    },
+    async setInstitutionActive(iid, active) {
+      S.calls.push({ name: "setInstitutionActive", iid, active });
+      S.institutions.find((i) => i.id === iid).active = active;
+      return later();
     },
     async declineRequest(req, adminUid) {
       S.calls.push({ name: "declineRequest", id: req.id });
@@ -260,12 +288,13 @@ function fakeCloud() {
 }
 
 const NAMES = [
-  "CloudError", "usingEmulators", "DEFAULT_LIMITS", "friendly", "onUserChange", "signIn", "signOut", "getProfile",
-  "saveProfile", "isAdmin", "myClasses", "myRequests", "askForNewClass", "askToJoinClass", "getClass", "watchClass",
-  "watchPages", "watchPictures", "watchVideos", "newPageId", "createPage", "savePage", "deletePage", "publishPage",
-  "setLatest", "mediaUrl", "addPicture", "setPictureWords", "deletePicture", "draftVideoUrl", "callFunction",
-  "getLimits", "getUsage", "pendingRequests", "allCoaches", "allClasses", "setCoachSuspended", "setClassStatus",
-  "adminSetLatest", "approveRequest", "declineRequest", "saveLimits",
+  "CloudError", "usingEmulators", "DEFAULT_LIMITS", "friendly", "onUserChange", "signIn", "signOut", "watchProfile",
+  "saveProfile", "listInstitutions", "isAdmin", "myClasses", "myRequests", "createClass", "askToJoinClass", "getClass",
+  "watchClass", "watchPages", "watchPictures", "watchVideos", "newPageId", "createPage", "savePage", "deletePage",
+  "publishPage", "setLatest", "mediaUrl", "addPicture", "setPictureWords", "deletePicture", "draftVideoUrl",
+  "callFunction", "getLimits", "getUsage", "pendingRequests", "allCoaches", "allClasses", "setCoachSuspended",
+  "decideCoach", "saveInstitution", "setInstitutionActive", "setClassStatus", "adminSetLatest", "approveRequest",
+  "declineRequest", "saveLimits",
 ];
 export const STUBS = { // (also used to take screenshots)
   "/coach/js/cloud.js": `window.__sampleMp4 = "${SAMPLE_MP4}";\n(${fakeCloud})();\nexport const { ${NAMES.join(", ")} } = window.__fakeCloud;\n`,
@@ -321,32 +350,102 @@ export default [
     expect: inPage(() => byText(".signin-problem .notice", "was blocked") && byText(".signin-problem .notice", "Chrome or Safari")),
   }),
   scene({
-    name: "sign in, first time: About you, then My classes",
+    name: "sign in, first time: About you (where you work), Waiting for approval, then approved as it happens",
     path: "/coach/",
     init: seed(`{ user: null, profiles: {}, coachesOf: {}, nextUser: { uid: "new-1", email: "new@example.com", name: "Mr Lim" } }`),
     setup: run(async () => {
       byText("button", "Sign in with Google").click();
-      await waitFor(() => $("h1")?.textContent === "About you");
+      await waitFor(() => $("h1")?.textContent === "About you" && $(".pick-option"));
       const save = byText("button", "Save and continue");
       const name = $("input[autocomplete=name]");
       if (name.value !== "Mr Lim") throw new Error("the name is not filled in from Google");
+      if (!save.disabled) throw new Error("Save works with no institution");
+      if ($(".pick-search")) throw new Error("a search box for a list of 4");
+      if (byText(".pick-group legend", "AWWA")?.parentElement.querySelectorAll(".pick-option").length !== 4) throw new Error("not the 4 AWWA places");
+      byText(".pick-option", "AWWA School @ Napiri").querySelector("input").click();
+      if (!byText(".pick-chip", "AWWA School @ Napiri")) throw new Error("no chip for the chosen one");
+      byText(".pick-option", "AWWA School @ Bedok").querySelector("input").click();
+      byText(".pick-chip", "AWWA School @ Bedok").click(); // taken off again
+      if (byText(".pick-chip", "Bedok") || byText(".pick-option", "AWWA School @ Bedok").querySelector("input").checked) throw new Error("the chip did not take it off");
       type(name, "  ");
       if (!save.disabled) throw new Error("Save works with no name");
       type(name, "Mr Lim");
-      type($("input[autocomplete=organization]"), "Rainbow School");
+      type($("textarea"), "Form teacher of 5 Joy. School office: 6123 4567.");
       save.click();
+      await waitFor(() => $("h1")?.textContent === "Waiting for approval" && byText(".facts dd li", "AWWA School @ Napiri"));
+      window.waited = byText(".next-steps", "changes by itself") && byText(".lead", "Thank you, Mr Lim") && byText("a.btn", "Change About you");
+      // the admin approves, somewhere else
+      Object.assign(__fake.profiles["new-1"], { status: "approved", decidedAt: new Date() });
+      __fakeNotify();
       await waitFor(() => $("h1")?.textContent === "My classes");
     }),
-    expect: inPage(() => __fake.profiles["new-1"]?.org === "Rainbow School" && __fake.calls.some((c) => c.name === "saveProfile" && c.isNew) &&
+    expect: inPage(() => waited && JSON.stringify(__fake.profiles["new-1"].institutions) === '["awwa-school-napiri"]' &&
+      __fake.calls.some((c) => c.name === "saveProfile" && c.isNew) && !("org" in __fake.profiles["new-1"]) &&
       byText(".empty", "No classes yet") && $("#account-email").textContent === "new@example.com" && !$("#nav").hidden &&
-      document.activeElement === $("h1")),
+      document.activeElement === $("h1") && fits()),
+  }),
+  scene({
+    name: "waiting for approval: every coach address shows it; About you can still be changed",
+    path: "/coach/#class/K7M3RQP9T",
+    init: seed(`{ profiles: { "coach-1": { name: "Ms Tan", institutions: ["awwa-school-napiri"], note: "", email: "coach@example.com", status: "pending", createdAt: new Date() } } }`),
+    setup: run(async () => {
+      await waitFor(() => $("h1")?.textContent === "Waiting for approval");
+      location.hash = "#poster/K7M3RQP9T";
+      await pause(50);
+      if ($("h1").textContent !== "Waiting for approval") throw new Error("the poster opened");
+      byText("a.btn", "Change About you").click();
+      await waitFor(() => $("h1")?.textContent === "About you" && $(".pick-option"));
+      byText(".pick-option", "AWWA School @ Bedok").querySelector("input").click();
+      byText("button", "Save").click();
+      await waitFor(() => $("h1")?.textContent === "Waiting for approval");
+    }),
+    expect: inPage(() => JSON.stringify(__fake.profiles["coach-1"].institutions) === '["awwa-school-napiri","awwa-school-bedok"]' &&
+      __fake.profiles["coach-1"].status === "pending" && !__fake.calls.some((c) => c.name === "callFunction")),
+  }),
+  scene({
+    name: "not approved: a plain note to contact the admin",
+    path: "/coach/#classes",
+    init: seed(`{ profiles: { "coach-1": { name: "Ms Tan", institutions: ["awwa-school-napiri"], note: "", email: "coach@example.com", status: "declined" } } }`),
+    expect: inPage(() => $("h1")?.textContent === "Not approved" && byText(".notice", "contact the admin") &&
+      byText(".facts dd li", "AWWA School @ Napiri") && !$(".class-card")),
+  }),
+  scene({
+    name: "a profile from before institutions: About you asks where they work first",
+    path: "/coach/#class/K7M3RQP9T",
+    init: seed(`{ profiles: { "coach-1": { name: "Ms Tan", org: "AWWA School @ Napiri", note: "", email: "coach@example.com", status: "approved" } } }`),
+    setup: run(async () => {
+      await waitFor(() => $("h1")?.textContent === "About you" && $(".pick-option"));
+      if (!byText(".lead", "now asks where you work")) throw new Error("no word on why");
+      byText(".pick-option", "AWWA School @ Napiri").querySelector("input").click();
+      byText("button", "Save and continue").click();
+      await waitFor(() => $("h1")?.textContent === "My classes");
+    }),
+    expect: inPage(() => __fake.calls.some((c) => c.name === "saveProfile" && !c.isNew) && __fake.profiles["coach-1"].institutionsChangedAt),
+  }),
+  scene({
+    name: "a long list of institutions: search narrows it; at most 10",
+    path: "/coach/#about",
+    init: seed(`{ institutions: Array.from({ length: 14 }, (_, i) => ({ id: "c" + i, name: (i % 2 ? "North " : "South ") + "Centre " + i,
+      org: i < 7 ? "First Society" : "Second Society", type: "Day activity centre", area: i % 2 ? "Woodlands" : "Bukit Merah", active: i !== 13 })) }`),
+    setup: run(async () => {
+      await waitFor(() => $(".pick-search"));
+      type($(".pick-search"), "north WOODLANDS"); // 7 in the North, one of them retired
+      if ($$(".pick-option").length !== 6 || !$$(".pick-option").every((o) => o.textContent.includes("North"))) throw new Error(`search: ${$$(".pick-option").length}`);
+      type($(".pick-search"), "");
+      if ($$(".pick-option").length !== 13) throw new Error("a retired place is offered");
+      for (let i = 0; i < 10; i++) $$(".pick-option input")[i].click(); // (each tick redraws the list)
+      if (!$$(".pick-option input").slice(10).every((b) => b.disabled) || !byText(".pick-count", "10 of 10 chosen")) throw new Error("an 11th could be chosen");
+      $(".pick-chip").click();
+      if ($$(".pick-option input").some((b) => b.disabled)) throw new Error("still full after taking one off");
+    }),
+    expect: inPage(() => $$(".pick-chip").length === 9 && $(".pick-list").classList.contains("is-long") && fits()),
   }),
 
   // ---------- my classes ----------
   scene({
     name: "My classes: the class with its code, a request waiting, joining forgives the code",
     path: "/coach/#classes",
-    init: seed(`{ requests: [{ id: "r1", uid: "coach-1", kind: "new-class", className: "4 Courage", status: "pending", createdAt: new Date() }] }`),
+    init: seed(`{ requests: [{ id: "r1", uid: "coach-1", kind: "join-class", classCode: "H4W9NEK3R", status: "pending", createdAt: new Date() }] }`),
     setup: run(async () => {
       await waitFor(() => $(".class-card"));
       byText("summary", "Join a colleague's class").click();
@@ -354,29 +453,36 @@ export default [
       type(box, "k7m-3rq p9");
       if (!byText(".code-echo", "K7M-3RQ-P9 — 1 more to go")) throw new Error(`echo: ${$(".code-echo").textContent}`);
       type(box, "k7m-3rq p9t");
-      const send = $$("button").filter((b) => b.textContent === "Send to the admin")[1];
+      const send = byText("button", "Send to the admin");
       if (send.disabled) throw new Error("a whole code can't be sent");
       send.click();
       await waitFor(() => __fake.requests.length === 2);
     }),
     expect: inPage(() => byText(".class-card-name", "3 Kindness") && byText(".class-card .code-text", "K7M-3RQ-P9T") &&
-      byText(".class-card-state", "Nothing published yet") && byText(".request-line", "New class: 4 Courage") &&
-      byText(".request-line", "Waiting for the admin") && __fake.requests[1].classCode === "K7M3RQP9T" &&
+      byText(".class-card-state", "Nothing published yet") && byText(".request-line", "Join the class H4W-9NE-K3R") &&
+      byText(".request-line", "Waiting for the admin") && __fake.requests[1].classCode === "K7M3RQP9T" && !("org" in __fake.requests[1]) &&
       byText(".toast", "Sent: join K7M-3RQ-P9T") && fits()),
   }),
   scene({
-    name: "ask for a new class",
+    name: "a new class: made at once, for one of my institutions, with a new code",
     path: "/coach/#classes",
+    init: seed(`{ nextCode: "H4W9NEK3R", profiles: { "coach-1": { name: "Ms Tan", institutions: ["awwa-school-napiri", "awwa-eic-hougang", "gone"],
+      note: "", email: "coach@example.com", status: "approved" } } }`),
     setup: run(async () => {
       await waitFor(() => $(".class-card"));
-      byText("summary", "Ask for a new class").click();
-      const name = $$("input").find((i) => i.maxLength === 30);
-      type(name, "5 Joy");
-      byText("button", "Send to the admin").click();
-      await waitFor(() => __fake.requests.length === 1);
+      byText("summary", "New class").click();
+      await waitFor(() => $$("select option").length === 2);
+      const make = byText("button", "Make the class");
+      if (!make.disabled) throw new Error("a class with no name");
+      type($$("input").find((i) => i.maxLength === 30), "5 Joy");
+      if ($("select").value !== "awwa-school-napiri") throw new Error(`the first of mine is not chosen: ${$("select").value}`);
+      make.click();
+      await waitFor(() => byText(".class-card-name", "5 Joy"));
     }),
-    expect: inPage(() => __fake.requests[0].className === "5 Joy" && __fake.requests[0].org === "Rainbow School" &&
-      byText(".request-line", "New class: 5 Joy")),
+    expect: inPage(() => JSON.stringify($$("select option").map((o) => o.textContent)) ===
+        '["AWWA School @ Napiri (Hougang)","AWWA Early Intervention Centre @ Hougang"]' &&
+      __fake.classes.H4W9NEK3R.institution === "awwa-school-napiri" && __fake.coachesOf.H4W9NEK3R[0] === "coach-1" &&
+      byText(".toast", "Made “5 Joy”. Its code is H4W-9NE-K3R.") && !__fake.requests.length),
   }),
 
   // ---------- the class: editor and preview ----------
@@ -678,34 +784,92 @@ export default [
 
   // ---------- admin ----------
   scene({
-    name: "admin: approve a new class (a new random code), decline another with Undo, save the limits",
+    name: "admin: approve a coach (Undo first), decline another, approve a join request, save the limits",
     path: "/coach/#admin",
     init: seed(`{ admins: ["coach-1"], profiles: {
-        "coach-1": { name: "Ms Tan", org: "Rainbow School", note: "Admin", email: "coach@example.com" },
-        "coach-2": { name: "Mr Lim", org: "Rainbow School", note: "Teacher of 5 Joy, call the office", email: "lim@example.com" } },
-      requests: [
-        { id: "r1", uid: "coach-2", kind: "new-class", className: "5 Joy", org: "Rainbow School", note: "", status: "pending", createdAt: new Date() },
-        { id: "r2", uid: "coach-2", kind: "join-class", classCode: "K7M3RQP9T", status: "pending", createdAt: new Date() }] }`),
+        "coach-1": { name: "Ms Tan", institutions: ["awwa-school-napiri"], note: "Admin", email: "coach@example.com", status: "approved" },
+        "coach-2": { name: "Mr Lim", institutions: ["awwa-school-napiri", "awwa-school-bedok"], note: "Form teacher of 5 Joy, call the office",
+          email: "lim@example.com", status: "pending", createdAt: new Date(Date.now() - 3600000) },
+        "coach-3": { name: "Ms Wong", institutions: ["awwa-eic-hougang"], note: "", email: "wong@example.com", status: "pending", createdAt: new Date() },
+        "coach-4": { name: "Mr Ong", org: "AWWA School @ Napiri", note: "", email: "ong@example.com", createdAt: new Date() } },
+      requests: [{ id: "r2", uid: "coach-1", kind: "join-class", classCode: "K7M3RQP9T", status: "pending", createdAt: new Date() }],
+      coachesOf: { K7M3RQP9T: ["coach-2"] } }`),
     setup: run(async () => {
-      await waitFor(() => $$(".admin-card").length >= 4);
-      if (!byText(".admin-card", "Teacher of 5 Joy, call the office")) throw new Error("no way to check the coach");
-      byText(".admin-card", "Join K7M-3RQ-P9T (3 Kindness)").querySelector("button:nth-child(2)").click();
-      await waitFor(() => !byText(".admin-card h3", "Join K7M-3RQ-P9T"));
+      await waitFor(() => byText("h2", "Coaches waiting for approval (3)"));
+      const card = (name) => byText("#adm-wait-h + .admin-list .admin-card", name);
+      if (!byText(".admin-card", "Form teacher of 5 Joy, call the office") || !card("Mr Lim").textContent.includes("AWWA School @ Bedok")) throw new Error("no way to check the coach");
+      if (!card("Mr Ong")?.textContent.includes("Organisation")) throw new Error("a coach from before institutions is not waiting, or has no organisation shown");
+      [...card("Mr Lim").querySelectorAll("button")].find((b) => b.textContent === "Approve").click();
+      await waitFor(() => !card("Mr Lim") && byText("h2", "Coaches waiting for approval (2)"));
       byText(".toast-btn", "Undo").click();
-      await waitFor(() => byText(".admin-card h3", "Join K7M-3RQ-P9T"));
-      byText(".admin-card", "New class: 5 Joy").querySelector("button").click();
-      await waitFor(() => byText(".toast", "Approved: “5 Joy”, code"));
+      await waitFor(() => card("Mr Lim"));
+      [...card("Ms Wong").querySelectorAll("button")].find((b) => b.textContent === "Decline").click();
+      await waitFor(() => !card("Ms Wong"));
+      [...card("Mr Lim").querySelectorAll("button")].find((b) => b.textContent === "Approve").click(); // the decline is written now
+      await waitFor(() => __fake.calls.some((c) => c.name === "decideCoach"));
+      [...byText(".admin-card", "Join K7M-3RQ-P9T (3 Kindness)").querySelectorAll("button")].find((b) => b.textContent === "Approve").click();
+      await waitFor(() => byText(".toast", "Approved: Ms Tan can now work on 3 Kindness"));
       const [flash] = $$("input[type=number]");
       type(flash, "150");
       byText("button", "Save the limits").click();
       await waitFor(() => __fake.limits.flashPerMonth === 150);
     }),
-    expect: inPage(async () => {
-      const { isClassCode } = await import("/coach/js/class-code.js");
-      const r1 = __fake.requests[0];
-      return r1.status === "approved" && isClassCode(r1.resultCode) && __fake.coachesOf[r1.resultCode][0] === "coach-2" &&
-        __fake.requests[1].status === "pending" && !__fake.calls.some((c) => c.name === "declineRequest") &&
-        byText(".admin-card h3", "5 Joy") && !$("#nav a[data-route=admin]").hidden;
+    expect: inPage(() => __fake.profiles["coach-2"].status === "approved" && __fake.profiles["coach-3"].status === "declined" &&
+      __fake.calls.filter((c) => c.name === "decideCoach").length === 2 && __fake.coachesOf.K7M3RQP9T.includes("coach-1") &&
+      !byText("#adm-wait-h + .admin-list", "Mr Lim") && byText(".admin-card h3", "Ms Wong") && byText(".admin-card .chip", "Not approved") &&
+      !$("#nav a[data-route=admin]").hidden),
+  }),
+  scene({
+    name: "admin: the coach list — approve later, suspend, and institutions changed after approval",
+    path: "/coach/#admin",
+    init: seed(`{ admins: ["coach-1"], profiles: {
+        "coach-1": { name: "Ms Tan", institutions: ["awwa-school-napiri"], note: "Admin", email: "coach@example.com", status: "approved" },
+        "coach-2": { name: "Mr Lim", institutions: ["awwa-school-napiri", "awwa-school-bedok"], note: "", email: "lim@example.com",
+          status: "approved", decidedAt: new Date(2026, 8, 1), institutionsChangedAt: new Date(2026, 8, 20, 9, 0) },
+        "coach-3": { name: "Ms Wong", institutions: ["awwa-eic-hougang"], note: "", email: "wong@example.com", status: "declined", decidedAt: new Date() } } }`),
+    setup: run(async () => {
+      await waitFor(() => byText("h2", "Coaches"));
+      const card = (name) => byText("#adm-coach-h + .admin-list .admin-card", name);
+      if (!card("Mr Lim").querySelector(".chip.is-waiting")?.textContent.includes("after approval")) throw new Error("no word that the institutions changed");
+      if (card("Ms Tan").textContent.includes("after approval")) throw new Error("said for a coach who did not change them");
+      [...card("Ms Wong").querySelectorAll("button")].find((b) => b.textContent === "Approve").click();
+      await waitFor(() => byText(".toast", "Approved: Ms Wong"));
+      [...card("Mr Lim").querySelectorAll("button")].find((b) => b.textContent === "Suspend").click();
+      await waitFor(() => __fake.profiles["coach-2"].suspended === true);
+    }),
+    expect: inPage(() => __fake.profiles["coach-3"].status === "approved" && byText("#adm-coach-h + .admin-list .admin-card", "Suspended")),
+  }),
+  scene({
+    name: "admin: institutions — add one, edit it, retire it (Undo brings it back)",
+    path: "/coach/#admin",
+    init: seed(`{ admins: ["coach-1"] }`),
+    setup: run(async () => {
+      await waitFor(() => byText("h2", "Institutions (4 in the list)"));
+      if (!byText(".inst-row", "AWWA School @ Napiri") || !byText(".inst-group h3", "AWWA")) throw new Error("the list");
+      byText("button", "Add an institution").click();
+      await waitFor(() => $(".inst-form"));
+      const [name, org, type_, area] = $$(".inst-form input");
+      type(name, "AWWA Home and Day Activity Centre");
+      type(org, "AWWA");
+      type(type_, "Day activity centre");
+      type(area, "Pasir Ris");
+      byText(".inst-form button", "Add").click();
+      await waitFor(() => byText("h2", "Institutions (5 in the list)"));
+      const row = () => byText(".inst-row", "AWWA Home and Day Activity Centre");
+      [...row().querySelectorAll("button")].find((b) => b.textContent === "Edit").click();
+      await waitFor(() => $(".inst-form"));
+      type($$(".inst-form input")[3], "Pasir Ris Drive 3");
+      byText(".inst-form button", "Save").click();
+      await waitFor(() => byText(".inst-row", "Pasir Ris Drive 3"));
+      [...row().querySelectorAll("button")].find((b) => b.textContent === "Retire").click();
+      await waitFor(() => byText("h2", "Institutions (4 in the list)") && row().querySelector(".chip"));
+      byText(".toast-btn", "Undo").click();
+      await waitFor(() => byText("h2", "Institutions (5 in the list)"));
+    }),
+    expect: inPage(() => {
+      const added = __fake.institutions.find((i) => i.name === "AWWA Home and Day Activity Centre");
+      return added && added.active === true && added.area === "Pasir Ris Drive 3" && added.type === "Day activity centre" &&
+        __fake.calls.filter((c) => c.name === "setInstitutionActive").length === 2 && fits();
     }),
   }),
   scene({

@@ -29,6 +29,7 @@ import {
 import { FIREBASE_CONFIG, FUNCTIONS_REGION, emulators } from "./firebase-config.js";
 import { newClassCode, formatCode } from "./class-code.js";
 import { sgMonthKey } from "./format.js";
+import { sameList } from "./institutions.js";
 
 const app = initializeApp(FIREBASE_CONFIG);
 // Signed in for this tab only: class iPads are shared, and closing the tab
@@ -148,17 +149,36 @@ export async function signOut() {
 
 // ---------- the coach ----------
 
-export async function getProfile(uid) {
-  return attempt(async () => {
-    const snap = await getDoc(doc(db, "coaches", uid));
-    return snap.exists() ? plain(snap) : null;
-  });
+// The profile, live: onData(profile or null) now and whenever it changes —
+// the admin's approval reaches the coach's screen as it happens.
+// A profile "not found" only in the device's cache means no connection, not
+// "no profile": that is an error, so nobody is sent to About you by mistake.
+export function watchProfile(uid, onData, onError) {
+  return onSnapshot(doc(db, "coaches", uid), (snap) => {
+    if (!snap.exists() && snap.metadata.fromCache) return onError?.(new CloudError("unavailable", OFFLINE));
+    return onData(snap.exists() ? plain(snap) : null);
+  }, (err) => onError?.(friendly(err)));
 }
 
-export async function saveProfile(user, { name, org, note }, { isNew }) {
+// A new profile waits for the admin (status "pending"). A change of
+// institutions is stamped, so the admin can see it came after approval.
+export async function saveProfile(user, { name, note, institutions }, { isNew, before }) {
   await attempt(() => (isNew
-    ? setDoc(doc(db, "coaches", user.uid), { name, org, note, email: user.email, createdAt: serverTimestamp() })
-    : updateDoc(doc(db, "coaches", user.uid), { name, org, note })));
+    ? setDoc(doc(db, "coaches", user.uid), {
+      name, note, institutions, email: user.email, status: "pending", createdAt: serverTimestamp(),
+    })
+    : updateDoc(doc(db, "coaches", user.uid), {
+      name, note, institutions,
+      ...(sameList(before?.institutions, institutions) ? {} : { institutionsChangedAt: serverTimestamp() }),
+    })));
+}
+
+// Every institution (the admin's list, retired ones too): [{ id, name, org, type, area, active }]
+export async function listInstitutions() {
+  return attempt(async () => {
+    const snap = await getDocs(collection(db, "institutions"));
+    return snap.docs.map(plain).sort((a, b) => String(a.org).localeCompare(String(b.org)) || String(a.name).localeCompare(String(b.name)));
+  }, "The list of institutions could not be loaded. Try again.");
 }
 
 export async function isAdmin(uid) {
@@ -194,15 +214,32 @@ export async function myRequests(uid) {
   });
 }
 
-export async function askForNewClass(uid, { className, org, note }) {
-  await attempt(() => addDoc(collection(db, "requests"), {
-    uid, kind: "new-class", className, org, note, status: "pending", createdAt: serverTimestamp(),
-  }));
+// An approved coach makes a class of their own: a new random code, the class
+// (for one of their institutions) and its coaches list with only them, in one
+// transaction — firestore.rules allow exactly that. Returns the code.
+export async function createClass(uid, { name, institution }) {
+  for (let tries = 0; tries < 5; tries++) {
+    const code = newClassCode();
+    try {
+      await runTransaction(db, async (tx) => {
+        if ((await tx.get(doc(db, "classes", code))).exists()) throw new CloudError("code-taken", "");
+        tx.set(doc(db, "classes", code), {
+          name, institution, status: "active", latest: null, createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+        });
+        tx.set(doc(db, "classCoaches", code), { uids: [uid] });
+      });
+      return code;
+    } catch (err) {
+      if (err?.code !== "code-taken") throw friendly(err, "The class could not be made. Try again.");
+    }
+  }
+  throw new CloudError("code-taken", "No free class code was found. Try again.");
 }
 
-export async function askToJoinClass(uid, { classCode, org, note }) {
+// Joining a colleague's class is a request the admin approves.
+export async function askToJoinClass(uid, { classCode, note }) {
   await attempt(() => addDoc(collection(db, "requests"), {
-    uid, kind: "join-class", classCode, org, note, status: "pending", createdAt: serverTimestamp(),
+    uid, kind: "join-class", classCode, note, status: "pending", createdAt: serverTimestamp(),
   }));
 }
 
@@ -396,6 +433,23 @@ export async function setCoachSuspended(uid, suspended) {
   await attempt(() => updateDoc(doc(db, "coaches", uid), { suspended }));
 }
 
+// "approved", "declined", or back to "pending" (an undo): stamped with who and when
+export async function decideCoach(uid, status, adminUid) {
+  await attempt(() => updateDoc(doc(db, "coaches", uid), { status, decidedAt: serverTimestamp(), decidedBy: adminUid }));
+}
+
+// Add (id null: a new id) or change an institution; returns its id.
+export async function saveInstitution(id, { name, org, type, area, active }) {
+  const ref = id ? doc(db, "institutions", id) : doc(collection(db, "institutions"));
+  await attempt(() => setDoc(ref, { name, org, type, area, active, updatedAt: serverTimestamp() }));
+  return ref.id;
+}
+
+// Retire (false) or bring back (true); never deleted — profiles and classes point at it
+export async function setInstitutionActive(id, active) {
+  await attempt(() => updateDoc(doc(db, "institutions", id), { active, updatedAt: serverTimestamp() }));
+}
+
 export async function setClassStatus(code, status) {
   await attempt(() => updateDoc(doc(db, "classes", code), { status, updatedAt: serverTimestamp() }));
 }
@@ -411,44 +465,21 @@ function stillPending(snap) {
   }
 }
 
-// Approve: a new class gets a new random code, its coach, and the request
-// says which code; joining adds the coach to the class. All or nothing.
-// Returns the class's code.
+// Approve a request to join a class: the coach is added to the class, and
+// the request says which class. All or nothing. Returns the class's code.
 export async function approveRequest(request, adminUid) {
-  const decided = (code) => ({ status: "approved", decidedAt: serverTimestamp(), decidedBy: adminUid, resultCode: code });
   const requestDoc = doc(db, "requests", request.id);
-  if (request.kind === "join-class") {
-    const code = request.classCode;
-    await attempt(() => runTransaction(db, async (tx) => {
-      stillPending(await tx.get(requestDoc));
-      const link = await tx.get(doc(db, "classCoaches", code));
-      if (!link.exists()) {
-        throw new CloudError("no-class", `There is no class with the code ${formatCode(code)}. Decline this request instead.`);
-      }
-      tx.update(doc(db, "classCoaches", code), { uids: arrayUnion(request.uid) });
-      tx.update(requestDoc, decided(code));
-    }));
-    return code;
-  }
-  for (let tries = 0; tries < 5; tries++) {
-    const code = newClassCode();
-    try {
-      await runTransaction(db, async (tx) => {
-        stillPending(await tx.get(requestDoc));
-        if ((await tx.get(doc(db, "classes", code))).exists()) throw new CloudError("code-taken", "");
-        tx.set(doc(db, "classes", code), {
-          name: request.className, org: request.org ?? "", status: "active", latest: null,
-          createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
-        });
-        tx.set(doc(db, "classCoaches", code), { uids: [request.uid] });
-        tx.update(requestDoc, decided(code));
-      });
-      return code;
-    } catch (err) {
-      if (err?.code !== "code-taken") throw friendly(err);
+  const code = request.classCode;
+  await attempt(() => runTransaction(db, async (tx) => {
+    stillPending(await tx.get(requestDoc));
+    const link = await tx.get(doc(db, "classCoaches", code));
+    if (!link.exists()) {
+      throw new CloudError("no-class", `There is no class with the code ${formatCode(code)}. Decline this request instead.`);
     }
-  }
-  throw new CloudError("code-taken", "No free class code was found. Try again.");
+    tx.update(doc(db, "classCoaches", code), { uids: arrayUnion(request.uid) });
+    tx.update(requestDoc, { status: "approved", decidedAt: serverTimestamp(), decidedBy: adminUid, resultCode: code });
+  }));
+  return code;
 }
 
 export async function declineRequest(request, adminUid) {

@@ -1,6 +1,7 @@
 // The coach app's pure parts: class codes, the editor's toolbar, dates and
-// the Singapore month, picture sizes, and spotting an app's built-in
-// browser. No dependencies, no runner:
+// the Singapore month, picture sizes, spotting an app's built-in browser,
+// and institutions (finding, grouping, naming, and which screen a coach
+// gets from their profile). No dependencies, no runner:
 //
 //   node tools/test-coach.mjs
 
@@ -14,6 +15,21 @@ const {
   cleanWords, pictureMarkdown, videoMarkdown, youtubeMarkdown, youtubeId,
   insertBlock, toggleHeading, toggleList, toggleBold,
 } = await import("../public/coach/js/edit.js");
+const {
+  MAX_INSTITUTIONS, fold, matches, groupByOrg, placeLine, namesOf, sameList, coachGate, changedAfterApproval,
+} = await import("../public/coach/js/institutions.js");
+
+// tools/seed/institutions.json as seeded, plus a retired place and another organisation
+const PLACES = [
+  { id: "awwa-school-napiri", name: "AWWA School @ Napiri", org: "AWWA", type: "SPED school", area: "Hougang", active: true },
+  { id: "awwa-school-bedok", name: "AWWA School @ Bedok", org: "AWWA", type: "SPED school", area: "Bedok", active: true },
+  { id: "awwa-eic-hougang", name: "AWWA Early Intervention Centre @ Hougang", org: "AWWA", type: "Early intervention", area: "Hougang", active: true },
+  { id: "awwa-eic-fernvale-link", name: "AWWA Early Intervention Centre @ Fernvale Link", org: "AWWA", type: "Early intervention", area: "Sengkang", active: true },
+  { id: "old", name: "AWWA Old Centre", org: "AWWA", type: "", area: "", active: false },
+  { id: "cafe", name: "Café Élan", org: "Another Society", type: "Day activity centre", area: "Tampines", active: true },
+];
+const groups = (query, chosen) => JSON.stringify(groupByOrg(PLACES, query, chosen).map((g) => [g.org, g.items.map((i) => i.id)]));
+const at = (s) => new Date(s);
 
 // A selection written into the text: [ and ] mark it, | a caret
 function sel(marked) {
@@ -108,6 +124,40 @@ const cases = [
   ["browser: an Android app's web view", looksLikeInAppBrowser(ANDROID_WEBVIEW, 5), true],
   ["browser: WhatsApp on Android", looksLikeInAppBrowser(WHATSAPP_ANDROID, 5), true],
   ["browser: Chrome on a Mac", looksLikeInAppBrowser(MAC_CHROME, 0), false],
+
+  // ---- institutions ----
+  ["institutions: at most 10, as the rules", MAX_INSTITUTIONS, 10],
+  ["fold: case, accents, dashes, spaces", fold("  Café–Élan   Centre "), "cafe-elan centre"],
+  ["match: every word, anywhere", matches(PLACES[0], "napiri awwa"), true],
+  ["match: the area counts", matches(PLACES[0], "hougang"), true],
+  ["match: the type counts", matches(PLACES[2], "early"), true],
+  ["match: accents forgiven", matches(PLACES[5], "cafe elan"), true],
+  ["match: a word that is not there", matches(PLACES[0], "napiri bedok"), false],
+  ["match: nothing typed", matches(PLACES[0], "  "), true],
+  ["groups: by organisation A–Z, places A–Z, no retired",
+    groups(""), JSON.stringify([["Another Society", ["cafe"]], ["AWWA", ["awwa-eic-fernvale-link", "awwa-eic-hougang", "awwa-school-bedok", "awwa-school-napiri"]]])],
+  ["groups: a retired place stays while chosen", groups("old", ["old"]), JSON.stringify([["AWWA", ["old"]]])],
+  ["groups: searching", groups("school"), JSON.stringify([["AWWA", ["awwa-school-bedok", "awwa-school-napiri"]]])],
+  ["groups: nothing matches", groups("zoo"), "[]"],
+  ["place line: area · type", placeLine(PLACES[0]), "Hougang · SPED school"],
+  ["place line: nothing to say", placeLine(PLACES[4]), ""],
+  ["names: in the coach's order", JSON.stringify(namesOf(["awwa-school-bedok", "awwa-school-napiri"], PLACES)), JSON.stringify(["AWWA School @ Bedok", "AWWA School @ Napiri"])],
+  ["names: retired and gone still show", JSON.stringify(namesOf(["old", "gone"], PLACES)), JSON.stringify(["AWWA Old Centre (retired)", "An institution no longer listed"])],
+  ["names: none", JSON.stringify(namesOf(undefined, PLACES)), "[]"],
+  ["same list", sameList(["a", "b"], ["a", "b"]), true],
+  ["same list: order matters", sameList(["a", "b"], ["b", "a"]), false],
+  ["same list: none and empty", sameList(undefined, []), true],
+  ["gate: no profile", coachGate(null), "about"],
+  ["gate: a profile from before institutions", coachGate({ name: "A", org: "AWWA School @ Napiri", status: "approved" }), "about"],
+  ["gate: waiting", coachGate({ institutions: ["a"], status: "pending" }), "pending"],
+  ["gate: no status yet counts as waiting", coachGate({ institutions: ["a"] }), "pending"],
+  ["gate: declined", coachGate({ institutions: ["a"], status: "declined" }), "declined"],
+  ["gate: approved (suspended is said on My classes)", coachGate({ institutions: ["a"], status: "approved", suspended: true }), "approved"],
+  ["changed after approval", changedAfterApproval({ status: "approved", decidedAt: at("2026-09-01"), institutionsChangedAt: at("2026-09-20") }), true],
+  ["changed before approval", changedAfterApproval({ status: "approved", decidedAt: at("2026-09-20"), institutionsChangedAt: at("2026-09-01") }), false],
+  ["never changed", changedAfterApproval({ status: "approved", decidedAt: at("2026-09-20") }), false],
+  ["changed, still waiting (nothing to flag)", changedAfterApproval({ status: "pending", institutionsChangedAt: at("2026-09-20") }), false],
+  ["changed, approved by the migration (no date)", changedAfterApproval({ status: "approved", institutionsChangedAt: at("2026-09-20") }), true],
 
   // ---- words and media lines ----
   ["words: one line, no brackets", cleanWords("  Hands [at]\nthe   sink "), "Hands at the sink"],

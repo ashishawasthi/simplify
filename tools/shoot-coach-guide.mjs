@@ -60,7 +60,11 @@ const pictureFiles = js(Object.fromEntries(PICTURES.map(([id, file]) => [id, fil
 const pages = (markdown = HANDS) => `{ K7M3RQP9T: [
   { id: "page1", title: "Washing my hands", markdown: ${js(markdown)}, createdAt: ${at(3, 9, 0)}, updatedAt: ${at(0, 8, 5)} },
   { id: "page2", title: "Sports day", markdown: ${js(SPORTS)}, createdAt: ${at(1, 16, 30)}, updatedAt: ${at(1, 16, 40)} }] }`;
-const klass = (latest) => `{ K7M3RQP9T: { name: "3 Kindness", org: "Rainbow School", status: "active", createdAt: ${at(20, 9, 0)}, latest: ${latest} } }`;
+const klass = (latest) => `{ K7M3RQP9T: { name: "3 Kindness", institution: "awwa-school-napiri", status: "active", createdAt: ${at(20, 9, 0)}, latest: ${latest} } }`;
+// coaches, as the admin sees them (the stand-in's institutions are tools/seed/institutions.json)
+const TAN = `{ name: "Ms Tan", institutions: ["awwa-school-napiri"], note: "Form teacher of 3 Kindness", email: "coach@example.com",
+  status: "approved", createdAt: ${at(40, 9, 0)}, decidedAt: ${at(39, 10, 0)} }`;
+const LIM_NOTE = "Form teacher of 5 Joy. School office: 6123 4567.";
 const LIVE = `{ pageId: "page1", title: "Washing my hands", markdown: ${js(HANDS)}, publishedAt: ${at(0, 8, 5)}, publishedBy: "coach-1" }`;
 const CLASS = `pages: ${pages()}, pictures: ${pictures}, pictureFiles: ${pictureFiles}`;
 
@@ -102,24 +106,32 @@ export const SCENES = {
     ...DESKTOP, path: "/coach/",
     seed: `{ profiles: {}, coachesOf: {} }`,
     setup: `
-      await waitFor(() => $("h1")?.textContent === "About you");
-      type($("input[autocomplete=organization]"), "Rainbow School");
+      await waitFor(() => $("h1")?.textContent === "About you" && $(".pick-option"));
+      byText(".pick-option", "AWWA School @ Napiri").querySelector("input").click();
       type($("textarea"), "Form teacher of 3 Kindness. School office: 6123 4567.");
       $("input[autocomplete=name]").focus();`,
-    expect: `$("textarea").value.includes("Form teacher")`,
+    expect: `$("textarea").value.includes("Form teacher") && byText(".pick-chip", "AWWA School @ Napiri")`,
     clip: { selectors: ["main h1", "main .lead", "main form"], pad: 16, maxWidth: 720 },
+  },
+  waiting: {
+    ...PHONE, path: "/coach/",
+    seed: `{ profiles: { "coach-1": { name: "Ms Tan", institutions: ["awwa-school-napiri"], note: "Form teacher of 3 Kindness. School office: 6123 4567.",
+      email: "coach@example.com", status: "pending", createdAt: ${at(0, 8, 0)} } } }`,
+    setup: `await waitFor(() => byText(".facts dd li", "AWWA School @ Napiri"));`,
+    expect: `$("h1")?.textContent === "Waiting for approval"`,
   },
   "my-classes": {
     ...DESKTOP, path: "/coach/#classes",
     seed: `{ classes: ${klass(LIVE)},
-      requests: [{ id: "r1", uid: "coach-1", kind: "new-class", className: "4 Courage", status: "pending", createdAt: ${at(0, 7, 50)} }] }`,
+      requests: [{ id: "r1", uid: "coach-1", kind: "join-class", classCode: "H4W9NEK3R", status: "pending", createdAt: ${at(0, 7, 50)} }] }`,
     setup: `
       await waitFor(() => $(".class-card") && $(".request-line"));
-      byText("summary", "Join a colleague's class").click();
-      const box = $$("input").find((i) => i.getAttribute("autocapitalize") === "characters");
-      type(box, "h4w-9ne k3r");
-      box.blur();`,
-    expect: `byText(".code-echo", "H4W-9NE-K3R")`,
+      byText("summary", "New class").click();
+      await waitFor(() => $("select option"));
+      const name = $$("input").find((i) => i.maxLength === 30);
+      type(name, "5 Joy");
+      name.blur();`,
+    expect: `byText("select option", "AWWA School @ Napiri") && !byText("button", "Make the class").disabled`,
     clip: { selectors: ["main h1", ".class-card", ".request-line", "#get-h", "details.fold"], pad: 16, maxWidth: 800 },
   },
   poster: {
@@ -298,24 +310,42 @@ export const SCENES = {
   },
   "admin-requests": {
     ...DESKTOP, path: "/coach/#admin",
-    seed: `{ admins: ["coach-1"], profiles: {
-        "coach-1": { name: "Ms Tan", org: "Rainbow School", note: "Admin", email: "coach@example.com" },
-        "coach-2": { name: "Mr Lim", org: "Rainbow School", note: "Form teacher of 5 Joy. School office: 6123 4567.", email: "lim@example.com" } },
-      requests: [
-        { id: "r1", uid: "coach-2", kind: "new-class", className: "5 Joy", org: "Rainbow School", note: "Starting in October.", status: "pending", createdAt: ${at(0, 7, 55)} },
-        { id: "r2", uid: "coach-2", kind: "join-class", classCode: "K7M3RQP9T", status: "pending", createdAt: ${at(0, 7, 58)} }] }`,
+    seed: `{ admins: ["coach-1"], classes: ${klass(LIVE)}, profiles: { "coach-1": ${TAN},
+        "coach-2": { name: "Mr Lim", institutions: ["awwa-school-napiri"], note: ${js(LIM_NOTE)}, email: "lim@example.com",
+          status: "pending", createdAt: ${at(0, 7, 55)} },
+        "coach-3": { name: "Ms Wong", institutions: ["awwa-school-napiri"], note: "Co-teacher of 3 Kindness.", email: "wong@example.com",
+          status: "approved", createdAt: ${at(9, 9, 0)}, decidedAt: ${at(8, 9, 0)} } },
+      requests: [{ id: "r2", uid: "coach-3", kind: "join-class", classCode: "K7M3RQP9T", note: "Ms Tan's class", status: "pending", createdAt: ${at(0, 7, 58)} }] }`,
     setup: `await waitFor(() => $$(".admin-card").length >= 4);`,
-    expect: `byText("h2", "Requests waiting (2)")`,
-    clip: { selectors: [".coach-header .brand", ".header-nav", "main h1", "main .lead", "#adm-req-h", "#adm-req-h + .admin-list .admin-card"], pad: 16, maxWidth: 880 },
+    expect: `byText("h2", "Coaches waiting for approval (1)") && byText("h2", "Requests to join a class (1)")`,
+    clip: { selectors: [".coach-header .brand", ".header-nav", "main h1", "main .lead", "#adm-wait-h", "#adm-wait-h + .admin-list .admin-card",
+      "#adm-req-h", "#adm-req-h + .admin-list .admin-card"], pad: 16, maxWidth: 880 },
   },
   "admin-classes": {
     ...DESKTOP, path: "/coach/#admin",
-    seed: `{ admins: ["coach-1"], classes: ${klass(LIVE)}, coachesOf: { K7M3RQP9T: ["coach-1", "coach-2"] }, profiles: {
-        "coach-1": { name: "Ms Tan", org: "Rainbow School", note: "Form teacher of 3 Kindness", email: "coach@example.com" },
-        "coach-2": { name: "Mr Lim", org: "Rainbow School", note: "Form teacher of 5 Joy. School office: 6123 4567.", email: "lim@example.com" } } }`,
+    seed: `{ admins: ["coach-1"], classes: ${klass(LIVE)}, coachesOf: { K7M3RQP9T: ["coach-1", "coach-2"] }, profiles: { "coach-1": ${TAN},
+        "coach-2": { name: "Mr Lim", institutions: ["awwa-school-napiri", "awwa-school-bedok"], note: ${js(LIM_NOTE)}, email: "lim@example.com",
+          status: "approved", createdAt: ${at(30, 9, 0)}, decidedAt: ${at(29, 9, 0)}, institutionsChangedAt: ${at(1, 16, 20)} } } }`,
     setup: `await waitFor(() => $("#adm-limits-h"));`,
-    expect: `byText(".admin-card", "Take the page down")`,
-    clip: { selectors: ["#adm-coach-h", ".admin-card", "#adm-limits-h + form"], pad: 16, maxWidth: 880 },
+    expect: `byText(".admin-card", "Take the page down") && byText(".admin-card .chip", "after approval")`,
+    clip: { selectors: ["#adm-coach-h", "#adm-coach-h + .admin-list", "#adm-class-h + .admin-list", "#adm-limits-h + form"], pad: 16, maxWidth: 880 },
+  },
+  "admin-institutions": {
+    ...DESKTOP, path: "/coach/#admin",
+    seed: `{ admins: ["coach-1"], profiles: { "coach-1": ${TAN} } }`,
+    setup: `
+      await waitFor(() => $("#adm-inst-h"));
+      byText("button", "Add an institution").click();
+      await waitFor(() => $(".inst-form"));
+      const [name, org, type_, area] = $$(".inst-form input");
+      type(name, "AWWA Home and Day Activity Centre");
+      type(org, "AWWA");
+      type(type_, "Day activity centre");
+      type(area, "Pasir Ris");
+      area.blur();
+      scrollToEl($("#adm-inst-h"), 20);`,
+    expect: `byText("h2", "Institutions (4 in the list)") && $$(".inst-row").length === 4`,
+    clip: { selectors: ["#adm-inst-h", "#adm-inst-h ~ *"], pad: 16, maxWidth: 880 },
   },
   "phone-class": {
     ...PHONE, path: "/coach/#class/K7M3RQP9T",

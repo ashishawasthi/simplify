@@ -1,9 +1,10 @@
-// My classes: the classes this coach is approved for (name, code, what
-// learners see now), the requests still waiting for the admin, and the two
-// ways to get a class — ask for a new one, or ask to join a colleague's by
-// its code.
+// My classes (for an approved coach): the classes this coach is a coach of
+// (name, code, what learners see now), their requests to join a class still
+// waiting for the admin, and the two ways to get a class — make a new one
+// (at once, for one of their institutions), or ask the admin to join a
+// colleague's by its code.
 
-import { h, field, notice, busyButton, statusLine } from "./dom.js";
+import { h, field, notice, busyButton, statusLine, uid } from "./dom.js";
 import { formatCode, normaliseCode, isClassCode, CODE_LENGTH } from "./class-code.js";
 import { whenText } from "./format.js";
 
@@ -33,7 +34,7 @@ function classCard(cls) {
 function requestLine(req) {
   const what = req.kind === "join-class"
     ? `Join the class ${formatCode(req.classCode)}`
-    : `New class: ${req.className}`;
+    : `New class: ${req.className}`; // an older request, from before coaches made their own
   const [chip, words] = req.status === "declined"
     ? [h("span", { class: "chip is-no" }, "Not approved"), `Decided ${whenText(req.decidedAt ?? req.createdAt)}`]
     : [h("span", { class: "chip is-waiting" }, "Waiting for the admin"), `Asked ${whenText(req.createdAt)}`];
@@ -57,7 +58,7 @@ export function classesScreen(root, ctx) {
       if (!alive) return;
       list.replaceChildren(...classes.map(classCard));
       listState.replaceChildren(classes.length ? "" : h("p", { class: "empty" },
-        "No classes yet. Ask for a new class, or ask to join a colleague's class. The admin approves each one."));
+        "No classes yet. Make a new class, or ask to join a colleague's class."));
       const open = asked.filter((r) => r.status === "pending" || r.status === "declined");
       requests.replaceChildren(...open.map(requestLine));
       requestsBox.hidden = !open.length;
@@ -68,21 +69,39 @@ export function classesScreen(root, ctx) {
     }
   }
 
-  // ---- ask for a class ----
+  // ---- make a class ----
 
   const newName = field({ label: "Class name", maxLength: 30, hint: "Learners see it when they join, for example 3 Kindness." });
-  const newOrg = field({ label: "Organisation or school", maxLength: 80, value: profile?.org ?? "" });
-  const newNote = field({
-    label: "Note for the admin (if you like)", multiline: true, rows: 3, maxLength: 300,
-    hint: "Anything that helps the admin check this class is yours.",
-  });
-  const newSend = h("button", { class: "btn btn-primary", type: "submit" }, "Send to the admin");
+  const whereId = uid("f");
+  const newWhere = h("select", { id: whereId, class: "select" }, h("option", { value: "" }, "Loading…"));
+  const whereField = h("div", { class: "field" }, h("label", { for: whereId }, "Where is the class?"), newWhere);
+  const newSend = h("button", { class: "btn btn-primary", type: "submit" }, "Make the class");
   const newProblem = h("div");
-  const newForm = h("form", { class: "stack", novalidate: true }, newName.field, newOrg.field, newNote.field, newProblem,
+  const newForm = h("form", { class: "stack", novalidate: true }, newName.field, whereField, newProblem,
     h("div", { class: "actions" }, newSend));
-  const syncNew = () => { newSend.disabled = !newName.input.value.trim(); };
+  const syncNew = () => { newSend.disabled = !newName.input.value.trim() || !newWhere.value; };
   newName.input.addEventListener("input", syncNew);
+  newWhere.addEventListener("change", syncNew);
   syncNew();
+
+  // the coach's own institutions that are still listed
+  async function loadPlaces() {
+    let list = [];
+    try {
+      list = await cloud.listInstitutions();
+    } catch (err) {
+      if (!alive) return;
+      newProblem.replaceChildren(notice(err.message, { tone: "problem" }));
+    }
+    if (!alive) return;
+    const mine = (profile?.institutions ?? []).map((id) => list.find((i) => i.id === id)).filter((i) => i?.active);
+    newWhere.replaceChildren(...mine.map((i) => h("option", { value: i.id }, i.area && !i.name.includes(i.area) ? `${i.name} (${i.area})` : i.name)));
+    if (!mine.length && list.length) {
+      newProblem.replaceChildren(notice("None of your institutions is listed any more. Change them in About you first.", { tone: "warning",
+        action: h("a", { class: "btn btn-secondary", href: "#about" }, "About you") }));
+    }
+    syncNew();
+  }
 
   const joinCode = field({
     label: "Class code", maxLength: 20, autocomplete: "off", autocapitalize: "characters", spellcheck: "false",
@@ -92,7 +111,9 @@ export function classesScreen(root, ctx) {
   const joinNote = field({ label: "Note for the admin (if you like)", multiline: true, rows: 3, maxLength: 300 });
   const joinSend = h("button", { class: "btn btn-primary", type: "submit" }, "Send to the admin");
   const joinProblem = h("div");
-  const joinForm = h("form", { class: "stack", novalidate: true }, joinCode.field, joinEcho, joinNote.field, joinProblem,
+  const joinForm = h("form", { class: "stack", novalidate: true },
+    h("p", { class: "field-hint" }, "The admin checks you really coach that class, then adds you to it."),
+    joinCode.field, joinEcho, joinNote.field, joinProblem,
     h("div", { class: "actions" }, joinSend));
   // the code is forgiven as it is typed: case, dashes and spaces don't matter
   const syncJoin = () => {
@@ -110,18 +131,19 @@ export function classesScreen(root, ctx) {
   busyButton(newSend, async () => {
     newProblem.replaceChildren();
     const className = newName.input.value.trim();
-    if (!className) return;
+    const institution = newWhere.value;
+    if (!className || !institution) return;
+    let code;
     try {
-      await cloud.askForNewClass(user.uid, { className, org: newOrg.input.value.trim(), note: newNote.input.value.trim() });
+      code = await cloud.createClass(user.uid, { name: className, institution });
     } catch (err) {
       newProblem.append(notice(err.message, { tone: "problem" }));
       return;
     }
     newName.input.value = "";
-    newNote.input.value = "";
     syncNew();
     newBox.open = false;
-    toast.show(`Sent: “${className}”. The admin will look at it.`);
+    toast.show(`Made “${className}”. Its code is ${formatCode(code)}.`);
     refresh();
   });
 
@@ -130,7 +152,7 @@ export function classesScreen(root, ctx) {
     const classCode = normaliseCode(joinCode.input.value);
     if (!isClassCode(classCode)) return;
     try {
-      await cloud.askToJoinClass(user.uid, { classCode, org: profile?.org ?? "", note: joinNote.input.value.trim() });
+      await cloud.askToJoinClass(user.uid, { classCode, note: joinNote.input.value.trim() });
     } catch (err) {
       joinProblem.append(notice(err.message, { tone: "problem" }));
       return;
@@ -143,7 +165,7 @@ export function classesScreen(root, ctx) {
     refresh();
   });
 
-  const newBox = h("details", { class: "fold" }, h("summary", null, "Ask for a new class"), newForm);
+  const newBox = h("details", { class: "fold" }, h("summary", null, "New class"), newForm);
   const joinBox = h("details", { class: "fold" }, h("summary", null, "Join a colleague's class"), joinForm);
 
   root.append(h("section", { class: "screen" },
@@ -159,5 +181,6 @@ export function classesScreen(root, ctx) {
       joinBox)));
 
   refresh();
+  loadPlaces();
   return () => { alive = false; };
 }
