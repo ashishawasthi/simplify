@@ -34,6 +34,18 @@ const SPEECH = `
   window.SpeechSynthesisUtterance = class { constructor(text) { this.text = text; } };
 `;
 
+// a stand-in for playing the recorded voice (headless Chrome won't play
+// without a real tap): the clips' paths, in the order they were played
+const CLIPS = `
+  window.played = [];
+  HTMLMediaElement.prototype.play = function () {
+    played.push(new URL(this.src).pathname);
+    setTimeout(() => this.dispatchEvent(new Event("ended")), 0);
+    return Promise.resolve();
+  };
+  window.clipFor = async (text) => (await import("/js/voice-clips.js")).CLIPS[text];
+`;
+
 const HOLD = run(async () => {
   const btn = document.querySelector("#tool-setup .hold-btn");
   const finger = { bubbles: true, pointerId: 7, button: 0, isPrimary: true, pointerType: "touch" };
@@ -153,16 +165,60 @@ export default [
     expect: inPage(() => !cardOpen() && location.hash === "#wait?m=2" && shown("#tool-wait") && !shown("#tool-i-need")),
   },
   {
-    name: "Speak reads the card's sentence — only when tapped",
+    name: "Speak plays the card's recorded sentence — only when tapped",
     path: "/#i-need",
-    init: HELPERS + SPEECH,
+    init: HELPERS + SPEECH + CLIPS,
     setup: run(async () => {
       card("water").click();
       await pause(100);
-      if (spoken.length) throw new Error("spoke by itself");
+      if (spoken.length || played.length) throw new Error("spoke by itself");
+      document.querySelector('.card-btn[aria-label^="Speak"]').click();
+      window.waterClip = await clipFor("I need water");
+    }),
+    expect: inPage(() => /^\/audio\/voice\/[0-9a-f]{12}\.mp3$/.test(waterClip) && played.join() === waterClip &&
+      spoken.length === 0),
+  },
+  {
+    name: "Speak on a Hurts answer plays its recorded sentence",
+    path: "/#i-need",
+    init: HELPERS + SPEECH + CLIPS,
+    setup: hurtsFlow("tummy", "lot") + `
+      await pause(400);
+      document.querySelector('.card-btn[aria-label^="Speak"]').click();
+      window.hurtsClip = await clipFor("It hurts here: tummy. A lot.");
+    `,
+    expect: inPage(() => cardWords() === "It hurts here: tummy. A lot." && !!hurtsClip && played.join() === hurtsClip &&
+      spoken.length === 0),
+  },
+  {
+    name: "Speak on I want with a picture plays its recorded sentence",
+    path: "/#i-need",
+    init: HELPERS + SPEECH + CLIPS + cards(ALL),
+    setup: run(async () => {
+      card("want").click();
+      await pause(50);
+      document.querySelector('.pp-pic[data-picture="kopi"]').click();
+      document.querySelector(".pp-done").click();
+      await pause(400);
+      document.querySelector('.card-btn[aria-label^="Speak"]').click();
+      window.kopiClip = await clipFor("I want: Kopi");
+    }),
+    expect: inPage(() => cardWords() === "I want: Kopi" && !!kopiClip && played.join() === kopiClip && spoken.length === 0),
+  },
+  {
+    name: "Speak on I want with typed words: the device's own voice (they have no clip)",
+    path: "/#i-need",
+    init: HELPERS + SPEECH + CLIPS + cards(ALL),
+    setup: run(async () => {
+      card("want").click();
+      await pause(50);
+      document.querySelector(".pp-words").value = "Chicken rice";
+      document.querySelector(".pp-done").click();
+      await pause(400);
       document.querySelector('.card-btn[aria-label^="Speak"]').click();
     }),
-    expect: inPage(() => spoken.join() === "I need water"),
+    expect: inPage(() => cardWords() === "I want: Chicken rice" && played.length === 0 &&
+      spoken.join() === "I want: Chicken rice"),
   },
 
   // ---------- Hurts ----------

@@ -83,7 +83,7 @@ const TYPES = {
   ".html": "text/html; charset=utf-8", ".css": "text/css", ".js": "text/javascript",
   ".mjs": "text/javascript", ".png": "image/png", ".svg": "image/svg+xml",
   ".json": "application/json", ".webmanifest": "application/manifest+json",
-  ".txt": "text/plain; charset=utf-8",
+  ".txt": "text/plain; charset=utf-8", ".mp3": "audio/mpeg",
 };
 
 // the headers firebase.json gives every response: CSP, nosniff, Permissions-Policy …
