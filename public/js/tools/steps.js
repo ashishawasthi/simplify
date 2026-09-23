@@ -16,10 +16,14 @@
 // words (one line), not in the way of the buttons below.
 //
 // Where the student is in each deck is saved (shell.save: { at: { <deck id>:
-// the step's index in the whole deck } }), so a reload, a trip to Can I buy?
-// and back, or 🏠 and back into the deck finds the same step. A deck left on
-// All done starts again the next time it is opened. The header ✕ starts the
-// deck on screen again, with Put it back.
+// the step's index in the whole deck }, touched: { <deck id>: when it was
+// last opened or moved, ms } }), so a reload, a trip to Can I buy? and back,
+// or 🏠 and back into the deck finds the same step. A deck left on All done
+// starts again the next time it is opened, and so does a deck left alone for
+// 30 minutes (FORGET_AFTER_MS): on a shared iPad the next student starts at
+// step 1, not in the middle of someone else's routine — also when the iPad
+// is woken with the deck still on screen. The header ✕ starts the deck on
+// screen again, with Put it back.
 //
 // The adult's set-up page has "Fewer steps" per deck (setup() below): only
 // the deck's core steps, as the student learns the small ones. Saved as this
@@ -33,6 +37,7 @@
 import { pictureImg, pictureSrc, menuIconSrc } from "../pictures.js";
 import {
   DECKS, DONE_PICTURE, deckById, where, stepAfter, stepBefore, cleanProgress, cleanFewer, leftOut,
+  cleanTouched, resumeAt,
 } from "./steps-decks.js";
 
 // A second tap on Next this soon after the first is the same tap (a double
@@ -64,6 +69,12 @@ const fewerOn = (settings, deck) => cleanFewer(settings?.fewer).includes(deck.id
 export function mount(block, shell) {
   const saved = shell.load();
   const at = cleanProgress(saved?.at); // { <deck id>: at }
+  const touched = cleanTouched(saved?.touched); // { <deck id>: ms }
+  // a deck was opened or moved: saved, with the time (the 30-minute start again)
+  const keep = (d) => {
+    touched[d.id] = Date.now();
+    shell.save({ at, touched });
+  };
   let deck = null; // the deck on screen, or null for the chooser
 
   // "Choose another" returns to the chooser the way Back does when the
@@ -223,7 +234,7 @@ export function mount(block, shell) {
     if (to === at[deck.id]) return;
     const focused = block.contains(document.activeElement) ? document.activeElement : null;
     at[deck.id] = to;
-    shell.save({ at });
+    keep(deck);
     render();
     shell.setClearAll(hasAnything());
     const now = place();
@@ -261,11 +272,11 @@ export function mount(block, shell) {
     const d = deck;
     const before = at[d.id];
     at[d.id] = 0;
-    shell.save({ at });
+    keep(d);
     render();
     shell.showToast("Back to step 1", () => {
       at[d.id] = before;
-      shell.save({ at });
+      keep(d);
       if (deck === d) {
         render();
         shell.setClearAll(hasAnything());
@@ -276,16 +287,16 @@ export function mount(block, shell) {
   function show(params, { fresh }) {
     const d = deckById(params.get("deck")); // none, or not a deck: the chooser
     if (d) {
+      // left alone for 30 minutes (a reload, Back, a new visit): step 1
+      at[d.id] = resumeAt(d, at[d.id], touched[d.id], Date.now());
       if (fresh) {
         chooserBehind = openedFromChooser === d.id;
         // a deck finished earlier starts again when it is opened anew
-        if (where(d, fewer(d), at[d.id]).done) {
-          at[d.id] = 0;
-          shell.save({ at });
-        }
+        if (where(d, fewer(d), at[d.id]).done) at[d.id] = 0;
       } else if (lastShown !== d.id) {
         chooserBehind = false; // back here some other way: not sure what is behind
       }
+      keep(d);
       preload(d);
     } else {
       chooserBehind = false;
@@ -303,6 +314,21 @@ export function mount(block, shell) {
   // another tab): the same place in the routine, with the steps now shown
   shell.onDeviceChange(() => {
     if (!deck) return;
+    render();
+    shell.setClearAll(hasAnything());
+  });
+
+  // the app back in front (an iPad woken up) with a deck on screen that was
+  // left alone for 30 minutes: step 1, as if it were opened now
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden || !deck || block.hidden) return;
+    const from = resumeAt(deck, at[deck.id], touched[deck.id], Date.now());
+    if (from === at[deck.id]) return;
+    at[deck.id] = from;
+    keep(deck);
+    lastNextAt = -Infinity;
+    doneSince = -Infinity;
+    status.textContent = "";
     render();
     shell.setClearAll(hasAnything());
   });

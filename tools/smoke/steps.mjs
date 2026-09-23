@@ -43,7 +43,18 @@ const once = (key, value) => `
     sessionStorage.setItem("seeded ${key}", "1");
   }
 `;
-const progress = (at) => once("simplify-steps-v1", { at });
+// Progress as the app saves it: each deck's step, and when it was last
+// touched — `ago` ms before the page loads (a deck left alone 30 minutes
+// starts again), stamped in the page, so a slow run can't age it.
+const progress = (at, ago = 0) => `
+  if (!sessionStorage.getItem("seeded simplify-steps-v1")) {
+    const at = ${JSON.stringify(at)}, when = Date.now() - ${ago};
+    localStorage.setItem("simplify-steps-v1",
+      JSON.stringify({ at, touched: Object.fromEntries(Object.keys(at).map((id) => [id, when])) }));
+    sessionStorage.setItem("seeded simplify-steps-v1", "1");
+  }
+`;
+const MIN = 60 * 1000;
 const device = (settings) => once("simplify-device-v1", settings);
 const FEWER = (...ids) => device({ tools: { steps: { fewer: ids } } });
 const PICTURES_ONLY = device({ picturesOnly: true });
@@ -338,6 +349,70 @@ export default [
       shown("#tool-steps .steps-another")),
   },
   {
+    name: "the steps' own pictures load: tap off, the halal side, the reader's tick",
+    path: "/#steps?deck=wash-hands",
+    init: HELPERS + progress({ "wash-hands": 5, "return-tray": 4, "pay-card": 3 }),
+    setup: run(async () => {
+      await pause(200);
+      if (!pictureIs("tap-off")) fail("Turn off the tap", q(".steps-picture img").getAttribute("src"));
+      location.hash = "#steps?deck=return-tray";
+      await pause(300);
+      if (words() !== "Halal tray? Use the halal side" || !pictureIs("tray-return-halal")) fail("halal", words());
+      location.hash = "#steps?deck=pay-card";
+      await pause(300);
+    }),
+    expect: inPage(() => words() === "Wait for the beep or the green tick" && pictureIs("reader-tick")),
+  },
+  {
+    name: "a shared iPad: decks left alone for 30 minutes open at step 1, the time saved again",
+    path: "/#steps?deck=wash-hands",
+    init: HELPERS + progress({ "wash-hands": 3, "return-tray": 2 }, 31 * MIN),
+    setup: run(async () => {
+      await pause(300); // saving waits 200 ms
+      if (words() !== "Turn on the tap" || dots() !== "O......") fail("wash-hands", [words(), dots()]);
+      if (shown("#clear-all-wrap")) fail("the ✕ on step 1", true);
+      const s = saved();
+      if (s?.at["wash-hands"] !== 0 || !(Date.now() - s.touched["wash-hands"] < 60000)) fail("saved", s);
+      location.hash = "#steps?deck=return-tray";
+      await pause(300);
+    }),
+    expect: inPage(() => words() === "Finish your food" && dots() === "O......" && saved()?.at["return-tray"] === 0),
+  },
+  {
+    name: "a deck left alone for 29 minutes keeps its step",
+    path: "/#steps?deck=wash-hands",
+    init: HELPERS + progress({ "wash-hands": 3 }, 29 * MIN),
+    expect: inPage(() => words() === "Rub for 20 seconds" && dots() === "xxxO..." && shown("#clear-all-wrap")),
+  },
+  {
+    name: "progress saved with no time (an older version): step 1",
+    path: "/#steps?deck=wash-hands",
+    init: HELPERS + once("simplify-steps-v1", { at: { "wash-hands": 3 } }),
+    setup: run(() => pause(300)),
+    expect: inPage(() => words() === "Turn on the tap" && saved()?.at["wash-hands"] === 0 &&
+      typeof saved()?.touched["wash-hands"] === "number"),
+  },
+  {
+    name: "the iPad woken with a deck on screen: after 5 minutes the same step, after 31 step 1",
+    path: "/#steps?deck=wash-hands",
+    init: HELPERS + progress({ "wash-hands": 3 }),
+    setup: run(async () => {
+      const real = Date.now.bind(Date);
+      const wake = async (minutes) => {
+        Date.now = () => real() + minutes * 60000;
+        document.dispatchEvent(new Event("visibilitychange"));
+        await pause(150);
+      };
+      await wake(5);
+      if (words() !== "Rub for 20 seconds") fail("after 5 minutes", words());
+      await wake(31);
+      Date.now = real;
+      await pause(300);
+    }),
+    expect: inPage(() => words() === "Turn on the tap" && dots() === "O......" && !shown("#clear-all-wrap") &&
+      saved()?.at["wash-hands"] === 0),
+  },
+  {
     name: "🏠 and back into the deck from the chooser: the same step",
     path: "/",
     init: HELPERS,
@@ -459,7 +534,7 @@ export default [
       if (shown("#tool-steps .steps-open")) fail("Can I buy? shows", "");
       for (let i = 0; i < 3; i++) await tapNext();
     }),
-    expect: inPage(() => words() === "Take your card back" && dots() === "xxxO" && pictureIs("travel-card")),
+    expect: inPage(() => words() === "Take your card back" && dots() === "xxxO" && pictureIs("bank-card")),
   },
   {
     name: "Fewer steps turned on mid-deck: the same place in the routine, one dot fewer",

@@ -80,6 +80,7 @@ soap.svg               emoji_u1f9fc.svg
 space.svg              emoji_u2194.svg
 stop.svg               emoji_u1f6d1.svg
 swim.svg               emoji_u1f3ca.svg
+tap-off.svg            parts: emoji_u1faf3.svg (moved, scaled and mirrored)
 tap-water.svg          parts: emoji_u1faf3.svg (moved, scaled and mirrored)
 taxi.svg               emoji_u1f695.svg
 thank-you.svg          emoji_u1f60a.svg
@@ -94,8 +95,9 @@ wipe-table.svg         parts: emoji_u1faf3.svg (moved and scaled)
 yes.svg                emoji_u1f44d.svg
 
 The other files are drawn for Simplify, with no Noto parts:
-bus.svg card-reader.svg hawker-stall.svg home.svg kopi.svg mrt-train.svg
-pay-qr.svg tablet.svg travel-card.svg tray-return.svg tray.svg water.svg
+bank-card.svg bus.svg card-reader.svg hawker-stall.svg home.svg kopi.svg
+mrt-train.svg pay-qr.svg reader-tick.svg tablet.svg travel-card.svg
+tray-return-halal.svg tray-return.svg tray.svg water.svg
 
 ------------------------------------------------------------------------
 
