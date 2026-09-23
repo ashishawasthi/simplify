@@ -121,16 +121,16 @@ async function runInside() {
   const P = "P9TK7M3RQ"; // paused: coachA
   const past = Timestamp.fromDate(new Date("2026-09-01T02:00:00Z"));
   const seeds = {
-    "coaches/coachA": { name: "Coach A", email: "coachA@example.com", institutions: ["centre-north"], status: "approved", createdAt: past },
-    "coaches/coachB": { name: "Coach B", email: "coachB@example.com", institutions: ["centre-north"], status: "approved", createdAt: past },
-    "coaches/coachC": { name: "Coach C", email: "coachC@example.com", institutions: ["centre-north"], status: "approved", createdAt: past },
-    "coaches/coachS": { name: "Coach S", email: "coachS@example.com", institutions: ["centre-north"], status: "approved", createdAt: past, suspended: true },
-    "coaches/coachP": { name: "Coach P", email: "coachP@example.com", institutions: ["centre-north"], status: "pending", createdAt: past },
-    "coaches/coachD": { name: "Coach D", email: "coachD@example.com", institutions: ["centre-north"], status: "declined", createdAt: past },
+    "coaches/coachA": { name: "Coach A", email: "coachA@example.com", institutions: ["awwa-school-napiri"], status: "approved", createdAt: past },
+    "coaches/coachB": { name: "Coach B", email: "coachB@example.com", institutions: ["awwa-school-napiri"], status: "approved", createdAt: past },
+    "coaches/coachC": { name: "Coach C", email: "coachC@example.com", institutions: ["awwa-school-napiri"], status: "approved", createdAt: past },
+    "coaches/coachS": { name: "Coach S", email: "coachS@example.com", institutions: ["awwa-school-napiri"], status: "approved", createdAt: past, suspended: true },
+    "coaches/coachP": { name: "Coach P", email: "coachP@example.com", institutions: ["awwa-school-napiri"], status: "pending", createdAt: past },
+    "coaches/coachD": { name: "Coach D", email: "coachD@example.com", institutions: ["awwa-school-napiri"], status: "declined", createdAt: past },
     // made before approvals existed: no status yet, so not approved
-    "coaches/coachL": { name: "Coach L", email: "coachL@example.com", org: "School", createdAt: past },
-    [`classes/${A}`]: { name: "3 Kindness", institution: "centre-north", status: "active", latest: null, createdAt: past, updatedAt: past },
-    [`classes/${P}`]: { name: "4 Care", institution: "centre-north", status: "suspended", latest: null, createdAt: past, updatedAt: past },
+    "coaches/coachL": { name: "Coach L", email: "coachL@example.com", org: "AWWA School @ Napiri", createdAt: past },
+    [`classes/${A}`]: { name: "3 Kindness", institution: "awwa-school-napiri", status: "active", latest: null, createdAt: past, updatedAt: past },
+    [`classes/${P}`]: { name: "4 Care", institution: "awwa-school-napiri", status: "suspended", latest: null, createdAt: past, updatedAt: past },
     // a coach waiting for (or refused by) the admin is refused even when listed
     [`classCoaches/${A}`]: { uids: ["coachA", "coachS", "coachC", "coachP", "coachD", "coachL"] },
     [`classCoaches/${P}`]: { uids: ["coachA"] },

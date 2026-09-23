@@ -1,7 +1,0 @@
-[
-  { "id": "sample-society-north", "name": "Sample Society (North)", "org": "Sample Society", "type": "Day activity centre", "area": "Woodlands", "source": "test fixture, not real" },
-  { "id": "sample-society-east", "name": "Sample Society (East)", "org": "Sample Society", "type": "Day activity centre", "area": "Tampines", "source": "test fixture, not real" },
-  { "id": "sample-society-west", "name": "Sample Society (West)", "org": "Sample Society", "type": "Early intervention centre", "area": "Jurong West", "source": "test fixture, not real" },
-  { "id": "sample-school", "name": "Sample School", "org": "Sample School", "type": "Special education school", "area": "Bukit Timah", "source": "test fixture, not real" },
-  { "id": "sample-home", "name": "Sample Home for the Disabled", "org": "Sample Home", "type": "Residential home", "area": "", "source": "test fixture, not real" }
-]
