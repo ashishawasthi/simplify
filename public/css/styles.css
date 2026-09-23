@@ -171,7 +171,7 @@ h2 {
   font-weight: 700;
   color: var(--color-muted);
 }
-/* 🏠 Menu is a link (Back returns to the menu too), drawn as the same circle */
+/* 🏠 is a link back to the menu (Back returns there too), drawn as the same circle */
 a.round-btn {
   display: inline-flex;
   align-items: center;
