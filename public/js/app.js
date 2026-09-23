@@ -56,8 +56,6 @@ initResult(
     floatAmount: $("result-float-amount"),
     actionWrap: $("result-action-wrap"),
     action: $("result-action"),
-    header,
-    title,
   },
   { onShowMe: openShowMoney },
 );
@@ -255,7 +253,7 @@ toMenu.addEventListener("click", (e) => {
 
 $("clear-all").addEventListener("click", () => {
   tools[active]?.clearAll();
-  title.focus({ preventScroll: true }); // Start over just hid itself
+  title.focus({ preventScroll: true }); // the ✕ just hid itself
 });
 
 // ---------- undo toast ----------

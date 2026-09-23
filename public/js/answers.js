@@ -5,6 +5,9 @@
 // and returns { tone, icon, headline, subline?, badge?, showMe?, pictures? }:
 //   tone      "yes" | "no" | "answer" | "neutral" — the panel's colour.
 //             "answer" is an amount (change, next dollar …), not a yes/no.
+//             "neutral" is nothing to judge yet: no panel is shown at all
+//             (a "type your money here" line is only more to read — the
+//             empty boxes already say it), so it carries nothing else.
 //   icon      an emoji, or { picture: valueCents } for a note or coin drawing
 //   subline   HTML, built only from formatted numbers and denomination
 //             labels — never from anything the user typed
@@ -24,8 +27,7 @@ import {
 
 const strong = (cents) => `<strong>${formatCents(cents)}</strong>`;
 
-const TYPE_MONEY = { tone: "neutral", icon: "⬆️", headline: "Type your money at the top" };
-const ADD_PRICES = { tone: "neutral", icon: "🛒", headline: "Add the prices of things to buy" };
+const NOTHING_YET = { tone: "neutral" };
 
 function cannotBuy(short) {
   return {
@@ -40,7 +42,7 @@ function cannotBuy(short) {
 }
 
 export function canIBuy({ money, total, hasPrices }) {
-  if (!hasPrices) return money == null ? TYPE_MONEY : ADD_PRICES;
+  if (!hasPrices) return NOTHING_YET;
   const left = (money ?? 0) - total;
   if (left < 0) return cannotBuy(-left);
   return {
@@ -50,11 +52,7 @@ export function canIBuy({ money, total, hasPrices }) {
 }
 
 export function change({ money, spend }) {
-  if (!spend) {
-    return money == null
-      ? TYPE_MONEY
-      : { tone: "neutral", icon: "🧾", headline: "Type how much you spend" };
-  }
+  if (!spend) return NOTHING_YET;
   const back = (money ?? 0) - spend;
   if (back < 0) return cannotBuy(-back);
   if (back === 0) {
@@ -70,7 +68,7 @@ export function change({ money, spend }) {
 }
 
 export function nextDollarAnswer({ total, hasPrices }) {
-  if (!hasPrices) return ADD_PRICES;
+  if (!hasPrices) return NOTHING_YET;
   const pay = nextDollar(total);
   const back = pay - total;
   return {
@@ -82,7 +80,7 @@ export function nextDollarAnswer({ total, hasPrices }) {
 }
 
 export function nextNote({ total, hasPrices }) {
-  if (!hasPrices) return ADD_PRICES;
+  if (!hasPrices) return NOTHING_YET;
   const { pay, backup } = nextNotes(total);
   const words = moneyWords(pay);
   const single = pay.length === 1 && pay[0].count === 1;
@@ -104,7 +102,7 @@ export function nextNote({ total, hasPrices }) {
 }
 
 export function makeAmount({ need }) {
-  if (!need) return { tone: "neutral", icon: "⬆️", headline: "Type how much you need" };
+  if (!need) return NOTHING_YET;
   // there is no 1¢ coin, so an odd amount is made up to the next 5¢
   const made = roundUpToCoin(need);
   const pieces = breakdown(made);
@@ -119,11 +117,7 @@ export function makeAmount({ need }) {
 }
 
 export function shoppingList({ money, total, hasPrices }) {
-  if (!hasPrices) {
-    return money == null
-      ? TYPE_MONEY
-      : { tone: "neutral", icon: "📝", headline: "Add the things you need to buy" };
-  }
+  if (!hasPrices) return NOTHING_YET;
   const left = (money ?? 0) - total;
   if (left < 0) {
     return {

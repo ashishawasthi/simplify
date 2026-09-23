@@ -46,17 +46,16 @@
 
 <body>
 
-  <!-- Inside a tool: 🏠 back to the menu on the left, Start over on the right.
-       Hidden on the menu itself, which has nowhere to go back to. -->
+  <!-- Inside a tool: 🏠 back to the menu on the left, ✕ start over on the
+       right — icons only, no words beside them: every extra word on screen
+       is one more thing to read, and screen readers still get the names from
+       aria-label. The floating yes/no pill sits between the two. Hidden on
+       the menu itself, which has nowhere to go back to. -->
   <header id="app-header" class="app-header" hidden>
-    <div class="labelled-btn">
-      <a id="to-menu" class="round-btn" href="/" aria-label="Menu: pick another money tool">
-        <span aria-hidden="true">🏠</span>
-      </a>
-      <span class="labelled-btn-text" aria-hidden="true">Menu</span>
-    </div>
-    <div id="clear-all-wrap" class="labelled-btn" hidden>
-      <span class="labelled-btn-text" aria-hidden="true">Start over</span>
+    <a id="to-menu" class="round-btn" href="/" aria-label="Menu: pick another money tool">
+      <span aria-hidden="true">🏠</span>
+    </a>
+    <div id="clear-all-wrap" hidden>
       <button id="clear-all" class="round-btn" type="button" aria-label="Start over: clear everything in this tool">
         <span aria-hidden="true">✕</span>
       </button>
@@ -69,7 +68,6 @@
     <!-- The menu: the app always opens here. One big button per money tool,
          each a plain link, so Back returns here and a tool can be shared. -->
     <nav id="menu" aria-label="Money tools">
-      <p class="menu-intro">Pick a money tool</p>
       <ul class="tool-list">
         <li><a class="tool-link" href="#can-i-buy">
             <span class="tool-icon" aria-hidden="true">🛒</span> Can I buy?</a></li>

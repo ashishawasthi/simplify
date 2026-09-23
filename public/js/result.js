@@ -5,21 +5,15 @@
 import { DEFAULT_CURRENCY, moneySvg } from "./currency-data.js";
 
 let panel, icon, headline, subline, float, floatIcon, floatAmount, actionWrap, action;
-let header, title;
 let current = null;
 
 export function initResult(els, { onShowMe }) {
-  ({
-    panel, icon, headline, subline, float, floatIcon, floatAmount, actionWrap, action,
-    header, title,
-  } = els);
+  ({ panel, icon, headline, subline, float, floatIcon, floatAmount, actionWrap, action } = els);
   action.addEventListener("click", () => {
     if (current?.showMe) onShowMe(current.showMe);
   });
   pinFloatToVisualViewport();
   trackPanelHeight();
-  addEventListener("resize", applyHeaderShelf); // e.g. rotating the phone
-  applyHeaderShelf();
 }
 
 // position:fixed anchors to the *layout* viewport, which on iOS is not what
@@ -39,40 +33,39 @@ function pinFloatToVisualViewport() {
 
 // A longer answer makes the panel taller. The page's bottom padding and the
 // undo toast follow its real height, so nothing ends up hidden behind it.
-function trackPanelHeight() {
-  const apply = () => {
-    const h = panel.hidden ? 0 : panel.offsetHeight;
-    document.documentElement.style.setProperty("--panel-h", `${h}px`);
-  };
-  if ("ResizeObserver" in window) new ResizeObserver(apply).observe(panel);
-  apply();
+// Also applied directly whenever the panel shows or hides: a size observer
+// can miss a hidden-attribute toggle made in the same tick as other changes.
+function applyPanelHeight() {
+  const h = panel.hidden ? 0 : panel.offsetHeight;
+  document.documentElement.style.setProperty("--panel-h", `${h}px`);
 }
 
-// The floating badge sits below the "🏠 Menu / Start over" row and the
-// tool's own name, not on top of them — offsetTop/offsetHeight are relative
-// to the page, not the current scroll position, so this is the height of
-// everything above the zones at scroll 0, not wherever the header has
-// scrolled to right now. Called on every render rather than left to a
-// ResizeObserver: header.hidden and title's text both change in the same
-// tick a screen switches, and a size-change observer on those two elements
-// was missing that first transition more often than it caught it.
-function applyHeaderShelf() {
-  const h = header.hidden ? 0 : title.offsetTop + title.offsetHeight;
-  document.documentElement.style.setProperty("--header-h", `${h}px`);
+function trackPanelHeight() {
+  if ("ResizeObserver" in window) new ResizeObserver(applyPanelHeight).observe(panel);
+  applyPanelHeight();
 }
 
 // The menu has no question, so no panel
 export function setResultVisible(visible) {
   panel.hidden = !visible;
   if (!visible) float.hidden = true;
+  applyPanelHeight();
 }
 
-const TONES = ["is-yes", "is-no", "is-answer", "is-neutral"];
+const TONES = ["is-yes", "is-no", "is-answer"];
 
 // answer: { tone, icon, headline, subline?, badge?, showMe? } — see answers.js
 export function renderResult(answer) {
   current = answer;
-  applyHeaderShelf();
+  // nothing to judge yet: no panel at all. A line saying "type your money
+  // at the top" is one more thing to read, and the empty boxes already say it.
+  if (answer.tone === "neutral") {
+    panel.hidden = true;
+    float.hidden = true;
+    applyPanelHeight();
+    return;
+  }
+  panel.hidden = false;
   panel.classList.remove(...TONES);
   panel.classList.add(`is-${answer.tone}`);
 
@@ -91,11 +84,18 @@ export function renderResult(answer) {
   // an "answer" tone (change, next dollar …) stays bottom-only because a
   // bare icon can't carry that meaning on its own
   const verdict = answer.tone === "yes" || answer.tone === "no";
-  float.hidden = !verdict || panel.hidden;
+  float.hidden = !verdict;
   if (verdict) {
     float.classList.remove("is-yes", "is-no");
     float.classList.add(`is-${answer.tone}`);
     floatIcon.textContent = answer.icon;
     floatAmount.textContent = answer.badge ?? "";
+    // the pill only has the gap between 🏠 and ✕: if "$1234.56 more"
+    // doesn't fit, drop the word rather than let "…" eat the digits — the
+    // number is the part that matters, and the colour still says more/left
+    if (floatAmount.scrollWidth > floatAmount.clientWidth) {
+      floatAmount.textContent = answer.badge.split(" ")[0];
+    }
   }
+  applyPanelHeight();
 }

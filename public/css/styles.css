@@ -10,8 +10,6 @@
   --color-yes-text: #1b5e20;
   --color-no-bg: #fdecea;
   --color-no-text: #b71c1c;
-  --color-neutral-bg: #eeeeee;
-  --color-neutral-text: #333333;
   --color-border: #757575;
 
   --font-body: 22px;
@@ -58,7 +56,7 @@ main {
   max-width: 520px;
   margin: 0 auto;
   padding: 12px var(--gap);
-  /* always tall enough for the "Start over" button, so the page doesn't
+  /* always tall enough for the ✕ start-over button, so the page doesn't
      jump down the moment the first amount is entered */
   min-height: calc(var(--target-small) + 24px);
 }
@@ -76,20 +74,10 @@ main {
   margin-top: 20px;
   font-size: 34px;
 }
-/* On a tool screen (never the menu — it never shows a verdict), always
-   reserve a shelf below the title for the floating yes/no badge, whether or
-   not one is showing right now. A constant gap means the zones below never
-   jump as the answer changes between a verdict and a hint or amount, and the
-   badge — positioned by result.js at the top of this same shelf — never
-   lands on a heading instead. Keep this in step with .result-float's own
-   height: 8px clearance + ~48px badge + 8px clearance = 64px. */
-.app-header:not([hidden]) + main .screen-title {
-  margin-bottom: 64px;
-}
 
-/* A quiet text label beside a round icon button — used for "Menu" and
-   "Start over" in the header and for the picker's two actions, so a circle
-   always reads as a small action and ✕ always means "clear". */
+/* A quiet text label beside a round icon button — used for the picker's two
+   actions, so a circle always reads as a small action and ✕ always means
+   "clear". (The header's 🏠 and ✕ stand alone: no words beside them.) */
 .labelled-btn {
   display: flex;
   align-items: center;
@@ -331,11 +319,6 @@ a.round-btn {
 /* ---------- the menu ---------- */
 /* One big button per tool: a picture, the name, and a › — the same shape
    as the guide's topic buttons, so the two read as one family. */
-.menu-intro {
-  margin: 0 0 16px;
-  font-size: 22px;
-  color: var(--color-muted);
-}
 .tool-list {
   list-style: none;
   margin: 0;
@@ -436,25 +419,26 @@ a.round-btn {
    meaning. Carries the short amount too ("$6 more"), not just the icon: the
    icon alone still says yes/no, but not by how much, and that is exactly
    the number a student needs while the keyboard is covering it below.
-   result.js keeps --header-h at the height of the "🏠 Menu / Start over" row
-   plus the tool's own name (at scroll position 0, not wherever the header
-   has since scrolled to) — the badge sits just under that, never on top of
-   it, because now that it carries text as well as an icon it is wider than
-   the gap between those two labels. */
+   It sits in the header row, between 🏠 and ✕: centred on them vertically
+   (header padding 12px + half a 56px button = 40px; half the ~48px pill =
+   24px → top 16px), and never wider than the gap between them, so it can't
+   cover either button. */
 .result-float {
   position: fixed;
-  top: calc(var(--header-h, 80px) + 8px + env(safe-area-inset-top));
+  top: calc(16px + env(safe-area-inset-top));
   left: 50%;
   transform: translateX(-50%);
   display: flex;
   align-items: center;
   gap: 8px;
-  max-width: calc(100vw - 32px);
+  /* the header's width, less both 56px buttons, the 16px gutters and 8px of
+     air on each side */
+  max-width: calc(min(100vw, 520px) - 2 * (var(--gap) + var(--target-small) + 8px));
   padding: 7px 18px 7px 14px;
   border: 3px solid;
   border-radius: 999px;
   /* the page-colored halo separates the badge from whatever it floats
-     over once scrolled past its usual spot below the header */
+     over once the header has scrolled away under it */
   box-shadow: 0 0 0 5px var(--color-bg), 0 3px 10px rgba(0, 0, 0, 0.25);
   z-index: 40;
 }
@@ -527,8 +511,6 @@ a.round-btn {
 /* an amount rather than a yes/no — change, next dollar, next note … —
    so neither the green nor the red; #0d47a1 on #e3f2fd is 7.5:1 */
 .result.is-answer { background: #e3f2fd; color: var(--color-primary-dark); }
-.result.is-neutral { background: var(--color-neutral-bg); color: var(--color-neutral-text); }
-.result.is-neutral .result-headline { font-size: 24px; font-weight: 700; }
 
 /* 💵 Show me: the notes and coins for the amount in the answer. A full row
    under the words, so the answer keeps the whole width and the button reads
