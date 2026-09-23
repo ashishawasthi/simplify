@@ -260,12 +260,15 @@ export default [
     expect: inPage(async () => {
       const { TOOLS } = await import("/js/tools.js");
       const onMenu = TOOLS.filter((t) => t.group);
-      const names = [...document.querySelectorAll("#tool-setup .setup-switch-name")].map((n) => n.textContent);
+      // the page's own sections: each tool's section (setup() in tools.js) has switches of its own
+      const own = '#tool-setup section[aria-labelledby="setup-menu-h"], #tool-setup section[aria-labelledby="setup-words-h"]';
+      const names = [...document.querySelectorAll(own.replaceAll(",", " .setup-switch-name,") + " .setup-switch-name")]
+        .map((n) => n.textContent);
       return !shown("#tool-setup .hold-btn") &&
         names.join("|") === [...onMenu.map((t) => t.title), "Pictures only (hide words)", "Speak button on cards"].join("|") &&
-        [...document.querySelectorAll("#tool-setup .setup-switch")].every((b) => b.getAttribute("aria-checked") ===
-          (b === byName("Pictures only (hide words)") ? "false" : "true")) &&
-        document.querySelectorAll("#tool-setup .setup-group-label").length === 3 &&
+        [...document.querySelectorAll(own.replaceAll(",", " .setup-switch,") + " .setup-switch")]
+          .every((b) => b.getAttribute("aria-checked") === (b === byName("Pictures only (hide words)") ? "false" : "true")) &&
+        document.querySelectorAll('#tool-setup section[aria-labelledby="setup-menu-h"] .setup-group-label').length === 3 &&
         shown("#class-setup-slot") && !shown("#clear-all-wrap") &&
         document.activeElement?.id === "setup-menu-h";
     }),
@@ -569,7 +572,10 @@ export default [
     },
     setup: HOLD + run(async () => {
       const headings = [...document.querySelectorAll("#tool-setup .setup-section > h2")].map((h) => h.textContent.trim());
-      if (headings.join("|") !== "Show on the menu|Words and sound|I need|My class") throw new Error(headings.join("|"));
+      const { TOOLS } = await import("/js/tools.js");
+      const want = ["Show on the menu", "Words and sound",
+        ...TOOLS.filter((t) => typeof t.setup === "function").map((t) => t.title), "My class"];
+      if (headings.join("|") !== want.join("|") || !want.includes("I need")) throw new Error(headings.join("|"));
       if (!document.querySelector("#tool-setup .setup-tool-heading .tool-icon img")) throw new Error("no picture");
       document.querySelector(".stub-setting").click();
       const saved = JSON.parse(localStorage.getItem("simplify-device-v1")).tools["i-need"];
