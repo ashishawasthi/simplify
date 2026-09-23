@@ -76,3 +76,4 @@ rather than edit the old one. The research behind the 2026-09-23 decisions is in
 |---|---|---|
 | 2026-09-23 | Project docs are an **Open Knowledge Format (OKF 0.2)** bundle, as in the whiz.coach repository, with generated indexes (`tools/build-docs-index.mjs`) | Future work starts from documents that describe what exists, one subject each |
 | 2026-09-23 | The public repository never names the partner organisation, the volunteer or the requester | The repository is public (MIT) |
+| 2026-09-24 | Exception, on the owner's instruction: the AWWA places coaches can choose (AWWA School @ Napiri, AWWA School @ Bedok, AWWA Early Intervention Centre @ Hougang and @ Fernvale Link) are named in the app, the seed data and the coach guide's examples; the volunteer and the requester still are not | The owner chose which institutions the app offers |
