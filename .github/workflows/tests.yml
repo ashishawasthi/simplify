@@ -1,0 +1,41 @@
+# Every test on every pull request and push to main: the zero-dependency unit
+# tests (tools/test-*.mjs — test-rules and test-functions start the Firebase
+# emulators themselves, so they need Java and the Firebase CLI), then the smoke
+# tests in headless Chrome. Nothing here deploys or needs a secret.
+
+name: Tests
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Firebase CLI and the Cloud Functions' dependencies
+        run: |
+          npm install --global firebase-tools@15
+          npm ci --prefix functions
+      - name: Unit tests
+        run: |
+          for test in tools/test-*.mjs; do
+            echo "::group::$test"
+            node "$test" || exit 1
+            echo "::endgroup::"
+          done
+      - name: Smoke tests (headless Chrome)
+        run: CHROME="$(command -v google-chrome)" node tools/smoke.mjs
