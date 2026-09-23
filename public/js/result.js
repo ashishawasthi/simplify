@@ -4,16 +4,22 @@
 
 import { DEFAULT_CURRENCY, moneySvg } from "./currency-data.js";
 
-let panel, icon, headline, subline, float, actionWrap, action;
+let panel, icon, headline, subline, float, floatIcon, floatAmount, actionWrap, action;
+let header, title;
 let current = null;
 
 export function initResult(els, { onShowMe }) {
-  ({ panel, icon, headline, subline, float, actionWrap, action } = els);
+  ({
+    panel, icon, headline, subline, float, floatIcon, floatAmount, actionWrap, action,
+    header, title,
+  } = els);
   action.addEventListener("click", () => {
     if (current?.showMe) onShowMe(current.showMe);
   });
   pinFloatToVisualViewport();
   trackPanelHeight();
+  addEventListener("resize", applyHeaderShelf); // e.g. rotating the phone
+  applyHeaderShelf();
 }
 
 // position:fixed anchors to the *layout* viewport, which on iOS is not what
@@ -42,6 +48,19 @@ function trackPanelHeight() {
   apply();
 }
 
+// The floating badge sits below the "🏠 Menu / Start over" row and the
+// tool's own name, not on top of them — offsetTop/offsetHeight are relative
+// to the page, not the current scroll position, so this is the height of
+// everything above the zones at scroll 0, not wherever the header has
+// scrolled to right now. Called on every render rather than left to a
+// ResizeObserver: header.hidden and title's text both change in the same
+// tick a screen switches, and a size-change observer on those two elements
+// was missing that first transition more often than it caught it.
+function applyHeaderShelf() {
+  const h = header.hidden ? 0 : title.offsetTop + title.offsetHeight;
+  document.documentElement.style.setProperty("--header-h", `${h}px`);
+}
+
 // The menu has no question, so no panel
 export function setResultVisible(visible) {
   panel.hidden = !visible;
@@ -50,9 +69,10 @@ export function setResultVisible(visible) {
 
 const TONES = ["is-yes", "is-no", "is-answer", "is-neutral"];
 
-// answer: { tone, icon, headline, subline?, showMe? } — see answers.js
+// answer: { tone, icon, headline, subline?, badge?, showMe? } — see answers.js
 export function renderResult(answer) {
   current = answer;
+  applyHeaderShelf();
   panel.classList.remove(...TONES);
   panel.classList.add(`is-${answer.tone}`);
 
@@ -67,13 +87,15 @@ export function renderResult(answer) {
   subline.innerHTML = answer.subline ?? "";
   actionWrap.hidden = !answer.showMe;
 
-  // mirror a real yes/no at the top of the screen; hints and amounts stay
-  // bottom-only because a bare icon can't carry their meaning
+  // mirror a real yes/no at the top of the screen, with its short amount —
+  // an "answer" tone (change, next dollar …) stays bottom-only because a
+  // bare icon can't carry that meaning on its own
   const verdict = answer.tone === "yes" || answer.tone === "no";
   float.hidden = !verdict || panel.hidden;
   if (verdict) {
     float.classList.remove("is-yes", "is-no");
     float.classList.add(`is-${answer.tone}`);
-    float.textContent = answer.icon;
+    floatIcon.textContent = answer.icon;
+    floatAmount.textContent = answer.badge ?? "";
   }
 }

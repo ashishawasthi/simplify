@@ -4,7 +4,7 @@
 // Pages are listed by their clean URLs ("/", "/guide", "/guide/speak"), never
 // as ".html": Hosting cleanUrls 301s the .html forms, and a cached redirected
 // response breaks offline navigations.
-const CACHE = "afford-v33";
+const CACHE = "afford-v34";
 const ASSETS = [
   "/",
   "/guide",

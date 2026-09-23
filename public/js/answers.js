@@ -2,12 +2,16 @@
 // tools/test-money.mjs can hold every wording to the requester's examples.
 //
 // Each function takes amounts already parsed to cents (null = an empty box)
-// and returns { tone, icon, headline, subline?, showMe?, pictures? }:
+// and returns { tone, icon, headline, subline?, badge?, showMe?, pictures? }:
 //   tone      "yes" | "no" | "answer" | "neutral" — the panel's colour.
 //             "answer" is an amount (change, next dollar …), not a yes/no.
 //   icon      an emoji, or { picture: valueCents } for a note or coin drawing
 //   subline   HTML, built only from formatted numbers and denomination
 //             labels — never from anything the user typed
+//   badge     short plain text ("$6 more") on a yes/no answer only, echoed
+//             on the floating badge at the top of the screen — the on-screen
+//             keyboard hides the bottom panel far more often than it hides
+//             the top of the screen, and a bare ✋ can't say how much
 //   showMe    { label, title, cents } — the 💵 Show me sheet's content
 //   pictures  [{ pieces, caption? }] — drawn on the tool's screen
 //
@@ -30,6 +34,7 @@ function cannotBuy(short) {
     headline: "Cannot buy",
     // phrased as "need more", never as a negative number
     subline: `You need ${strong(short)} more`,
+    badge: `${formatCents(short)} more`,
     showMe: { label: "You need", title: `${formatCents(short)} more`, cents: short },
   };
 }
@@ -38,7 +43,10 @@ export function canIBuy({ money, total, hasPrices }) {
   if (!hasPrices) return money == null ? TYPE_MONEY : ADD_PRICES;
   const left = (money ?? 0) - total;
   if (left < 0) return cannotBuy(-left);
-  return { tone: "yes", icon: "✅", headline: "Can buy", subline: `Money left: ${strong(left)}` };
+  return {
+    tone: "yes", icon: "✅", headline: "Can buy",
+    subline: `Money left: ${strong(left)}`, badge: `${formatCents(left)} left`,
+  };
 }
 
 export function change({ money, spend }) {
@@ -118,9 +126,15 @@ export function shoppingList({ money, total, hasPrices }) {
   }
   const left = (money ?? 0) - total;
   if (left < 0) {
-    return { tone: "no", icon: "✋", headline: "Over your budget", subline: `Too much by ${strong(-left)}` };
+    return {
+      tone: "no", icon: "✋", headline: "Over your budget",
+      subline: `Too much by ${strong(-left)}`, badge: `${formatCents(-left)} over`,
+    };
   }
-  return { tone: "yes", icon: "✅", headline: "Yes! Within your budget", subline: `Money left: ${strong(left)}` };
+  return {
+    tone: "yes", icon: "✅", headline: "Yes! Within your budget",
+    subline: `Money left: ${strong(left)}`, badge: `${formatCents(left)} left`,
+  };
 }
 
 // The tools, by the id used in the URL (#change) and in the guide

@@ -85,7 +85,10 @@ device. Works offline once installed (PWA).
 - Never a validation error — bad input is prevented or forgiven, not rejected.
   A blank box counts as $0 rather than leaving the answer waiting.
 - Every state uses color + icon + plain words together (works for
-  color-blind users and non-readers); WCAG AAA contrast.
+  color-blind users and non-readers); WCAG AAA contrast. The floating
+  yes/no badge at the top of the screen (visible even when the on-screen
+  keyboard hides the bottom panel) carries the short amount too — "$6
+  more", not just ✋ — for the same reason.
 - Big type, plain language, at most a few words per label.
 - Immediate feedback — the answer updates as you type or tap; no submit button.
 - Undo instead of confirmation dialogs ("Take back one", "Put it back").
