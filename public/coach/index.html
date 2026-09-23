@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en-SG">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <!-- For coaches only: kept out of search results, and nothing a learner
+       sees links here (docs/daily-life-tools.md section 8). -->
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#0d47a1">
+  <meta name="description" content="Simplify for coaches: write and publish your class's page.">
+  <title>Simplify for coaches</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/coach/css/coach.css">
+  <!-- the learner app's My class look, for the phone preview (scoped to #tool-my-class) -->
+  <link rel="stylesheet" href="/css/tools/my-class.css">
+  <script type="module" src="/coach/js/main.js"></script>
+</head>
+
+<body>
+  <a class="skip-link" href="#main">Skip to the page</a>
+
+  <header class="coach-header">
+    <a class="brand" href="#classes">Simplify <span class="brand-for">for coaches</span></a>
+    <nav id="nav" class="header-nav" aria-label="Coach pages" hidden>
+      <a href="#classes" data-route="classes">My classes</a>
+      <a href="#admin" data-route="admin" hidden>Admin</a>
+      <a href="#about" data-route="about">About you</a>
+    </nav>
+    <div id="account" class="account" hidden>
+      <span id="account-email" class="account-email"></span>
+      <button id="sign-out" class="btn btn-quiet" type="button">Sign out</button>
+    </div>
+  </header>
+
+  <main id="main" tabindex="-1">
+    <p class="loading">Loading…</p>
+    <noscript>
+      <p>Simplify for coaches needs JavaScript. Turn it on, or open this page in Chrome or Safari.</p>
+    </noscript>
+  </main>
+
+  <footer class="coach-footer">
+    <a href="/coach/guide.html">Help for coaches</a>
+  </footer>
+
+  <!-- The undo toast (js/toast.js) and the line screen readers hear it from -->
+  <div id="toast" class="toast" hidden>
+    <span id="toast-text" class="toast-text"></span>
+    <button id="toast-undo" class="toast-btn" type="button">Undo</button>
+  </div>
+  <p id="toast-status" class="visually-hidden" role="status" aria-live="polite"></p>
+</body>
+
+</html>

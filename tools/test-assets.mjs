@@ -32,12 +32,18 @@ function readAssets() {
   return [...body.replace(/\/\/.*$/gm, "").matchAll(/"([^"]*)"|'([^']*)'/g)].map((m) => m[1] ?? m[2]);
 }
 
+// The coach app (/coach/) is served from the same site but is not part of the
+// learner app: the service worker never caches or serves it, so none of its
+// files belong in ASSETS (and none may be there).
+const COACH = "coach";
+
 // every file Hosting serves from public/ (firebase.json ignores dotfiles),
-// by the URL it is served at
+// by the URL it is served at — the coach app's files aside
 function servedUrls(dir = PUBLIC) {
   const urls = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     if (entry.name.startsWith(".")) continue;
+    if (dir === PUBLIC && entry.name === COACH) continue;
     const path = join(dir, entry.name);
     if (entry.isDirectory()) {
       urls.push(...servedUrls(path));
@@ -60,7 +66,8 @@ const twice = assets.filter((url, i) => assets.indexOf(url) !== i);
 for (const url of new Set(twice)) problems.push(`listed twice in ASSETS: ${url}`);
 
 for (const url of assets) {
-  if (url.endsWith(".html")) problems.push(`list the page by its clean URL, without .html: ${url}`);
+  if (url === `/${COACH}` || url.startsWith(`/${COACH}/`)) problems.push(`the coach app is never precached: ${url}`);
+  else if (url.endsWith(".html")) problems.push(`list the page by its clean URL, without .html: ${url}`);
   else if (!served.has(url)) problems.push(`in ASSETS, but there is no such file: ${url}`);
 }
 
