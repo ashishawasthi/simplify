@@ -127,12 +127,12 @@ accounts, small. Effort: S (days), M (a week or two), L (more — usually drawin
 | **Now and next** | NOW big on top, NEXT below, each a picture + 1–3 words; an adult queues up to 8 cards. The student taps Done; NEXT moves up. The same list shows as **My day** (a strip of the whole day), with a "Changed" card so a change is announced, not hidden. | 5 / 5 | M |
 | **Show a card** | Big cards to show someone: LTA's own wording ("May I have a seat please?", "Please alert me when I am approaching my stop"), "I cannot talk now, I can point or type", and a card for the parent ("My child is overwhelmed. Please give us space. We are OK."). Full-screen, flip to face the person opposite, landscape-friendly, speak on tap. | 5 / 4 | M |
 | **Steps** | One step per screen: a picture, 2–4 words, progress dots, a big Next, Back to undo, "All done" pointing back to the task. Starts with 2–3 decks (wash hands, return the tray, pay by card or QR); "fewer steps" merges mastered ones. | 5 / 4 | M engine + L drawings |
+| **My class** | The coach's latest post, one page at a time (photo, a few words, Next) — the coach platform, [section 8](#8-coach-platform-my-class) | 4 / 3 | L |
 
 ### Next
 
 | Tool | One screen | Impact / Fit | Effort | Note |
 |---|---|---|---|---|
-| **My class** | The coach's latest content, one page at a time (photo, a few words, Next) | 4 / 3 | L | The coach platform, [section 8](#8-coach-platform-my-class) |
 | **Say it** | Type (or dictate) one sentence; show it huge or speak it; last 5 phrases as buttons | 3 / 4 | S | Reuses Show a card; not a replacement for prescribed AAC |
 | **How I feel** | Five bands (colour, size, one word; faces optional) → the student's own "what helps me" pictures | 4 / 5 | S | Words must match the school's own programme (Zones or a 5-point scale); no branding; nothing saved |
 | **Order food** | Drink (kopi, teh, Milo, water + O, C, kosong, siew dai, peng), food row (halal by default), here or tapau/dabao/bungkus → one big sentence to show; then Can I buy? and "return the tray" | 4 / 4 | M + L drawings | Builds the words, not a menu; device voices may mispronounce kopi terms |
@@ -182,7 +182,81 @@ puberty and hygiene for teens, body safety, water safety, cross the road (Green 
 
 ## 8. Coach platform (My class)
 
-_To be completed with the decisions on the coach platform._
+whiz.coach is a platform for coaches and learners; simplify.whiz.coach gets its own, much smaller one for coaches of
+autistic learners. A coach makes very simple content — a few pages, each a photo and a few words — and every
+learner in the class sees it on their own phone or the class iPad, offline too.
+
+### Roles and flows
+
+| Who | Signs in? | Can do |
+|---|---|---|
+| **Admin** (the owner) | Yes (Google) | Approve or decline each coach **for each class**, after checking they really are a trustworthy coach of that class; suspend a coach; remove any post |
+| **Coach** | Yes (Google, any Google account — Gmail or a Google account made on a school address) | Ask for a new class, or ask to join a colleague's class; once approved, post to that class and print its QR code |
+| **Learner** | **Never** | Subscribe once by scanning the class QR code (or typing its code on the set-up page); open **My class** to see the **latest post only** |
+
+1. A coach signs in, fills in who they are (name, organisation, how the admin can check), and asks for a class
+   ("3 Kindness") or to join one by its code.
+2. The admin approves the request. A new class gets a random code (9 characters from a 31-character set with no
+   look-alikes, shown as `K7M-3RQ-P9T`); the class name is only a label, because names collide across schools and are
+   easy to guess.
+3. The coach prints the class's QR poster. The QR opens `https://simplify.whiz.coach/#join=K7M3RQP9T`; the app asks
+   "Is this your class?" with the class name, and remembers it. The fragment never reaches a server.
+4. The coach writes a post: 1–6 pages, each a photo (resized in the coach's browser, EXIF/GPS dropped) and a few words,
+   plus one optional link. Every post screen carries the warning: **what you post is public — anyone with the class
+   code can see it, so never post pictures of students or any private or sensitive information.** Coaches are the
+   experts for their learners and decide what to post; there is no consent tick box.
+5. Publishing replaces the class's latest post. Learners see only that one, a page at a time with a big Next; the coach
+   keeps older posts to publish again.
+
+### Where things live
+
+- Firebase project `simplify-special`, on the **Blaze** plan (Cloud Storage for Firebase needs Blaze since
+  3 Feb 2026), with a budget alert. Firestore in **asia-southeast1** (Singapore) and a Storage bucket in the same
+  region. Firebase Authentication itself runs in US data centres (coaches' and the admin's sign-in data only).
+- A second Hosting site for the coach app (`simplify-coach`, to be served at coach.simplify.whiz.coach). The coach site
+  loads the Firebase SDK; the learner app does not — it reads the class with one plain HTTPS request.
+- Built on its own, not inside the whiz.coach platform: that platform's data is in the US, its classes need signed-in
+  learners, its coach role can read the user directory, and its security rules deploy as one large shared file.
+  Ideas reused from it: Google sign-in, admin-switched roles, browser-side photo resizing, image URLs restricted to the
+  project's own bucket.
+
+| Data | Readable by | Written by |
+|---|---|---|
+| `admins/{uid}` | that admin | the owner, in the console |
+| `coaches/{uid}` — name, organisation, note | that coach, admins | that coach (own profile only) |
+| `requests/{id}` — new class or join class, pending / approved / declined | that coach, admins | coach creates; admin decides |
+| `classes/{code}` — name, latest post, updated | **anyone with the exact code** (get only, no listing), while active | that class's approved coaches (post); admins (create, suspend) |
+| `classCoaches/{code}` — the class's coach uids | its coaches, admins | admins |
+| `classes/{code}/posts/{id}` — older posts | its coaches | its coaches |
+| Storage `classes/{code}/{post}/{n}.jpg` | anyone with the exact path (no listing) | that class's approved coaches; images only, size-capped |
+
+### Learner app changes
+
+- **My class** tile at the top of the menu once a class is set; the latest post one page at a time; "Updated Tue 8:05";
+  offline shows the saved copy; nothing yet shows "Nothing from your coach yet" — never an error.
+- Words are shown as text only (no HTML); a link is one big button naming the site and opens only on a tap, https only.
+- The app sends only the class code (and, like any website, the device's internet address) — nothing a learner types
+  or taps. The CSP gains `connect-src` for Firestore and Storage and `img-src blob:`; everything else stays offline.
+- The privacy page and README change from "nothing is sent anywhere" to "nothing leaves the device unless My class is
+  set up, and then only the class code".
+
+### Risks and what limits them
+
+| Risk | Mitigation |
+|---|---|
+| A coach account is taken over and posts something harmful | Admin approval per class; a coach reaches only their own classes; admin can suspend and remove posts; learners see only the latest post, so a bad post is replaced by the next one; coaches asked to turn on 2-Step Verification |
+| The QR code is photographed and shared | A new code can be issued (devices set up again); the public warning keeps private information out of posts |
+| Costs on Blaze (reads, downloads) | Learner devices check at most on opening and every 10 minutes; images cached on the device; a budget alert; App Check later if needed |
+| iPad: the QR opens Safari, whose data is separate from the home-screen app | The code is printed under the QR and can be typed on the set-up page inside the app |
+| School-managed devices block Google's APIs | Ask the school to allow `firestore.googleapis.com` and `firebasestorage.googleapis.com` |
+| Google sign-in fails inside WhatsApp or Telegram's built-in browser | The coach guide says to open the coach link in Chrome or Safari |
+| PDPA | Holding a school's content makes the owner its data intermediary: a short written agreement with each organisation (purpose, Singapore storage, retention, deletion on request, breach notice). Pilot with an SSA-run SPED school (MOE schools follow public-sector rules). |
+
+### Put off
+
+Microsoft sign-in (if a school needs it), App Check, several classes per device, content for one learner, read
+receipts or analytics, learner replies, push notifications, video uploads, a parent view, a class-wide tool list that
+sets each device's menu.
 
 ## 9. Technical notes for adding tools
 
@@ -222,7 +296,12 @@ _To be completed with the decisions on the coach platform._
 | 2026-09-23 | First release adds **Wait, I need, Now and next (My day), Show a card, Steps** | One tool per core need; all offline with no security-header change; builds the shared parts later tools reuse |
 | 2026-09-23 | Design for **both** picture users and readers: pictures + 1–3 words by default, an adult can set a device to pictures-only | Covers minimally-speaking children and teens who read |
 | 2026-09-23 | Menu: **group headings + an adult hides unused tools per device** | Keeps each child's menu short and one level deep |
-| 2026-09-23 | **Coach platform pilot with photos**: coaches approved by an admin; only coaches upload; learners subscribe once by QR code and see only the latest content for their class | See section 8 |
+| 2026-09-23 | **Coach platform pilot with photos**: coaches approved by an admin for each class; only coaches upload; learners subscribe once by QR code and see only the latest post of their class | whiz.coach is a coaches-and-learners platform; simplify.whiz.coach mirrors it for coaches of autistic learners (section 8) |
+| 2026-09-23 | **Blaze plan with a Cloud Storage bucket** in Singapore for photos, Firestore in Singapore for classes and posts | Full-size photos; pilot cost is cents a month; a budget alert warns (it does not cap) |
+| 2026-09-23 | **Trust coaches** with what they post; show a clear warning that posts are public — never pictures of students or private or sensitive information | Coaches are responsible for their learners and are the experts |
+| 2026-09-23 | Sign in with **Google, any Google account** (Gmail or one made on a school address); Microsoft later if a school needs it | Most Singapore SPED operators checked use Microsoft 365, so Gmail-only would shut many coaches out |
+| 2026-09-23 | A **random class code** in the QR, the class name only a label | Learners read without signing in, so the code is the only lock; names collide and are guessable |
+| 2026-09-23 | **Standalone** in `simplify-special`, not inside the whiz.coach platform | Singapore data location, learners without accounts, narrow coach permissions, separate rules and deploys |
 
 ## Sources
 
