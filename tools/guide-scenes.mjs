@@ -123,3 +123,208 @@ export const SCENES = {
     expect: panel("Yes! Within your budget | Money left: $1.50"),
   },
 };
+
+// ---------- the daily-life tools ----------
+// Their setups may await (a tap, then the card it opens) and change the
+// device's settings the way the set-up page in another tab would: saved,
+// then a "storage" event, which device.js listens for — so a scene needs no
+// reload, here or in the smoke run (tools/smoke/app.mjs), which runs every
+// scene below as well.
+
+// page helpers, for the setups below
+const HELPERS = `
+  const pause = (ms) => new Promise((r) => setTimeout(r, ms));
+  const $ = (sel) => document.querySelector(sel);
+  const $$ = (sel) => [...document.querySelectorAll(sel)];
+  const shown = (sel) => { const el = $(sel); return !!el && el.getClientRects().length > 0; };
+  const deviceSettings = (settings) => {
+    localStorage.setItem("simplify-device-v1", JSON.stringify({
+      hidden: [], picturesOnly: false, speak: true, classCode: null, className: null, tools: {}, ...settings,
+    }));
+    dispatchEvent(new StorageEvent("storage", { key: "simplify-device-v1" }));
+  };
+  // pick a picture in the picture picker, as a finger would
+  const pickPicture = async (id) => {
+    await pause(100);
+    $('.pp-pic[data-picture="' + id + '"]').click();
+    $(".pp-done").click();
+    await pause(300);
+  };
+  // press and hold "Hold to open set-up", then lift the finger
+  const hold = async () => {
+    const btn = $("#tool-setup .hold-btn");
+    const finger = { bubbles: true, pointerId: 7, button: 0, isPrimary: true, pointerType: "touch" };
+    btn.dispatchEvent(new PointerEvent("pointerdown", finger));
+    await pause(1700);
+    btn.dispatchEvent(new PointerEvent("pointerup", finger));
+    await pause(700);
+  };
+`;
+// Now and next, filled in the way an adult does it: ＋ Add and a picture,
+// then more in My day; then Done on the first card.
+const MORNING = `
+  $("#tool-now-next .nn-add-first").click();
+  await pickPicture("brush-teeth");
+  $$("#tool-now-next .nn-view")[1].click();
+  await pause(500);
+  for (const id of ["bus", "school", "home"]) {
+    $("#tool-now-next .nn-add").click();
+    await pickPicture(id);
+    await pause(300);
+  }
+  $$("#tool-now-next .nn-view")[0].click();
+  await pause(500);
+  $("#tool-now-next .nn-done").click();
+  await pause(800);
+`;
+
+// My class: this device follows 3 Kindness, and has its latest page saved
+const CODE = "K7M3RQP9T";
+const CLASS_PAGE = `# Washing hands
+We wash our hands before we eat.
+
+[How to wash hands](https://youtu.be/dQw4w9WgXcQ)
+---
+## At the sink
+1. Wet your hands
+2. Put on soap
+3. Rub and rinse
+---
+All done. Now we can eat.`;
+const CLASS = `
+  localStorage.setItem("simplify-class-v1", JSON.stringify({
+    code: "${CODE}", name: "3 Kindness", checkedAt: Date.now(),
+    latest: { pageId: "p1", title: "Washing hands", markdown: ${JSON.stringify(CLASS_PAGE)},
+      publishedAt: new Date(Date.now() - 3600e3).toISOString() },
+  }));
+  deviceSettings({ classCode: "${CODE}", className: "3 Kindness" });
+  await pause(200);
+`;
+
+const scene = (out, path, setup, expect) => ({ ...SCREEN, out: `img/guide/${out}.png`, path, setup: HELPERS + setup, expect });
+
+Object.assign(SCENES, {
+  // the minute buttons, with one "While I wait" picture an adult added
+  "wait-pick": scene("screen-wait-pick", "/#wait", `
+    $("#tool-wait .wait-while-add").click();
+    await pickPicture("read");
+    document.activeElement.blur();
+    scrollTo(0, 0);
+  `, `document.querySelectorAll('#tool-wait .wait-min').length === 5 &&
+    document.querySelectorAll('#tool-wait .wait-while-list li').length === 1`),
+
+  // a 5-minute wait, two minutes in: the clock is moved on, not waited for
+  wait: scene("screen-wait", "/#wait", `
+    $("#tool-wait .wait-while-add").click();
+    await pickPicture("read");
+    $('#tool-wait .wait-min[data-minutes="5"]').click();
+    const realNow = Date.now;
+    Date.now = () => realNow.call(Date) + 2 * 60 * 1000 + 5000;
+    await pause(1500);
+    document.activeElement.blur();
+  `, `document.querySelector('#tool-wait .wait-words').textContent.startsWith('3 minutes')`),
+
+  "i-need": scene("screen-i-need", "/#i-need", ``,
+    `[...document.querySelectorAll('#tool-i-need .need-card')].filter((c) => c.getClientRects().length).length === 7`),
+
+  "i-need-card": scene("screen-i-need-card", "/#i-need", `
+    $('#tool-i-need .need-card[data-card="break"]').click();
+    await pause(400);
+    document.activeElement.blur();
+  `, `document.querySelector('.card-sheet')?.open && document.querySelector('.card-words').textContent === 'I need a break'`),
+
+  "i-need-hurts": scene("screen-i-need-hurts", "/#i-need", `
+    $('#tool-i-need .need-card[data-card="hurts"]').click();
+    await pause(500);
+    document.activeElement.blur();
+  `, `!!document.querySelector('#tool-i-need .hurts-spot[data-region="tummy"]')`),
+
+  "show-card": scene("screen-show-card", "/#show-card", ``,
+    `document.querySelectorAll('#tool-show-card .sc-card').length === 6`),
+
+  "show-card-stop": scene("screen-show-card-stop", "/#show-card", `
+    deviceSettings({ tools: { "show-card": { stop: "Bishan Interchange" } } });
+    await pause(100);
+    $('#tool-show-card .sc-card[data-card="bell"]').click();
+    await pause(400);
+    document.activeElement.blur();
+  `, `document.querySelector('.card-sheet')?.open && document.querySelector('.card-sheet').textContent.includes('My stop: Bishan Interchange')`),
+
+  // a morning of four cards, the first one done
+  "now-next": scene("screen-now-next", "/#now-next", MORNING + `
+    document.activeElement.blur();
+  `, `document.querySelector('#tool-now-next .nn-now .nn-words').textContent === 'Bus' &&
+    document.querySelector('#tool-now-next .nn-next .nn-words').textContent === 'School'`),
+
+  // the same morning as My day, with a change said on one card
+  "my-day": scene("screen-my-day", "/#now-next", MORNING + `
+    $$("#tool-now-next .nn-view")[1].click();
+    await pause(500);
+    const school = $$("#tool-now-next .nn-item").find((li) => li.querySelector(".nn-face .nn-words")?.textContent === "School");
+    school.querySelector(".nn-toggle").click();
+    await pause(500);
+    document.activeElement.blur();
+    scrollTo(0, 0);
+  `, `document.querySelectorAll('#tool-now-next .nn-item').length === 4 &&
+    document.querySelector('#tool-now-next .nn-item.is-now .nn-face .nn-words')?.textContent === 'Bus'`),
+
+  // the rest of the menu: My day and Talk
+  "menu-more": scene("screen-menu-more", "/", `
+    $('#menu h2[data-group="my-day"]').scrollIntoView({ block: "start" });
+    scrollBy(0, -12);
+  `, `!document.getElementById('menu').hidden`),
+
+  // a device that follows a class: My class comes first on the menu
+  "menu-class": scene("screen-menu-class", "/", CLASS + `
+    await pause(300);
+  `, `document.querySelector('#menu li[data-tool="my-class"]')?.getClientRects().length > 0`),
+
+  // the class this device follows, as the coach published it: no internet
+  // needed, the device's copy
+  "my-class": scene("screen-my-class", "/", CLASS + `
+    location.hash = "#my-class";
+    await pause(600);
+    document.activeElement.blur();
+  `, `document.querySelector('#tool-my-class .mc-screen h2')?.textContent === 'Washing hands'`),
+
+  // a class's QR code opens the app at #join=<code>: "Is this your class?".
+  // The class is looked up from a stand-in for Google's server (on
+  // 127.0.0.1 the app asks nobody else).
+  "class-join": scene("screen-class-join", "/", `
+    localStorage.setItem("simplify-class-emulator", "on");
+    const realFetch = window.fetch.bind(window);
+    window.fetch = async (input, options) => {
+      const url = String(input?.url ?? input);
+      if (!url.startsWith("http://127.0.0.1:8085/")) return realFetch(input, options);
+      return new Response(JSON.stringify({ fields: {
+        name: { stringValue: "3 Kindness" }, status: { stringValue: "active" }, latest: { nullValue: null },
+      } }), { status: 200, headers: { "content-type": "application/json" } });
+    };
+    location.hash = "#join=${CODE}";
+    await pause(800);
+    document.activeElement.blur();
+  `, `document.querySelector('#tool-setup .cs-question')?.getClientRects().length > 0 &&
+    document.querySelector('#tool-setup .cs-ask .cs-name').textContent === '3 Kindness'`),
+
+  // Steps: the routines to choose from, then one step at a time
+  steps: scene("screen-steps", "/#steps", ``,
+    `document.querySelectorAll('#tool-steps .steps-choose').length >= 3`),
+
+  // Wash hands, on its third step
+  "steps-step": scene("screen-steps-step", "/#steps?deck=wash-hands", `
+    await pause(300);
+    for (let i = 0; i < 2; i++) {
+      $("#tool-steps .steps-next").click();
+      await pause(500);
+    }
+    document.activeElement.blur();
+  `, `document.querySelector('#tool-steps .steps-picture img')?.getAttribute('src') === '/img/pic/soap.svg'`),
+
+  "setup-hold": scene("screen-setup-hold", "/#setup", ``, `!!document.querySelector('#tool-setup .hold-btn')`),
+
+  setup: scene("screen-setup", "/#setup", `
+    await hold();
+    document.activeElement.blur();
+    scrollTo(0, 0);
+  `, `document.querySelector('#tool-setup .setup-settings')?.hidden === false`),
+});

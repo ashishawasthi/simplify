@@ -31,13 +31,13 @@ body {
 }
 
 main {
-  max-width: 520px;
+  max-width: 560px;
   margin: 0 auto;
   padding: 0 var(--gap) 48px;
 }
 
 header.guide-header {
-  max-width: 520px;
+  max-width: 560px;
   margin: 0 auto;
   padding: 16px var(--gap) 0;
 }
@@ -49,6 +49,28 @@ h1 {
 /* a topic page's title sits under the "← Help menu" button, not at the top */
 main > h1:first-child {
   margin-top: 20px;
+}
+
+/* the tool's own picture beside a page's title, and in its "Open this
+   tool" button: the same drawing the app's menu shows */
+.h1-pic {
+  width: 40px;
+  height: 40px;
+  vertical-align: -6px;
+}
+.open-pic {
+  width: 32px;
+  height: 32px;
+  /* a white tile, so the picture reads on the blue button */
+  padding: 3px;
+  background: #fff;
+  border-radius: 8px;
+}
+
+/* a button in the middle of a page (set-up's "Open set-up") */
+.page-action {
+  margin: 20px 0;
+  text-align: center;
 }
 
 .subtitle {
@@ -168,6 +190,27 @@ figcaption {
   color: var(--color-primary-dark);
 }
 
+/* something that matters more than a tip: a student's right, a limit of
+   the app. The app's blue (#0d47a1 on #e3f2fd, 7.5:1), with a bar. */
+.callout.key {
+  background: #e3f2fd;
+  color: var(--color-primary-dark);
+  border-left: 8px solid var(--color-primary);
+}
+
+/* two screenshots side by side where there is room (an iPad), one above
+   the other on a phone */
+.figures {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0 20px;
+}
+.figures figure {
+  flex: 1 1 220px;
+  max-width: 250px;
+}
+
 .platform {
   border: 3px solid var(--color-border);
   border-radius: var(--radius);
@@ -261,6 +304,13 @@ a.topic:active { background: #e3f2fd; }
   font-size: 30px;
   text-align: center;
 }
+/* the app's own pictures (js/pictures.js), as on its menu, so the guide
+   looks the same on every phone and iPad */
+.topic-icon img {
+  display: block;
+  width: 44px;
+  height: 44px;
+}
 /* the app's own note and coin drawings, as on its menu */
 .topic-icon svg { display: block; height: auto; }
 .topic-icon .note-svg { width: 50px; }
@@ -314,6 +364,13 @@ a.open-app {
 
 a.open-app:active {
   background: var(--color-primary-dark);
+}
+
+/* a link inside the words, to another topic: the app's dark blue, bold, so
+   it reads as a link without relying on colour alone (it keeps its line) */
+main a:not([class]) {
+  color: var(--color-primary-dark);
+  font-weight: 700;
 }
 
 a:focus-visible {
