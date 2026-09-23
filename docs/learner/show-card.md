@@ -1,7 +1,7 @@
 ---
 type: Product Contract
 title: Show a card
-description: The Show a card tool (#show-card) — the six cards and their exact words (three carry LTA Helping Hand wording, never its design), fixed places with gaps, the adult's per-device switches, stop name and opt-in second line — and the shared full-screen card every tool opens (openCard) with Turn around, Speak on a tap in the device's own voice, fit-to-screen text and the wake lock.
+description: The Show a card tool (#show-card) — the six cards and their exact words (three carry LTA Helping Hand wording, never its design), fixed places with gaps, the adult's per-device switches, stop name and opt-in second line — and the shared full-screen card every tool opens (openCard) with Turn around, Speak on a tap (a recorded voice for fixed words, the device's own for typed ones), fit-to-screen text and the wake lock.
 tags: [show-card, cards, lta, helping-hand, full-screen-card, speech, disclosure, setup]
 status: stable
 ---
@@ -64,7 +64,7 @@ It returns a promise that settles when the card closes: with the action tapped, 
 - **The words** are set by `fit()` to the biggest font size (20–480 px) at which the words and lines fit their box without breaking a word; a word too long even at 20 px may then break. It refits when the phone turns or an iPad splits the screen. A device on its side puts the picture beside the words — on an iPad or in a browser; the installed Android app is held upright by the manifest (`"orientation": "portrait"`).
 - **Three round buttons** run along the bottom edge, nearest whoever holds the phone:
   - **🔄 Turn around** ("Turn around, for the person opposite", `aria-pressed`) turns the card body 180° so the person opposite can read it; the buttons and choices stay the right way up for the holder. Tap again to turn it back.
-  - **🔊 Speak** ("Speak: say the card out loud") reads the words and lines aloud — shown only when the device's `speak` setting is on, the browser can speak, and there is something to say.
+  - **🔊 Speak** ("Speak: say the card out loud") reads the words and lines aloud — shown only when the device's `speak` setting is on and some of them can be said on this device (`canSpeak(what)`).
   - **✕** ("Close the card"), with no words under it, as everywhere else. Esc and Android's Back close it too.
 - The dialog's accessible name is the message (or the picture's words).
 - For 350 ms after it opens, real taps on the card are ignored, so the second tap of a quick double tap on a tile can't land on the card that just opened under the finger.
@@ -74,10 +74,11 @@ It returns a promise that settles when the card closes: with the action tapped, 
 
 ### Speech
 
-`public/js/say-aloud.js`: `canSpeak()`, `say(text | [{ text, lang }])`, `stop()`. Output only, with the device's own `speechSynthesis` voice — the microphone stays off site-wide.
+`public/js/say-aloud.js`: `canSpeak(what?)`, `say(text | [{ text, lang }])`, `stop()`. Output only — the microphone stays off site-wide.
 
-- `say()` must be called straight from a tap (iOS only lets speech start from one); it cuts off anything still being said, speaks at rate 0.9 (a little slower, for a noisy place), and settles when done or cut off.
-- Voices arrive late and differ per phone. English tries Singapore, then British, then any English; Chinese tries Singapore, China, then Taiwan Mandarin — never a Hong Kong or Macau voice, which would read the words as Cantonese. Malay and Tamil try Singapore, then Malaysia or India. Within each, an on-device voice beats a network one, which fails offline.
+- **Fixed words play a recorded clip.** Every sentence a card can show on its own — each card here and in I need, each Hurts answer, "I want: <a picture's words>", the two second lines — has a clip in one clear Chirp 3 HD voice, kept on the device. A line with no clip (a stop name, words typed into I want, another language) is read by the device's own `speechSynthesis` voice; one line is never half of each. The clips, the voice and the playback rules are in [the recorded voice](/platform/voice.md).
+- `say()` must be called straight from a tap (iOS only lets sound start from one); it cuts off anything still being said, plays the lines one after another, and settles when done or cut off. The device's voice speaks at rate 0.9 (a little slower, for a noisy place); the clips are recorded at that pace.
+- The device's voices arrive late and differ per phone. English tries Singapore, then British, then any English; Chinese tries Singapore, China, then Taiwan Mandarin — never a Hong Kong or Macau voice, which would read the words as Cantonese. Malay and Tamil try Singapore, then Malaysia or India. Within each, an on-device voice beats a network one, which fails offline.
 - A part in a language the device has no voice for is left out, since the English voice would read it as nonsense; English always goes.
 - Speech stops when the card closes, the screen changes, or the app goes to the background.
 
@@ -94,7 +95,7 @@ It returns a promise that settles when the card closes: with the action tapped, 
 | `public/js/tools/show-card.js` | the screen and the set-up section |
 | `public/js/tools/show-card-cards.js` | `CARDS`, `DISCLOSURES`, `STOP_MAX`, `readSettings`, `withCard`, `withStop`, `withDisclosure`, `cardLines`, `cardFor` (pure) |
 | `public/js/show-card.js` | the shared full-screen card: `openCard`, `closeCard` |
-| `public/js/say-aloud.js` | speech: `canSpeak`, `say`, `stop` |
+| `public/js/say-aloud.js` | speech: `canSpeak`, `say`, `stop` — the recorded clips (`public/js/voice-clips.js`, [the recorded voice](/platform/voice.md)) and the device's voice |
 | `public/css/tools/show-card.css`, `public/css/styles.css` | the screen; the card overlay (`.card-sheet`) |
 
-`node tools/test-show-card.mjs` pins every card's words (the three LTA cards exactly), pictures and the settings rules; `node tools/smoke.mjs show-card` runs the screen, the card, Speak, Turn around, gaps, pictures only, phone-on-its-side and iPad layouts, and the set-up section in Chrome.
+`node tools/test-show-card.mjs` pins every card's words (the three LTA cards exactly), pictures and the settings rules; `node tools/smoke.mjs show-card` runs the screen, the card, Speak (the recorded clip, the stop name in the device's voice), Turn around, gaps, pictures only, phone-on-its-side and iPad layouts, and the set-up section in Chrome.

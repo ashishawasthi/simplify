@@ -32,7 +32,7 @@ The grid has 2 columns on a phone and 3 on a screen at least 600 px both ways (a
 
 ## Tapping a card
 
-A plain card opens the full-screen card: its picture, its sentence in the largest type that fits, and the card's own Turn around, Speak (where allowed) and ✕ — nothing is said until Speak is tapped.
+A plain card opens the full-screen card: its picture, its sentence in the largest type that fits, and the card's own Turn around, Speak (where allowed) and ✕ — nothing is said until Speak is tapped. Speak plays every sentence on this page — each card's, each Hurts answer, "I want: <a picture's words>" — in [the recorded voice](/platform/voice.md); only words typed into I want are read by the device's own voice.
 
 ### Break opens Wait
 

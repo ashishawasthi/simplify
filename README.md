@@ -66,6 +66,7 @@ node tools/test-i-need.mjs      # I need's cards, settings, sentences and body m
 node tools/test-now-next.mjs    # Now and next's list rules
 node tools/test-show-card.mjs   # Show a card's wording (LTA's words exactly) and settings
 node tools/test-steps.mjs       # the Steps decks, Next/Back and Fewer steps
+node tools/test-voice.mjs       # the recorded voice: every sentence Speak says has its clip, in the map and sw.js
 node tools/test-pictures.mjs    # the picture set: list vs files, SVG safety, size, licence notices
 node tools/test-class.mjs       # class markdown, class codes, reading a class, the service worker's exclusions
 node tools/test-coach.mjs       # the coach app's pure parts

@@ -94,6 +94,7 @@ Each is one Node file with no runner and no dependencies unless the table says s
 | `test-show-card.mjs` | Show a card's wording, pictures and settings (`show-card-cards.js`) | Node |
 | `test-speak.mjs` | the dictation parser `speechToCents()` | Node |
 | `test-steps.mjs` | the Steps decks word for word, the rules every deck keeps, Next / Back / Fewer steps, the 30-minute start again | Node |
+| `test-voice.mjs` | the recorded voice: every sentence a card can say has its clip, every clip is in the map, keys are the on-screen words, the generator's plan, map and sw.js list are current ([the recorded voice](/platform/voice.md)) | Node |
 | `test-wait.mjs` | Wait's time maths (`wait-time.js`) | Node |
 
 `test-rules.mjs` and `test-functions.mjs` write a temporary `firebase.json` with ports of their own (rules: 9311, 8311, 9411, hub 4411; functions: 9321, 8321, 9421, 5321, hub 4421, plus Eventarc 9621 and Cloud Tasks 9721) and a temporary `TMPDIR`, then run themselves again inside `firebase emulators:exec`. They can run beside `firebase emulators:start` or each other.
@@ -165,5 +166,6 @@ A new or changed image under `public/` needs a `CACHE` bump in `public/sw.js`, a
 |---|---|
 | `node tools/vendor-firebase.mjs` | Downloads the pinned Firebase JS SDK modules (`FIREBASE`, currently 12.19.0: app, auth, firestore, storage, functions) from gstatic and `uqr` (`UQR`, 0.1.3) from jsdelivr into `public/coach/vendor/`, rewriting the SDK's absolute imports to relative ones, with licences and a README of source URLs and SHA-256 sums. The coach CSP is `script-src 'self'` (plus `apis.google.com`), so nothing else loads them. To upgrade: change the version, run it, update the import paths in `public/coach/js/cloud.js` or `public/coach/js/qr.js`, delete the old folder. |
 | `node tools/copy-class-markdown.mjs [--check]` | Copies `public/js/class-markdown.js` byte for byte to `functions/class-markdown.js` (functions deploy from `functions/` alone). `--check` exits 1 if the copy differs. `firebase.json` runs the copy as the functions' `predeploy`; `test-functions.mjs` runs the check. |
+| `node tools/make-voice.mjs [--check]` | Records the clips Speak plays (Cloud Text-to-Speech, Chirp 3 HD) for every fixed sentence the cards can say — only the missing ones — deletes orphans, and writes `public/js/voice-clips.js` and the clip list in `sw.js`. Needs ffmpeg and `gcloud auth login`. See [the recorded voice](/platform/voice.md). Run `test-voice.mjs` after it and bump `CACHE`. |
 | `node tools/make-pictures.mjs [names…]` | Builds `public/img/pic/` from `public/js/pictures.js`: pinned Noto Emoji SVGs plus our own drawings, with the licence file. See [pictures](/learner/pictures.md). Run `test-pictures.mjs` after it. |
 | `python3 tools/make-qr.py` | Draws `public/img/og-card.png` and `public/img/qr-poster.png`. See [share card](/operations/share-card.md). |

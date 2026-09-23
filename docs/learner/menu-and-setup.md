@@ -77,7 +77,7 @@ With `picturesOnly` on, `<html>` gets `data-pictures-only` and every `.pic-words
 
 ### The Speak button
 
-`speak` (default on) allows the 🔊 Speak button on full-screen cards; it shows only when this is on, the browser can speak, and the card has words. The card and the voice rules are in [Show a card](/learner/show-card.md#the-full-screen-card).
+`speak` (default on) allows the 🔊 Speak button on full-screen cards; it shows only when this is on and the card has words this device can say — a recorded clip, or the device's own voice ([the recorded voice](/platform/voice.md)). The card and the voice rules are in [Show a card](/learner/show-card.md#the-full-screen-card).
 
 ## The set-up page (`#setup`)
 
