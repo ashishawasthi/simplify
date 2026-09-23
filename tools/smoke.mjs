@@ -140,6 +140,9 @@ const chrome = spawn(CHROME, [
   "--disable-background-timer-throttling",
   "--disable-renderer-backgrounding",
   "--disable-backgrounding-occluded-windows",
+  // GitHub's Ubuntu runners can't start Chrome's sandbox (user namespaces
+  // are restricted there); only ever turned off on CI
+  ...(process.env.CI ? ["--no-sandbox", "--disable-dev-shm-usage"] : []),
   "about:blank",
 ], { stdio: "ignore" });
 
@@ -165,7 +168,7 @@ setTimeout(() => {
 }, 10 * 60 * 1000).unref();
 
 let devtools;
-for (let i = 0; i < 100 && !devtools; i++) {
+for (let i = 0; i < 300 && !devtools; i++) { // up to 30 s: a cold CI runner is slow
   try {
     const [port, path] = readFileSync(join(profile, "DevToolsActivePort"), "utf8").split("\n");
     if (port && path) devtools = `ws://127.0.0.1:${port}${path}`;
