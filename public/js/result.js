@@ -1,8 +1,10 @@
 // The answer panel: always visible inside a tool, recomputed on every change.
 // Colour + icon + plain words together, so no single channel carries the
-// message. What to say comes from answers.js; this only shows it.
+// message. What to say comes from answers.js (or a new tool); this only
+// shows it.
 
 import { DEFAULT_CURRENCY, moneySvg } from "./currency-data.js";
+import { MARKUP } from "./answers.js";
 
 let panel, icon, headline, subline, float, floatIcon, floatAmount, actionWrap, action;
 let current = null;
@@ -54,7 +56,10 @@ export function setResultVisible(visible) {
 
 const TONES = ["is-yes", "is-no", "is-answer"];
 
-// answer: { tone, icon, headline, subline?, badge?, showMe? } — see answers.js
+// answer: { tone, icon, headline, subline?, badge?, showMe? } — see answers.js.
+//   icon     an emoji, { picture: cents } for a note or coin, or an element
+//            (a picture from pictures.js)
+//   subline  plain text, unless the answer carries answers.js's MARKUP mark
 export function renderResult(answer) {
   current = answer;
   // nothing to judge yet: no panel at all. A line saying "type your money
@@ -72,12 +77,21 @@ export function renderResult(answer) {
   if (typeof answer.icon === "string") {
     icon.classList.remove("is-picture");
     icon.textContent = answer.icon;
-  } else {
+  } else if (answer.icon instanceof Node) {
+    icon.classList.add("is-picture");
+    icon.replaceChildren(answer.icon);
+  } else if (typeof answer.icon?.picture === "number") {
     icon.classList.add("is-picture");
     icon.innerHTML = moneySvg(DEFAULT_CURRENCY, answer.icon.picture);
+  } else {
+    icon.classList.remove("is-picture");
+    icon.textContent = "";
   }
-  headline.textContent = answer.headline;
-  subline.innerHTML = answer.subline ?? "";
+  headline.textContent = answer.headline ?? "";
+  // Only answers.js's own markup (formatted amounts in <strong>) goes in as
+  // HTML; anything else is text, so words a person typed stay words.
+  if (answer[MARKUP]) subline.innerHTML = answer.subline ?? "";
+  else subline.textContent = answer.subline ?? "";
   actionWrap.hidden = !answer.showMe;
 
   // mirror a real yes/no at the top of the screen, with its short amount —
@@ -88,13 +102,13 @@ export function renderResult(answer) {
   if (verdict) {
     float.classList.remove("is-yes", "is-no");
     float.classList.add(`is-${answer.tone}`);
-    floatIcon.textContent = answer.icon;
+    floatIcon.textContent = typeof answer.icon === "string" ? answer.icon : "";
     floatAmount.textContent = answer.badge ?? "";
     // the pill only has the gap between 🏠 and ✕: if "$1234.56 more"
     // doesn't fit, drop the word rather than let "…" eat the digits — the
     // number is the part that matters, and the colour still says more/left
     if (floatAmount.scrollWidth > floatAmount.clientWidth) {
-      floatAmount.textContent = answer.badge.split(" ")[0];
+      floatAmount.textContent = (answer.badge ?? "").split(" ")[0];
     }
   }
   applyPanelHeight();

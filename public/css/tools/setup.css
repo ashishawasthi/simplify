@@ -1,0 +1,199 @@
+/* Set up this device (#setup, js/setup.js). For adults, so ordinary words;
+   the same big targets and AAA contrast as everywhere else. */
+
+/* ---------- the hold ---------- */
+/* One big button: a ring fills while it is held down. touch-action and the
+   user-select lines keep a long press from turning into a scroll, a text
+   selection or iOS's callout menu. */
+#tool-setup .setup-gate {
+  display: flex;
+  justify-content: center;
+  padding: 24px 0 8px;
+}
+#tool-setup .hold-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: min(100%, 320px);
+  padding: 24px 16px 22px;
+  font-family: inherit;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--color-text);
+  background: #fff;
+  border: 3px solid var(--color-border);
+  border-radius: 24px;
+  cursor: pointer;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+#tool-setup .hold-btn.is-holding {
+  background: #e3f2fd;
+  border-color: var(--color-primary);
+}
+#tool-setup .hold-face {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 150px;
+  height: 150px;
+}
+/* turned a quarter back, so the ring starts filling at 12 o'clock */
+#tool-setup .hold-ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+#tool-setup .hold-ring circle {
+  fill: none;
+  stroke-width: 9;
+}
+#tool-setup .hold-ring-track { stroke: #e0e0e0; }
+/* 277 ≈ the circle's length (2π × 44): all of it dashed away is empty, none
+   is full. Filling takes as long as the hold (--hold-ms, set by setup.js);
+   letting go drains it quickly. */
+#tool-setup .hold-ring-fill {
+  stroke: var(--color-primary);
+  stroke-dasharray: 277;
+  stroke-dashoffset: 277;
+  transition: stroke-dashoffset 200ms ease-out;
+}
+#tool-setup .hold-btn.is-holding .hold-ring-fill {
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset var(--hold-ms, 1500ms) linear;
+}
+#tool-setup .hold-icon {
+  font-size: 64px;
+  line-height: 1;
+}
+/* no moving ring under reduced motion (it could only jump to full, which
+   would say "done" too soon): the button's colour change shows the hold */
+@media (prefers-reduced-motion: reduce) {
+  #tool-setup .hold-ring-fill { display: none; }
+}
+
+/* ---------- the settings ---------- */
+#tool-setup .setup-section { margin: 8px 0 32px; }
+/* focus lands on the first heading when the hold opens the page (for screen
+   readers); like the screen title, it needs no ring */
+#tool-setup .setup-section h2:focus { outline: none; }
+#tool-setup .setup-group-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 20px 0 10px;
+  font-size: 20px;
+  color: var(--color-muted);
+}
+#tool-setup .setup-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+#tool-setup .setup-note {
+  margin: 0;
+  font-size: 20px;
+  color: var(--color-muted);
+}
+
+/* A whole row is one switch: [picture] name ········ [● On] */
+#tool-setup .setup-switch {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 72px;
+  padding: 8px 12px 8px 14px;
+  font-family: inherit;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: left;
+  color: var(--color-text);
+  background: #fff;
+  border: 3px solid var(--color-border);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+#tool-setup .setup-switch:active { background: #e3f2fd; }
+#tool-setup .setup-switch-name {
+  flex: 1;
+  min-width: 0;
+}
+/* the menu's pictures, a size smaller */
+#tool-setup .setup-switch .tool-icon {
+  width: 52px;
+  font-size: 32px;
+}
+#tool-setup .setup-switch .tool-icon img { width: 40px; height: 40px; }
+#tool-setup .setup-switch .tool-icon .note-svg { width: 48px; }
+#tool-setup .setup-switch .tool-icon .coin-svg { width: 34px; }
+#tool-setup .setup-switch .tool-icon .note-svg + .coin-svg {
+  width: 24px;
+  margin: 14px 0 0 -18px;
+}
+
+/* The switch itself says its state three ways: green or white, the knob's
+   side (with a ✔ when on), and the word. White on #1b5e20 is 7.9:1. */
+#tool-setup .switch-state {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 104px;
+  height: 48px;
+  padding: 0 4px;
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--color-muted);
+  background: #fff;
+  border: 3px solid var(--color-border);
+  border-radius: 999px;
+}
+#tool-setup .switch-knob {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  font-size: 18px;
+  color: #fff;
+  background: var(--color-border);
+  border-radius: 50%;
+}
+#tool-setup .switch-word { padding: 0 8px; }
+#tool-setup .setup-switch[aria-checked="true"] .switch-state {
+  flex-direction: row-reverse;
+  color: #fff;
+  background: var(--color-yes-text);
+  border-color: var(--color-yes-text);
+}
+#tool-setup .setup-switch[aria-checked="true"] .switch-knob {
+  color: var(--color-yes-text);
+  background: #fff;
+}
+
+/* ---------- each tool's own section (a tool's setup(), tools.js) ---------- */
+/* Its heading carries the tool's picture from the menu, as its switch does. */
+#tool-setup .setup-tool-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+#tool-setup .setup-tool-heading .tool-icon {
+  width: 44px;
+  font-size: 30px;
+}
+#tool-setup .setup-tool-heading .tool-icon img { width: 36px; height: 36px; }
+#tool-setup .setup-group-label img { display: block; width: 24px; height: 24px; }
