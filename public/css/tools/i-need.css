@@ -1,1 +1,339 @@
-/* I need (js/tools/i-need.js): styles go here, each inside #tool-i-need. */
+/* I need (js/tools/i-need.js). The card that opens over the whole screen is
+   the shared one (js/show-card.js, styled in styles.css); the Hurts sheet
+   borrows the picture picker's full-screen .picker, and everything else
+   here is the tool's own. No transitions or animations: nothing moves. */
+
+/* ---------- the cards ---------- */
+/* 2 columns on a phone; 3 on a screen at least 600 px both ways (an iPad,
+   either way up) — so turning a phone on its side keeps its 2 columns and
+   no card changes place. A card switched off keeps its cell, empty. */
+#tool-i-need .need-cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: 1fr; /* every row as tall as the tallest */
+  gap: 14px;
+}
+#tool-i-need .need-slot {
+  display: flex;
+  min-width: 0;
+}
+#tool-i-need .need-slot.is-off { visibility: hidden; }
+
+/* A big tile: the picture, and its few words under it. The picture sits at
+   the same height in every card, whether its words take one line or two.
+   No text selection or iOS picture menu on a long press, and no zoom on a
+   double tap: a finger resting on a card just opens it. */
+#tool-i-need .need-card {
+  flex: 1;
+  min-width: 0;
+  min-height: 148px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 16px 8px 12px;
+  font-family: inherit;
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.15;
+  text-align: center;
+  text-wrap: balance;
+  color: var(--color-text);
+  background: #fff;
+  border: 3px solid var(--color-border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+#tool-i-need .need-card:active { background: #e3f2fd; }
+#tool-i-need .need-card img {
+  display: block;
+  flex: none;
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+}
+/* with no words under them, the pictures take the room */
+html[data-pictures-only] #tool-i-need .need-card { justify-content: center; }
+html[data-pictures-only] #tool-i-need .need-card img {
+  width: 104px;
+  height: 104px;
+}
+/* a small phone: "understand" still fits on its line */
+@media (max-width: 359px) {
+  #tool-i-need .need-card { font-size: 19px; }
+}
+/* a tablet: 3 columns in the same width, taller */
+@media (min-width: 600px) and (min-height: 600px) {
+  #tool-i-need .need-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  #tool-i-need .need-card {
+    min-height: 176px;
+    padding: 18px 6px 12px;
+  }
+  #tool-i-need .need-card img {
+    width: 100px;
+    height: 100px;
+  }
+  html[data-pictures-only] #tool-i-need .need-card img {
+    width: 120px;
+    height: 120px;
+  }
+}
+
+/* every card switched off: a line for the adult */
+#tool-i-need .need-none {
+  margin: 8px 0;
+  font-size: 20px;
+  color: var(--color-muted);
+}
+
+/* ---------- Hurts: "Where?" and "How much?" (js/tools/i-need-hurts.js) ---------- */
+/* The picture picker's full-screen sheet (.picker in styles.css), as a
+   column: the question on top, the answers taking the rest. */
+#tool-i-need .hurts-sheet[open] {
+  display: flex;
+  flex-direction: column;
+  padding: 0 calc(var(--gap) + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom))
+    calc(var(--gap) + env(safe-area-inset-left));
+}
+/* ✕ (or ◀) and the question, staying at the top if a short screen scrolls */
+#tool-i-need .hurts-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: calc(12px + env(safe-area-inset-top)) 0 12px;
+  background: var(--color-bg);
+}
+#tool-i-need .hurts-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 30px;
+  line-height: 1.2;
+}
+/* it takes focus when the question changes (for screen readers): no ring */
+#tool-i-need .hurts-title:focus { outline: none; }
+#tool-i-need .hurts-title img {
+  display: block;
+  flex: none;
+  width: 48px;
+  height: 48px;
+}
+
+/* Where? — the body as big as the screen allows (hurts-fit is the room,
+   i-need-hurts.js sizes hurts-map to fit in it, whole), My back under it.
+   A very short screen scrolls rather than shrink the body past 440 px. */
+#tool-i-need .hurts-where {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+#tool-i-need .hurts-fit {
+  position: relative;
+  flex: 1 1 0;
+  align-self: stretch;
+  min-height: 440px;
+}
+#tool-i-need .hurts-map {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+}
+#tool-i-need .hurts-map > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+/* a place to tap: invisible over the drawing, which lights up instead */
+#tool-i-need .hurts-spot {
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+#tool-i-need .hurts-spot:focus-visible {
+  outline: 4px solid var(--color-primary);
+  outline-offset: -2px;
+}
+/* under a finger, the mouse or the keyboard's focus: that part lights up */
+#tool-i-need .need-body .is-lit { fill: #90caf9; }
+
+#tool-i-need .hurts-myback {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  width: min(100%, 360px);
+  min-height: 96px;
+  padding: 6px 20px;
+  font-family: inherit;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--color-text);
+  background: #fff;
+  border: 3px solid var(--color-border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+#tool-i-need .hurts-myback:active { background: #e3f2fd; }
+#tool-i-need .hurts-myback svg {
+  display: block;
+  flex: none;
+  width: 54px; /* UPPER's shape: 176 × 272 */
+  height: 84px;
+}
+
+/* How much? — what was chosen, small, then three sizes side by side */
+#tool-i-need .hurts-much {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  padding: 8px 0 24px;
+}
+#tool-i-need .hurts-chosen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+}
+#tool-i-need .hurts-chosen-picture svg {
+  display: block;
+  width: auto;
+  height: 200px;
+}
+#tool-i-need .hurts-chosen-name {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+#tool-i-need .hurts-sizes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+  max-width: 600px;
+}
+#tool-i-need .hurts-size {
+  min-width: 0;
+  min-height: 172px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 4px;
+  font-family: inherit;
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.15;
+  text-align: center;
+  text-wrap: balance;
+  color: var(--color-text);
+  background: #fff;
+  border: 3px solid var(--color-border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+#tool-i-need .hurts-size:active { background: #e3f2fd; }
+/* the circles grow from left to right; the red is the drawing's "it hurts
+   here" (5:1 on white), and each sits in the same square so the words line up */
+#tool-i-need .hurts-dot-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 84px;
+  height: 84px;
+}
+#tool-i-need .hurts-dot {
+  display: block;
+  border-radius: 50%;
+  background: #d32f2f;
+}
+#tool-i-need .hurts-dot.is-little { width: 26px; height: 26px; }
+#tool-i-need .hurts-dot.is-lot { width: 52px; height: 52px; }
+#tool-i-need .hurts-dot.is-very { width: 84px; height: 84px; }
+
+@media (min-width: 600px) and (min-height: 600px) {
+  #tool-i-need .hurts-chosen-picture svg { height: 260px; }
+  #tool-i-need .hurts-size {
+    min-height: 220px;
+    font-size: 24px;
+  }
+  #tool-i-need .hurts-dot-box {
+    width: 124px;
+    height: 124px;
+  }
+  #tool-i-need .hurts-dot.is-little { width: 38px; height: 38px; }
+  #tool-i-need .hurts-dot.is-lot { width: 76px; height: 76px; }
+  #tool-i-need .hurts-dot.is-very { width: 124px; height: 124px; }
+}
+
+/* a phone on its side: My back beside the body, the sizes beside the choice */
+@media (orientation: landscape) and (max-height: 599px) {
+  #tool-i-need .hurts-where {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: center;
+  }
+  #tool-i-need .hurts-myback {
+    width: auto;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px 16px;
+  }
+  #tool-i-need .hurts-much { flex-direction: row; }
+  #tool-i-need .hurts-chosen-picture svg { height: 150px; }
+}
+
+/* ---------- its section on the set-up page ---------- */
+/* setup() builds it inside #tool-setup, whose setup.css draws the switch
+   rows and notes. These rules reach only the parts of its own: every class
+   here (need-…) is used by that section alone. */
+#tool-setup .need-setup > .setup-note { margin-bottom: 14px; }
+
+/* under each card's name, what the card says, word for word */
+#tool-setup .need-says {
+  display: block;
+  margin-top: 4px;
+  font-size: 17px;
+  font-weight: 400;
+  line-height: 1.3;
+  color: var(--color-muted);
+}
