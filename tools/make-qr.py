@@ -8,9 +8,9 @@ from PIL import Image, ImageDraw, ImageFont
 
 URL = "https://simplify.whiz.coach/"
 URL_LABEL = "simplify.whiz.coach"
-APP_NAME = "Simplify"          # the app; "Can I afford it?" is only its first page
-TITLE = "Can I afford it?"
-TAGLINE = "Check if you have enough money to buy what you want."
+APP_NAME = "Simplify"
+TITLE = "Simplify"
+TAGLINE = "Simple tools for money, my day and asking for help."
 
 PRIMARY = "#1565c0"
 PRIMARY_DARK = "#0d47a1"

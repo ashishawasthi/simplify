@@ -22,8 +22,9 @@ const MOVED = {
 };
 
 function followMove() {
-  const moved = MOVED[location.hash.slice(1)];
-  if (moved) location.replace(moved);
+  // own keys only: /guide#toString must not find Object's toString
+  const key = location.hash.slice(1);
+  if (Object.hasOwn(MOVED, key)) location.replace(MOVED[key]);
 }
 
 followMove();
