@@ -5,7 +5,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#1565c0">
-  <meta name="description" content="Check if you have enough money to buy what you want.">
+  <meta name="description"
+    content="Simple money tools: can I buy it, what is my change, next dollar, next note, make the amount, and a shopping list.">
   <title>Simplify</title>
   <link rel="canonical" href="https://simplify.whiz.coach/">
 
@@ -22,7 +23,7 @@
   <meta property="og:url" content="https://simplify.whiz.coach/">
   <meta property="og:title" content="Simplify">
   <meta property="og:description"
-    content="Check if you have enough money to buy what you want. A simple, offline-friendly money app for special-needs users.">
+    content="Simple money tools for special-needs learners: can I buy it, what is my change, next dollar, next note, make the amount, and a shopping list. Offline-friendly.">
   <meta property="og:image" content="https://simplify.whiz.coach/img/og-card.png?v=2">
   <meta property="og:image:type" content="image/png">
   <meta property="og:image:width" content="1200">
@@ -33,7 +34,7 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Simplify">
   <meta name="twitter:description"
-    content="Check if you have enough money to buy what you want. A simple, offline-friendly money app for special-needs users.">
+    content="Simple money tools for special-needs learners: can I buy it, what is my change, next dollar, next note, make the amount, and a shopping list. Offline-friendly.">
   <meta name="twitter:image" content="https://simplify.whiz.coach/img/og-card.png?v=2">
   <meta name="twitter:image:alt" content="Simplify — QR code linking to simplify.whiz.coach">
 
@@ -45,73 +46,239 @@
 
 <body>
 
-  <header class="app-header">
-    <h1>Can I buy?</h1>
-    <div id="clear-all-wrap" class="labelled-btn">
+  <!-- Inside a tool: 🏠 back to the menu on the left, Start over on the right.
+       Hidden on the menu itself, which has nowhere to go back to. -->
+  <header id="app-header" class="app-header" hidden>
+    <div class="labelled-btn">
+      <a id="to-menu" class="round-btn" href="/" aria-label="Menu: pick another money tool">
+        <span aria-hidden="true">🏠</span>
+      </a>
+      <span class="labelled-btn-text" aria-hidden="true">Menu</span>
+    </div>
+    <div id="clear-all-wrap" class="labelled-btn" hidden>
       <span class="labelled-btn-text" aria-hidden="true">Start over</span>
-      <button id="clear-all" class="round-btn" type="button" aria-label="Start over: clear everything">
+      <button id="clear-all" class="round-btn" type="button" aria-label="Start over: clear everything in this tool">
         <span aria-hidden="true">✕</span>
       </button>
     </div>
   </header>
 
   <main>
-    <!-- Zone 1: money the user has -->
-    <section class="zone" aria-labelledby="money-heading">
-      <div class="zone-head">
-        <h2 id="money-heading"><span class="zone-icon" aria-hidden="true">💰</span> My money</h2>
-        <button id="open-picker" class="icon-btn" type="button" aria-label="Tap my notes and coins"
-          title="Tap my notes and coins">
-          <span aria-hidden="true">💵</span>
-        </button>
-      </div>
-      <div class="amount-wrap">
-        <label class="amount-field" for="money-input">
-          <span class="dollar-prefix" aria-hidden="true">$</span>
-          <input id="money-input" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="0"
-            aria-label="How much money I have, in dollars">
-        </label>
-        <button id="speak-money" class="mic-btn" type="button" aria-label="Say how much money I have"
-          title="Say my money">
-          <span aria-hidden="true">🎤</span>
-        </button>
-        <button id="clear-money" class="clear-btn" type="button" hidden aria-label="Clear my money"
-          title="Clear my money">
-          <span aria-hidden="true">✕</span>
-        </button>
-      </div>
-      <p id="money-chip" class="chip" hidden><span aria-hidden="true">💵</span> from my notes and coins</p>
-    </section>
+    <h1 id="screen-title" class="screen-title" tabindex="-1">Simplify</h1>
 
-    <!-- Zone 2: item prices -->
-    <section class="zone" aria-labelledby="items-heading">
-      <h2 id="items-heading"><span class="zone-icon" aria-hidden="true">🛒</span> Things I want to buy</h2>
-      <ul id="items-list" class="items-list"></ul>
-      <button id="add-item" class="add-btn" type="button">
-        <span aria-hidden="true">＋</span> Add item
-      </button>
-      <p class="items-total">Things cost: <strong id="items-total">$0</strong></p>
-    </section>
+    <!-- The menu: the app always opens here. One big button per money tool,
+         each a plain link, so Back returns here and a tool can be shared. -->
+    <nav id="menu" aria-label="Money tools">
+      <p class="menu-intro">Pick a money tool</p>
+      <ul class="tool-list">
+        <li><a class="tool-link" href="#can-i-buy">
+            <span class="tool-icon" aria-hidden="true">🛒</span> Can I buy?</a></li>
+        <li><a class="tool-link" href="#change">
+            <span class="tool-icon" aria-hidden="true" data-picture="50"></span> What is the change?</a></li>
+        <li><a class="tool-link" href="#next-dollar">
+            <span class="tool-icon" aria-hidden="true">💲</span> Next dollar</a></li>
+        <li><a class="tool-link" href="#next-note">
+            <span class="tool-icon" aria-hidden="true" data-picture="1000"></span> Next note</a></li>
+        <li><a class="tool-link" href="#make-amount">
+            <span class="tool-icon" aria-hidden="true" data-picture="200 100"></span> Make the amount</a></li>
+        <li><a class="tool-link" href="#shopping-list">
+            <span class="tool-icon" aria-hidden="true">📝</span> Make a shopping list</a></li>
+      </ul>
+    </nav>
+
+    <!-- ============ Can I buy? ============ -->
+    <div id="tool-can-i-buy" class="tool" hidden>
+      <section class="zone" aria-labelledby="buy-money-h">
+        <div class="zone-head">
+          <h2 id="buy-money-h"><span class="zone-icon" aria-hidden="true">💰</span> My money</h2>
+          <button class="icon-btn" type="button" data-picker-for="money" aria-label="Tap my notes and coins"
+            title="Tap my notes and coins">
+            <span aria-hidden="true">💵</span>
+          </button>
+        </div>
+        <div class="amount-wrap" data-box="money">
+          <label class="amount-field">
+            <span class="dollar-prefix" aria-hidden="true">$</span>
+            <input type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="0"
+              aria-label="How much money I have, in dollars">
+          </label>
+          <button class="mic-btn" type="button" aria-label="Say how much money I have" title="Say my money">
+            <span aria-hidden="true">🎤</span>
+          </button>
+          <button class="clear-btn" type="button" hidden aria-label="Clear my money" title="Clear my money">
+            <span aria-hidden="true">✕</span>
+          </button>
+        </div>
+        <p class="chip" data-chip-for="money" hidden><span aria-hidden="true">💵</span> from my notes and coins</p>
+      </section>
+
+      <section class="zone" aria-labelledby="buy-items-h">
+        <h2 id="buy-items-h"><span class="zone-icon" aria-hidden="true">🛒</span> Things I want to buy</h2>
+        <ul class="items-list" data-list="items"></ul>
+        <button class="add-btn" type="button" data-add-item hidden>
+          <span aria-hidden="true">＋</span> Add item
+        </button>
+        <p class="items-total">Things cost: <strong data-total>$0</strong></p>
+      </section>
+    </div>
+
+    <!-- ============ What is the change? ============ -->
+    <div id="tool-change" class="tool" hidden>
+      <section class="zone" aria-labelledby="change-money-h">
+        <div class="zone-head">
+          <h2 id="change-money-h"><span class="zone-icon" aria-hidden="true">💰</span> My money</h2>
+          <button class="icon-btn" type="button" data-picker-for="money" aria-label="Tap the notes and coins I pay with"
+            title="Tap the notes and coins I pay with">
+            <span aria-hidden="true">💵</span>
+          </button>
+        </div>
+        <div class="amount-wrap" data-box="money">
+          <label class="amount-field">
+            <span class="dollar-prefix" aria-hidden="true">$</span>
+            <input type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="0"
+              aria-label="How much money I pay with, in dollars">
+          </label>
+          <button class="mic-btn" type="button" aria-label="Say how much money I pay with" title="Say my money">
+            <span aria-hidden="true">🎤</span>
+          </button>
+          <button class="clear-btn" type="button" hidden aria-label="Clear my money" title="Clear my money">
+            <span aria-hidden="true">✕</span>
+          </button>
+        </div>
+        <p class="chip" data-chip-for="money" hidden><span aria-hidden="true">💵</span> from my notes and coins</p>
+      </section>
+
+      <section class="zone" aria-labelledby="change-spend-h">
+        <h2 id="change-spend-h"><span class="zone-icon" aria-hidden="true">🧾</span> I spend</h2>
+        <div class="amount-wrap" data-box="spend">
+          <label class="amount-field">
+            <span class="dollar-prefix" aria-hidden="true">$</span>
+            <input type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="0"
+              aria-label="How much I spend, in dollars">
+          </label>
+          <button class="mic-btn" type="button" aria-label="Say how much I spend" title="Say how much I spend">
+            <span aria-hidden="true">🎤</span>
+          </button>
+          <button class="clear-btn" type="button" hidden aria-label="Clear how much I spend" title="Clear it">
+            <span aria-hidden="true">✕</span>
+          </button>
+        </div>
+      </section>
+    </div>
+
+    <!-- ============ Next dollar ============ -->
+    <div id="tool-next-dollar" class="tool" hidden>
+      <section class="zone" aria-labelledby="dollar-items-h">
+        <h2 id="dollar-items-h"><span class="zone-icon" aria-hidden="true">🛒</span> Things I buy</h2>
+        <ul class="items-list" data-list="items"></ul>
+        <button class="add-btn" type="button" data-add-item hidden>
+          <span aria-hidden="true">＋</span> Add item
+        </button>
+        <p class="items-total">Things cost: <strong data-total>$0</strong></p>
+      </section>
+    </div>
+
+    <!-- ============ Next note ============ -->
+    <div id="tool-next-note" class="tool" hidden>
+      <section class="zone" aria-labelledby="note-items-h">
+        <h2 id="note-items-h"><span class="zone-icon" aria-hidden="true">🛒</span> Things I buy</h2>
+        <ul class="items-list" data-list="items"></ul>
+        <button class="add-btn" type="button" data-add-item hidden>
+          <span aria-hidden="true">＋</span> Add item
+        </button>
+        <p class="items-total">Things cost: <strong data-total>$0</strong></p>
+      </section>
+      <!-- the note to pay with, drawn; the panel below says it in words -->
+      <div class="answer-pictures" data-pictures aria-hidden="true" hidden></div>
+    </div>
+
+    <!-- ============ Make the amount ============ -->
+    <div id="tool-make-amount" class="tool" hidden>
+      <section class="zone" aria-labelledby="amount-need-h">
+        <h2 id="amount-need-h"><span class="zone-icon" aria-hidden="true">🎯</span> I need</h2>
+        <div class="amount-wrap" data-box="need">
+          <label class="amount-field">
+            <span class="dollar-prefix" aria-hidden="true">$</span>
+            <input type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="0"
+              aria-label="How much I need to make, in dollars">
+          </label>
+          <button class="mic-btn" type="button" aria-label="Say how much I need" title="Say how much I need">
+            <span aria-hidden="true">🎤</span>
+          </button>
+          <button class="clear-btn" type="button" hidden aria-label="Clear how much I need" title="Clear it">
+            <span aria-hidden="true">✕</span>
+          </button>
+        </div>
+      </section>
+      <!-- the notes and coins that make it, drawn; the panel says it in words -->
+      <div class="answer-pictures" data-pictures aria-hidden="true" hidden></div>
+    </div>
+
+    <!-- ============ Make a shopping list ============ -->
+    <div id="tool-shopping-list" class="tool" hidden>
+      <section class="zone" aria-labelledby="list-money-h">
+        <div class="zone-head">
+          <h2 id="list-money-h"><span class="zone-icon" aria-hidden="true">💰</span> My money</h2>
+          <button class="icon-btn" type="button" data-picker-for="money" aria-label="Tap my notes and coins"
+            title="Tap my notes and coins">
+            <span aria-hidden="true">💵</span>
+          </button>
+        </div>
+        <div class="amount-wrap" data-box="money">
+          <label class="amount-field">
+            <span class="dollar-prefix" aria-hidden="true">$</span>
+            <input type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="0"
+              aria-label="How much money I have, in dollars">
+          </label>
+          <button class="mic-btn" type="button" aria-label="Say how much money I have" title="Say my money">
+            <span aria-hidden="true">🎤</span>
+          </button>
+          <button class="clear-btn" type="button" hidden aria-label="Clear my money" title="Clear my money">
+            <span aria-hidden="true">✕</span>
+          </button>
+        </div>
+        <p class="chip" data-chip-for="money" hidden><span aria-hidden="true">💵</span> from my notes and coins</p>
+      </section>
+
+      <section class="zone" aria-labelledby="list-items-h">
+        <h2 id="list-items-h"><span class="zone-icon" aria-hidden="true">📝</span> I need to buy</h2>
+        <ul class="items-list" data-list="named"></ul>
+        <button class="add-btn" type="button" data-add-item hidden>
+          <span aria-hidden="true">＋</span> Add item
+        </button>
+        <p class="items-total">Things cost: <strong data-total>$0</strong></p>
+      </section>
+    </div>
 
     <footer class="app-footer">
-      <a class="guide-link" href="/guide" target="_blank" rel="noopener">
-        <span class="guide-icon" aria-hidden="true">ℹ️</span> How to use this app
+      <a id="guide-link" class="guide-link" href="/guide" target="_blank" rel="noopener">
+        <span class="guide-icon" aria-hidden="true">ℹ️</span> <span id="guide-link-text">How to use this app</span>
       </a>
     </footer>
   </main>
 
-  <!-- Floating mirror of the verdict icon, pinned top-center so the answer
-       stays visible while the keyboard covers the bottom panel. Icon only;
-       the panel below carries the words, and it alone talks to screen
+  <!-- Floating mirror of a yes/no answer's icon, pinned top-center so the
+       answer stays visible while the keyboard covers the bottom panel. Icon
+       only; the panel below carries the words, and it alone talks to screen
        readers, so this stays aria-hidden. -->
   <span id="result-float" class="result-float" hidden aria-hidden="true"></span>
 
-  <!-- Zone 3: the answer, always visible -->
-  <section id="result" class="result is-neutral" role="status" aria-live="polite">
-    <span id="result-icon" class="result-icon" aria-hidden="true">⬆️</span>
-    <div class="result-text">
-      <p id="result-headline" class="result-headline">Type your money and prices above</p>
-      <p id="result-subline" class="result-subline"></p>
+  <!-- The answer, always visible inside a tool. The Show me button sits
+       outside the live region, so screen readers don't re-read it with every
+       change of the answer. -->
+  <section id="result" class="result is-neutral" aria-label="Answer" hidden>
+    <div class="result-live" role="status" aria-live="polite">
+      <span id="result-icon" class="result-icon" aria-hidden="true"></span>
+      <div class="result-text">
+        <p id="result-headline" class="result-headline"></p>
+        <p id="result-subline" class="result-subline"></p>
+      </div>
+    </div>
+    <div id="result-action-wrap" class="result-action" hidden>
+      <button id="result-action" class="show-me-btn" type="button"
+        aria-label="Show me: the notes and coins for this amount">
+        <span aria-hidden="true">💵</span> Show me
+      </button>
     </div>
   </section>
 
@@ -158,6 +325,21 @@
 
     <h3 class="picker-group-label">Coins</h3>
     <div id="coin-grid" class="coin-grid"></div>
+  </dialog>
+
+  <!-- Show me: the notes and coins for an amount — how much more is needed,
+       or the change to expect. Same full-screen sheet as the picker. -->
+  <dialog id="show-money" class="picker" aria-labelledby="show-money-label show-money-title">
+    <header class="picker-header">
+      <p id="show-money-label" class="picker-total-label">You need</p>
+      <p id="show-money-title" class="picker-total show-money-title"></p>
+      <button id="show-money-done" class="done-btn" type="button">
+        <span aria-hidden="true">✔</span> OK
+      </button>
+    </header>
+    <p id="show-money-words" class="money-words"></p>
+    <p id="show-money-note" class="money-note" hidden></p>
+    <div id="show-money-pieces" class="money-pieces" aria-hidden="true"></div>
   </dialog>
 
   <!-- Speak: a plain text box so the full keyboard (with its mic) opens.

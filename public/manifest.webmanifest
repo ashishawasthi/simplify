@@ -1,7 +1,7 @@
 {
   "name": "Simplify",
   "short_name": "Simplify",
-  "description": "Check if you have enough money to buy what you want.",
+  "description": "Simple money tools: can I buy it, what is my change, next dollar, next note, make the amount, and a shopping list.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
