@@ -43,6 +43,7 @@ const MIN_PX = 20; // the words never get smaller than this
 const MAX_PX = 480;
 
 let els = null;
+let openedAt = 0; // performance.now() when the card last opened
 let settle = null; // resolves the promise of the card on screen
 let spoken = []; // what Speak says: [{ text, lang }]
 let wakeLock = null;
@@ -95,6 +96,17 @@ function build() {
   dialog.append(body, choices, bar);
   document.body.append(dialog);
   els = { dialog, picture, textBox, text, words, lines, choices, turn: turn.btn, speakWrap: speak.wrap };
+
+  // A quick double tap on a tile near the bottom of a grid can land its
+  // second tap on the card that just opened under the finger: ignore taps
+  // for a moment after opening (capture, so they never reach a button).
+  // Only a real finger's tap counts: a tap from code is always meant.
+  dialog.addEventListener("click", (e) => {
+    if (e.isTrusted && performance.now() - openedAt < 350) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+  }, true);
 
   turn.btn.addEventListener("click", () => {
     const turned = dialog.classList.toggle("is-turned");
@@ -178,6 +190,7 @@ export function openCard({ picture = null, words = "", lang = null, lines = [], 
   els.turn.setAttribute("aria-pressed", "false");
   els.speakWrap.hidden = !(getDevice().speak && canSpeak() && spoken.length);
 
+  openedAt = performance.now();
   if (!els.dialog.open) els.dialog.showModal();
   fit();
   keepAwake();
