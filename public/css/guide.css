@@ -161,6 +161,13 @@ figcaption {
   color: var(--color-text);
 }
 
+/* a worked example, in the app's own colour for an amount answer
+   (#0d47a1 on #e3f2fd, 7.5:1) */
+.callout.example {
+  background: #e3f2fd;
+  color: var(--color-primary-dark);
+}
+
 .platform {
   border: 3px solid var(--color-border);
   border-radius: var(--radius);
@@ -247,9 +254,20 @@ a.topic:active { background: #e3f2fd; }
 
 .topic-icon {
   flex: none;
-  width: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
   font-size: 30px;
   text-align: center;
+}
+/* the app's own note and coin drawings, as on its menu */
+.topic-icon svg { display: block; height: auto; }
+.topic-icon .note-svg { width: 50px; }
+.topic-icon .coin-svg { width: 36px; }
+.topic-icon .note-svg + .coin-svg {
+  width: 24px;
+  margin: 14px 0 0 -20px;
 }
 
 /* ---------- moving around ---------- */

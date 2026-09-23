@@ -1,4 +1,4 @@
-# simplify — Can I buy?
+# simplify — money tools
 
 Simplify workflows for special needs.
 
@@ -9,26 +9,46 @@ between pages stay relative so they also work offline and in PR previews.
 (The same site answers at Firebase's own `simplify-special.web.app` too, but
 that is a separate origin: numbers saved there don't carry over.)
 
-**Can I buy?** is a simple, static progressive web app that helps
-special-needs users answer one question: *"Do I have enough money to buy
-these things?"*
+**Simplify** is a simple, static progressive web app of money tools for
+special-needs learners. It opens on a menu of six big buttons; each tool is
+one screen that answers one question:
 
-- **My money** — type an amount, dictate it with the mobile keyboard's
-  microphone, or tap pictures of Singapore notes and coins to count cash
-  visually (each picture shows how many times it was tapped, e.g. ×2).
-- **Things I want to buy** — add any number of prices.
-- **The answer** — a big, always-visible green "Can buy" or red "Cannot
-  buy", with the money left over or how much more is needed. An empty money
-  box counts as $0, so a price alone already gives an answer.
+| Tool (URL) | Asks for | Answers |
+|---|---|---|
+| **Can I buy?** (`/#can-i-buy`) | My money, the prices of things | green "Can buy · Money left", or red "Cannot buy · You need $X more" with 💵 Show me |
+| **What is the change?** (`/#change`) | My money (the note you pay with), I spend | "Change: $2.70", with 💵 Show me |
+| **Next dollar** (`/#next-dollar`) | the prices | "Next dollar: $4 · You get back $0.50" |
+| **Next note** (`/#next-note`) | the prices | "Next note: $5 · No $5? Use $10", with both notes drawn |
+| **Make the amount** (`/#make-amount`) | I need | "$1 + 20¢ + 10¢", drawn |
+| **Make a shopping list** (`/#shopping-list`) | My money, item names and prices | "Yes! Within your budget · Money left", or "Over your budget" |
+
+- **My money** — type an amount, dictate it with the keyboard's microphone
+  (🎤), or tap pictures of Singapore notes and coins (💵) to count cash; each
+  picture shows how many times it was tapped (×2).
+- **The answer** — always visible at the bottom: green yes, red no, blue for
+  an amount, grey for "what to type next". An empty money box counts as $0, so
+  a price alone already gives an answer.
+- **💵 Show me** — the notes and coins for a shortfall or for the change,
+  drawn, fewest pieces, rounded up to the next 5¢ (there is no 1¢ coin).
+- Each tool remembers its own numbers; **Start over** clears only the tool on
+  screen; **🏠 Menu** (or Back) returns to the menu. Every tool has its own
+  link, which a teacher can share.
+
+What each tool says lives in `public/js/answers.js` (pure, no DOM); the
+maths — fewest notes and coins, next dollar, next note, rounding — in
+`public/js/money.js`. Both are pinned by `node tools/test-money.mjs`, which
+includes every example from the requester's change-request document.
 
 The **user guide** is a short topic menu at [/guide](public/guide.html) with
-one small page per topic under [/guide/](public/guide/) — `can-i-buy`,
-`notes-and-coins`, `speak`, `home-screen`, `updates`, `no-microphone`,
-`privacy` — so nobody has to read a long page to find one answer. Pages are
-served without `.html` (Hosting `cleanUrls`), share `public/css/guide.css`,
-and start and end with a "← Help menu" link. The app's footer links to the
-menu (new tab). Screenshots are in `public/img/guide/`; every page and image
-is precached by the service worker, so the guide works offline too.
+one small page per topic under [/guide/](public/guide/): `menu`, one page per
+tool (`can-i-buy`, `change`, `next-dollar`, `next-note`, `make-amount`,
+`shopping-list` — the same ids as the app's URLs, and each tool's "How to use
+this tool" link opens its page), then `notes-and-coins`, `speak`,
+`home-screen`, `updates`, `no-microphone` and `privacy` — so nobody has to
+read a long page to find one answer. Pages are served without `.html`
+(Hosting `cleanUrls`), share `public/css/guide.css`, and start and end with a
+"← Help menu" link. Screenshots are in `public/img/guide/`; every page and
+image is precached by the service worker, so the guide works offline too.
 
 The guide was once a single page whose sections were shared as
 `/guide#<section>` links; `public/js/guide-links.js` forwards those to the
@@ -41,7 +61,7 @@ alongside it, so its words and pictures describe what actually ships. The
 screenshots come from the running app, one scene per run:
 
 ```sh
-for s in yes no picker; do node tools/shoot-guide.mjs $s; done
+for s in menu yes no picker show-me change next-dollar next-note make-amount shopping-list; do node tools/shoot-guide.mjs $s; done
 ```
 
 (Node 22 and Chrome, nothing to install; each scene checks the app reached
@@ -57,7 +77,10 @@ device. Works offline once installed (PWA).
 
 ## Design principles for special-needs users
 
-- One screen, one question — no navigation, menus, or settings.
+- One question per screen, picked from one simple menu — one level deep, no
+  settings. Every tool is built from the same parts in the same places (money
+  box, list, answer at the bottom) and uses the same words ("Add item",
+  "Start over", "Put it back", "Can buy / Cannot buy").
 - Touch targets 56–96&nbsp;px with generous spacing.
 - Never a validation error — bad input is prevented or forgiven, not rejected.
   A blank box counts as $0 rather than leaving the answer waiting.
@@ -66,11 +89,29 @@ device. Works offline once installed (PWA).
 - Big type, plain language, at most a few words per label.
 - Immediate feedback — the answer updates as you type or tap; no submit button.
 - Undo instead of confirmation dialogs ("Take back one", "Put it back").
-- The note/coin pictures are stylized drawings (real SGD colors + big
-  numerals), which avoids MAS currency-reproduction restrictions and is more
-  legible than photos.
+- The note/coin pictures are drawn to be recognised, not copied. Singapore's
+  Currency Act (s.20; Gazette Notification 2078 of 2006) covers any drawing
+  *resembling* a note or coin, and using any design from one needs MAS
+  permission, so the drawings take only physical facts from MAS's own
+  descriptions: each note's colour and true proportions (a $2 is drawn 78% the
+  length of a $100), each coin's metal (5¢ gold; 10¢–50¢ silver; $1 a silver
+  centre in a gold ring) and relative size, and the value. Never the artwork:
+  no portrait, coat of arms, lion, landmarks, orchid, lettering, signatures,
+  serial numbers or security features (the full list is in
+  `public/js/currency-data.js`).
 - `prefers-reduced-motion` respected; state saved locally so it survives
   closing the app (count your notes at home, check at the shop, offline).
+  Each tool has its own `localStorage` key; Can I buy? keeps `afford-it-v1`,
+  the key the app used before it had a menu, so nobody's numbers were lost.
+
+## Tests
+
+No dependencies, no runner:
+
+```sh
+node tools/test-money.mjs   # money maths + every tool's wording, incl. the requester's examples
+node tools/test-speak.mjs   # the dictation parser
+```
 
 ## Run locally
 
@@ -139,8 +180,8 @@ app from the app switcher (common on Android and iPad) isn't an open at all.
 
 - it reloads into the new version as soon as one takes over, if the screen
   hasn't been touched since the app opened or came to the front; otherwise
-  the next time the app goes to the background — never while the picker or
-  speak window is open;
+  the next time the app goes to the background — never while a window (the
+  picker, speak, Show me) is open;
 - when the app comes back to the front (at most every 10 minutes) it asks the
   browser to check for a new version, so an app left open for days updates
   too;
