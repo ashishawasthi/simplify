@@ -31,7 +31,8 @@
 // the phone: Turn around (turns the card upside down so the person opposite
 // can read it; tap again to turn it back — the buttons and choices stay the
 // right way up for the holder), Speak (only when the set-up page allows it
-// and the device has a voice) and ✕. The screen is kept awake while a card is
+// and the card can be said here: a recorded clip, or the device's own voice —
+// say-aloud.js) and ✕. The screen is kept awake while a card is
 // up, where the browser allows it, so it doesn't go dark in front of the
 // person reading it. Any change of screen takes the card away (app.js).
 
@@ -188,7 +189,7 @@ export function openCard({ picture = null, words = "", lang = null, lines = [], 
 
   els.dialog.classList.remove("is-turned");
   els.turn.setAttribute("aria-pressed", "false");
-  els.speakWrap.hidden = !(getDevice().speak && canSpeak() && spoken.length);
+  els.speakWrap.hidden = !(getDevice().speak && spoken.length && canSpeak(spoken));
 
   openedAt = performance.now();
   if (!els.dialog.open) els.dialog.showModal();
