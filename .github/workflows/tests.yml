@@ -1,5 +1,5 @@
 # Every test on every pull request and push to main: the zero-dependency unit
-# tests (tools/test-*.mjs — test-rules and test-functions start the Firebase
+# tests (tools/test-*.mjs — test-rules, test-functions and test-seed start the Firebase
 # emulators themselves, so they need Java and the Firebase CLI), then the smoke
 # tests in headless Chrome. Nothing here deploys or needs a secret.
 
