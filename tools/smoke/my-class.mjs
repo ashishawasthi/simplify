@@ -353,7 +353,9 @@ const scenes = [
   {
     name: "reader: a class taken away keeps showing until the next visit, then nothing",
     path: "/#my-class",
-    init: HELPERS + FOLLOWS + saved(PAGE, { ago: 20 * 60 * 1000 }) + NET({ docs: {}, delay: 300 }),
+    // the news that the class is gone must arrive AFTER the learner has
+    // started reading (a slow CI runner can take longer than 300 ms to tap)
+    init: HELPERS + FOLLOWS + saved(PAGE, { ago: 20 * 60 * 1000 }) + NET({ docs: {}, delay: 1500 }),
     setup: run(async () => {
       await tap("#tool-my-class .mc-next");
       await pause(600);
