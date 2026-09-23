@@ -86,7 +86,7 @@ service cloud.firestore {
 
     // an institution's id (institutions/{id}): the seed file's slugs, or an auto id
     function isInstitutionId(value) {
-      return value is string && value.matches('^[A-Za-z0-9_-]{1,60}$');
+      return value is string && value.matches('^[A-Za-z0-9_-]{1,100}$');
     }
 
     // ---------- admins ----------
@@ -129,7 +129,7 @@ service cloud.firestore {
       function validInstitutions(v) {
         return v is list && v.size() >= 1 && v.size() <= 10
           && v.toSet().size() == v.size()
-          && v.join(',').matches('^[A-Za-z0-9_-]{1,60}(,[A-Za-z0-9_-]{1,60})*$')
+          && v.join(',').matches('^[A-Za-z0-9_-]{1,100}(,[A-Za-z0-9_-]{1,100})*$')
           && v.join(',').split(',') == v;
       }
 

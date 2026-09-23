@@ -6,7 +6,12 @@
 //   node tools/seed-institutions.mjs --dry-run            what would change (production)
 //   node tools/seed-institutions.mjs                      write it (production, as the owner)
 //   node tools/seed-institutions.mjs --emulator 127.0.0.1:8080   the emulator instead
-//   --file <path>                                         another file (the tests use a sample)
+//   --file <path>                                         another file
+//
+// Only the institutions the app should offer are in that file.
+// tools/seed/institutions-researched.json is a longer researched list that is
+// NOT seeded: the admin adds entries from it one at a time, on the Admin
+// screen (Institutions → Add an institution), when a coach needs one.
 //
 // An entry that is new is created active. One that exists gets its name, org,
 // type and area from the file only if they differ — its `active` stays as the
@@ -22,7 +27,7 @@ import { fileURLToPath } from "node:url";
 import { connect, parseArgs, SERVER_TIME } from "./firestore-rest.mjs";
 
 const DEFAULT_FILE = fileURLToPath(new URL("./seed/institutions.json", import.meta.url));
-const ID = /^[A-Za-z0-9_-]{1,60}$/;
+const ID = /^[A-Za-z0-9_-]{1,100}$/;
 const FIELDS = ["name", "org", "type", "area"];
 const LIMITS = { name: 80, org: 60, type: 60, area: 40 };
 
@@ -34,7 +39,7 @@ export function checkSeed(list) {
   const entries = list.map((raw, i) => {
     const where = `entry ${i + 1}${raw?.id ? ` (${raw.id})` : ""}`;
     const e = { id: String(raw?.id ?? "") };
-    if (!ID.test(e.id)) problems.push(`${where}: the id must be 1–60 letters, digits, - or _`);
+    if (!ID.test(e.id)) problems.push(`${where}: the id must be 1–100 letters, digits, - or _`);
     if (seen.has(e.id)) problems.push(`${where}: the id is used twice`);
     seen.add(e.id);
     for (const key of FIELDS) {
