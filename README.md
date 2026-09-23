@@ -25,14 +25,17 @@ one screen that answers one question:
 - **My money** — type an amount, dictate it with the keyboard's microphone
   (🎤), or tap pictures of Singapore notes and coins (💵) to count cash; each
   picture shows how many times it was tapped (×2).
-- **The answer** — always visible at the bottom: green yes, red no, blue for
-  an amount, grey for "what to type next". An empty money box counts as $0, so
-  a price alone already gives an answer.
+- **The answer** — at the bottom as soon as there is something to answer:
+  green yes, red no, blue for an amount. (Before that there is no panel at
+  all — no "type your money here" line; the empty boxes already say it.) A
+  yes/no is repeated in a small pill at the top, between 🏠 and ✕ — "✋ $6
+  more" — because the on-screen keyboard often covers the bottom. An empty
+  money box counts as $0, so a price alone already gives an answer.
 - **💵 Show me** — the notes and coins for a shortfall or for the change,
   drawn, fewest pieces, rounded up to the next 5¢ (there is no 1¢ coin).
-- Each tool remembers its own numbers; **Start over** clears only the tool on
-  screen; **🏠 Menu** (or Back) returns to the menu. Every tool has its own
-  link, which a teacher can share.
+- Each tool remembers its own numbers; the round **✕** at the top right
+  starts over in the tool on screen only; **🏠** (or Back) returns to the
+  menu. Every tool has its own link, which a teacher can share.
 
 What each tool says lives in `public/js/answers.js` (pure, no DOM); the
 maths — fewest notes and coins, next dollar, next note, rounding — in
@@ -80,15 +83,20 @@ device. Works offline once installed (PWA).
 - One question per screen, picked from one simple menu — one level deep, no
   settings. Every tool is built from the same parts in the same places (money
   box, list, answer at the bottom) and uses the same words ("Add item",
-  "Start over", "Put it back", "Can buy / Cannot buy").
+  "Put it back", "Can buy / Cannot buy").
+- As few words on screen as possible: every word is one more thing to read.
+  The header's 🏠 and ✕ have no labels beside them (screen readers get their
+  names from `aria-label`), the menu has no "pick a tool" line, and there is
+  no hint text before there is an answer.
 - Touch targets 56–96&nbsp;px with generous spacing.
 - Never a validation error — bad input is prevented or forgiven, not rejected.
   A blank box counts as $0 rather than leaving the answer waiting.
 - Every state uses color + icon + plain words together (works for
   color-blind users and non-readers); WCAG AAA contrast. The floating
-  yes/no badge at the top of the screen (visible even when the on-screen
+  yes/no pill at the top of the screen (visible even when the on-screen
   keyboard hides the bottom panel) carries the short amount too — "$6
-  more", not just ✋ — for the same reason.
+  more", not just ✋ — for the same reason; if an amount is too long for
+  the space between 🏠 and ✕, it drops the word, never digits.
 - Big type, plain language, at most a few words per label.
 - Immediate feedback — the answer updates as you type or tap; no submit button.
 - Undo instead of confirmation dialogs ("Take back one", "Put it back").
