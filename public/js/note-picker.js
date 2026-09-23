@@ -10,6 +10,7 @@ let els = {};
 let onDone = null;
 let picked = []; // cents value of each tap, in tap order
 let currency = DEFAULT_CURRENCY;
+const buttons = new Map(); // cents value → { btn, badge, denom }, for the ×N counts
 
 export function initPicker(elements, options) {
   els = elements;
@@ -48,6 +49,7 @@ function buildGrids() {
   const cur = CURRENCIES[currency];
   els.noteGrid.textContent = "";
   els.coinGrid.textContent = "";
+  buttons.clear();
 
   for (const note of cur.notes) {
     els.noteGrid.append(moneyButton(note, "note-btn", noteSvg(note)));
@@ -63,15 +65,29 @@ function moneyButton(denom, className, svg) {
   btn.className = className;
   btn.setAttribute("aria-label", `Add ${denom.speech}`);
   btn.innerHTML = svg;
+  // "×2" on the picture itself: the tray at the top has scrolled out of view
+  // by the time the big notes and the coins are in reach, so the count has
+  // to sit where the finger is
+  const badge = document.createElement("span");
+  badge.className = "count-badge";
+  badge.setAttribute("aria-hidden", "true");
+  badge.hidden = true;
+  btn.append(badge);
+  buttons.set(denom.valueCents, { btn, badge, denom });
   btn.addEventListener("click", () => {
     picked.push(denom.valueCents);
     update();
     navigator.vibrate?.(10); // silent no-op where unsupported (iOS)
-    els.total.classList.remove("pop");
-    void els.total.offsetWidth; // restart the animation
-    els.total.classList.add("pop");
+    pop(els.total);
+    pop(badge);
   });
   return btn;
+}
+
+function pop(el) {
+  el.classList.remove("pop");
+  void el.offsetWidth; // restart the animation
+  el.classList.add("pop");
 }
 
 function update() {
@@ -89,6 +105,14 @@ function update() {
     li.style.background = denom.color;
     li.textContent = count > 1 ? `${denom.label} × ${count}` : denom.label;
     els.trayList.append(li);
+  }
+
+  for (const [valueCents, { btn, badge, denom }] of buttons) {
+    const count = counts.get(valueCents) || 0;
+    badge.hidden = count === 0;
+    badge.textContent = `×${count}`;
+    btn.setAttribute("aria-label",
+      count ? `Add ${denom.speech}, ${count} tapped` : `Add ${denom.speech}`);
   }
 
   els.trayEmpty.hidden = picked.length > 0;

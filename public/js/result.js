@@ -26,25 +26,21 @@ function pinFloatToVisualViewport() {
 }
 
 export function renderResult({ moneyCents, hasMoney, itemsCents, hasPrices }) {
-  if (!hasMoney) {
-    show("is-neutral", "⬆️", "Type your money at the top", "");
-    return;
-  }
+  // hints only until there is something to judge; once a price is in, an
+  // empty money box counts as $0 rather than leaving the answer waiting
   if (!hasPrices) {
-    show("is-neutral", "🛒", "Add the prices of things to buy", "");
+    if (hasMoney) show("is-neutral", "🛒", "Add the prices of things to buy", "");
+    else show("is-neutral", "⬆️", "Type your money at the top", "");
     return;
   }
 
   const leftover = moneyCents - itemsCents;
-  if (leftover > 0) {
-    show("is-yes", "✅", "Yes! You have enough",
+  if (leftover >= 0) {
+    show("is-yes", "✅", "Can buy",
       `Money left: <strong>${formatCents(leftover)}</strong>`);
-  } else if (leftover === 0) {
-    show("is-yes", "✅", "Yes — exactly enough",
-      "Money left: <strong>$0</strong>");
   } else {
     // phrased as "need more", never as a negative number
-    show("is-no", "✋", "Not enough",
+    show("is-no", "✋", "Cannot buy",
       `You need <strong>${formatCents(-leftover)}</strong> more`);
   }
 }
