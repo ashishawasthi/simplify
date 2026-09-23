@@ -9,7 +9,7 @@
 //     30 minutes old), against the Firestore and Storage emulators, and
 //   - calls a few of them over HTTP through the Functions emulator, exactly as
 //     the coach app does (callable protocol, an ID token, functions/.env.local).
-// Covers: who may call, write / ask / decline, the free answer for an empty
+// Covers: who may call (only an approved, unsuspended coach of an active class), write / ask / decline, the free answer for an empty
 // instruction, monthly limits (also under parallel calls), refunds, the Singapore
 // month, the page check, and plan → start → check → approve / discard.
 // Needs `npm ci` in functions/ first. No other dependencies.
@@ -117,17 +117,22 @@ async function runInside() {
 
   // ---------- seed ----------
 
-  const A = "K7M3RQP9T"; // active: coachA, coachC, coachS (suspended)
+  const A = "K7M3RQP9T"; // active: coachA, coachC, coachS (suspended), coachP (waiting), coachD (declined)
   const P = "P9TK7M3RQ"; // paused: coachA
   const past = Timestamp.fromDate(new Date("2026-09-01T02:00:00Z"));
   const seeds = {
-    "coaches/coachA": { name: "Coach A", email: "coachA@example.com", createdAt: past },
-    "coaches/coachB": { name: "Coach B", email: "coachB@example.com", createdAt: past },
-    "coaches/coachC": { name: "Coach C", email: "coachC@example.com", createdAt: past },
-    "coaches/coachS": { name: "Coach S", email: "coachS@example.com", createdAt: past, suspended: true },
-    [`classes/${A}`]: { name: "3 Kindness", org: "", status: "active", latest: null, createdAt: past, updatedAt: past },
-    [`classes/${P}`]: { name: "4 Care", org: "", status: "suspended", latest: null, createdAt: past, updatedAt: past },
-    [`classCoaches/${A}`]: { uids: ["coachA", "coachS", "coachC"] },
+    "coaches/coachA": { name: "Coach A", email: "coachA@example.com", institutions: ["centre-north"], status: "approved", createdAt: past },
+    "coaches/coachB": { name: "Coach B", email: "coachB@example.com", institutions: ["centre-north"], status: "approved", createdAt: past },
+    "coaches/coachC": { name: "Coach C", email: "coachC@example.com", institutions: ["centre-north"], status: "approved", createdAt: past },
+    "coaches/coachS": { name: "Coach S", email: "coachS@example.com", institutions: ["centre-north"], status: "approved", createdAt: past, suspended: true },
+    "coaches/coachP": { name: "Coach P", email: "coachP@example.com", institutions: ["centre-north"], status: "pending", createdAt: past },
+    "coaches/coachD": { name: "Coach D", email: "coachD@example.com", institutions: ["centre-north"], status: "declined", createdAt: past },
+    // made before approvals existed: no status yet, so not approved
+    "coaches/coachL": { name: "Coach L", email: "coachL@example.com", org: "School", createdAt: past },
+    [`classes/${A}`]: { name: "3 Kindness", institution: "centre-north", status: "active", latest: null, createdAt: past, updatedAt: past },
+    [`classes/${P}`]: { name: "4 Care", institution: "centre-north", status: "suspended", latest: null, createdAt: past, updatedAt: past },
+    // a coach waiting for (or refused by) the admin is refused even when listed
+    [`classCoaches/${A}`]: { uids: ["coachA", "coachS", "coachC", "coachP", "coachD", "coachL"] },
     [`classCoaches/${P}`]: { uids: ["coachA"] },
     [`classes/${A}/pictures/busstop1`]: { words: "Our bus stop", file: "pictures/busstop1.jpg", width: 1600, height: 1200, createdAt: past, createdBy: "coachA" },
     [`classes/${A}/videos/wash1`]: { status: "approved", prompt: "hands", words: "Hands washing", seconds: 8, interactionId: "x", createdBy: "coachA", createdAt: past, updatedAt: past },
@@ -142,6 +147,9 @@ async function runInside() {
   check("not signed in", (await write(null)).error, "unauthenticated");
   check("signed in, no coach profile", await write("stranger"), { error: "permission-denied", message: "Fill in About you first." });
   check("suspended coach", await write("coachS"), { error: "permission-denied", message: "Your account is paused. Ask the admin." });
+  check("coach waiting for the admin", await write("coachP"), { error: "permission-denied", message: "The admin has not approved you yet." });
+  check("coach the admin declined", await write("coachD"), { error: "permission-denied", message: "The admin has not approved you as a coach. Contact the admin." });
+  check("coach from before approvals (no status)", await write("coachL"), { error: "permission-denied", message: "The admin has not approved you yet." });
   check("coach of another class", await write("coachB"), { error: "permission-denied", message: "You are not a coach of this class." });
   check("class that does not exist", (await write("coachA", { classCode: "ZZZZZZZZZ" })).message, "You are not a coach of this class.");
   check("paused class", await write("coachA", { classCode: P }), { error: "failed-precondition", message: "This class is paused by the admin." });
@@ -158,6 +166,9 @@ async function runInside() {
   ]) {
     check(`${name}: coach of another class`, (await call(handler, "coachB", { classCode: A, ...data })).error, "permission-denied");
     check(`${name}: suspended coach`, (await call(handler, "coachS", { classCode: A, ...data })).error, "permission-denied");
+    check(`${name}: coach waiting for the admin`, await call(handler, "coachP", { classCode: A, ...data }),
+      { error: "permission-denied", message: "The admin has not approved you yet." });
+    check(`${name}: coach the admin declined`, (await call(handler, "coachD", { classCode: A, ...data })).error, "permission-denied");
   }
 
   // ---------- writePage ----------
@@ -400,6 +411,8 @@ async function runInside() {
   check("no ID token → UNAUTHENTICATED", h.error?.status, "UNAUTHENTICATED");
   h = await http("writePage", "coachB", { classCode: A, instruction: "A page" });
   check("another class's coach → the plain message", [h.error?.status, h.error?.message], ["PERMISSION_DENIED", "You are not a coach of this class."]);
+  h = await http("writePage", "coachP", { classCode: A, instruction: "A page" });
+  check("a coach waiting for the admin → the plain message", [h.error?.status, h.error?.message], ["PERMISSION_DENIED", "The admin has not approved you yet."]);
   h = await http("planVideo", "coachA", { classCode: A, request: "a tray returned at a hawker centre" });
   check("planVideo → a plan", [h.result?.action, !!h.result?.planId], ["write", true]);
   const httpPlan = h.result?.planId;

@@ -82,9 +82,11 @@ async function runInside() {
     learner: null,
     owner: "owner",
     admin: token("admin1"),
-    coachA: token("coachA"), // coach of the active class and of the paused class
-    coachB: token("coachB"), // a coach, but of neither class
-    coachS: token("coachS"), // listed for the active class, but suspended
+    coachA: token("coachA"), // approved; coach of the active class and of the paused class
+    coachB: token("coachB"), // approved, but a coach of neither class
+    coachS: token("coachS"), // approved and listed for the active class, but suspended
+    coachP: token("coachP"), // listed for the active class, but still waiting for the admin
+    coachD: token("coachD"), // the admin declined them
     newbie: token("newbie"), // signed in, no coach profile yet
   };
 
@@ -101,7 +103,7 @@ async function runInside() {
     return { mapValue: { fields: fields(v) } };
   }
   function fields(obj) {
-    return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== NOW).map(([k, v]) => [k, value(v)]));
+    return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== NOW && v !== undefined).map(([k, v]) => [k, value(v)]));
   }
   // every NOW in the object, as "a.b" field paths, for REQUEST_TIME transforms (serverTimestamp)
   function nowPaths(obj, prefix = "") {
@@ -125,13 +127,17 @@ async function runInside() {
     return res.status;
   }
   const transforms = (data) => nowPaths(data).map((fieldPath) => ({ fieldPath, setToServerValue: "REQUEST_TIME" }));
+  // one write, for a batch of several (all or nothing, as a transaction commits)
+  const W = {
+    create: (path, data) => ({
+      update: { name: docName(path), fields: fields(data) }, currentDocument: { exists: false }, updateTransforms: transforms(data),
+    }),
+    set: (path, data) => ({ update: { name: docName(path), fields: fields(data) }, updateTransforms: transforms(data) }),
+  };
+  const batch = lazy((who, writes) => commit(who, writes));
   // create (fails if it exists), set (replace), update (merge the given fields; mask = their paths)
-  const create = lazy((who, path, data) => commit(who, [{
-    update: { name: docName(path), fields: fields(data) }, currentDocument: { exists: false }, updateTransforms: transforms(data),
-  }]));
-  const set = lazy((who, path, data) => commit(who, [{
-    update: { name: docName(path), fields: fields(data) }, updateTransforms: transforms(data),
-  }]));
+  const create = lazy((who, path, data) => commit(who, [W.create(path, data)]));
+  const set = lazy((who, path, data) => commit(who, [W.set(path, data)]));
   const update = lazy((who, path, data, mask = Object.keys(data)) => commit(who, [{
     update: { name: docName(path), fields: fields(data) },
     updateMask: { fieldPaths: mask.filter((p) => !nowPaths(data).includes(p)) },
@@ -182,14 +188,24 @@ async function runInside() {
   const P = "P9TK7M3RQ"; // paused class: coachA listed
   const past = new Date("2026-09-01T02:00:00Z");
   const latest = { pageId: "page1", title: "Waiting for the bus", markdown: "# Bus\n\nI wait.", publishedAt: past, publishedBy: "coachA" };
+  const approved = { status: "approved", decidedAt: past, decidedBy: "admin1" };
   const seeds = {
     "admins/admin1": {},
-    "coaches/coachA": { name: "Coach A", org: "School", note: "Ask the principal", email: "coachA@example.com", createdAt: past },
-    "coaches/coachB": { name: "Coach B", org: "School", note: "", email: "coachB@example.com", createdAt: past },
-    "coaches/coachS": { name: "Coach S", org: "School", note: "", email: "coachS@example.com", createdAt: past, suspended: true },
-    [`classes/${A}`]: { name: "3 Kindness", org: "School", status: "active", latest, createdAt: past, updatedAt: past },
+    "institutions/centre-north": { name: "Centre North", org: "A Society", type: "Day activity centre", area: "Woodlands", active: true, updatedAt: past },
+    "institutions/centre-south": { name: "Centre South", org: "A Society", type: "Day activity centre", area: "Bukit Merah", active: true, updatedAt: past },
+    "institutions/old-school": { name: "Old School", org: "B School", type: "Special education school", area: "", active: false, updatedAt: past },
+    "coaches/coachA": { name: "Coach A", note: "Ask the principal", institutions: ["centre-north", "old-school"], email: "coachA@example.com", createdAt: past, ...approved },
+    "coaches/coachB": { name: "Coach B", note: "", institutions: ["centre-south"], email: "coachB@example.com", createdAt: past, ...approved },
+    "coaches/coachS": { name: "Coach S", note: "", institutions: ["centre-north"], email: "coachS@example.com", createdAt: past, ...approved, suspended: true },
+    "coaches/coachP": { name: "Coach P", note: "New", institutions: ["centre-north"], email: "coachP@example.com", createdAt: past, status: "pending" },
+    "coaches/legacy": { name: "Old Coach", org: "School", note: "", email: "legacy@example.com", createdAt: past },
+    "coaches/coachD": { name: "Coach D", note: "", institutions: ["centre-north"], email: "coachD@example.com", createdAt: past, status: "declined", decidedAt: past, decidedBy: "admin1" },
+    [`classes/${A}`]: { name: "3 Kindness", institution: "centre-north", status: "active", latest, createdAt: past, updatedAt: past },
+    // made before institutions existed: it still has the free-text org
     [`classes/${P}`]: { name: "4 Care", org: "School", status: "suspended", latest: null, createdAt: past, updatedAt: past },
-    [`classCoaches/${A}`]: { uids: ["coachA", "coachS"] },
+    [`classCoaches/${A}`]: { uids: ["coachA", "coachS", "coachP"] },
+    // a coaches list with no class (never made by the app): its code can't be taken
+    "classCoaches/ZZZZZZZZ2": { uids: ["coachB"] },
     [`classCoaches/${P}`]: { uids: ["coachA"] },
     [`classes/${A}/pages/page1`]: { title: "Waiting for the bus", markdown: "# Bus", createdAt: past, createdBy: "coachA", updatedAt: past, updatedBy: "coachA" },
     [`classes/${P}/pages/page1`]: { title: "Old", markdown: "Old", createdAt: past, createdBy: "coachA", updatedAt: past, updatedBy: "coachA" },
@@ -199,8 +215,9 @@ async function runInside() {
     "usage/coachA_2026-09": { flash: 3, video: 1, declined: 0 },
     "usage/coachB_2026-09": { flash: 1, video: 0, declined: 0 },
     "config/limits": { flashPerMonth: 200, videosPerMonth: 5 },
+    // an older request, from when coaches asked the admin for new classes
     "requests/reqA": { uid: "coachA", kind: "new-class", className: "5 Joy", org: "School", note: "", status: "pending", createdAt: past },
-    "requests/reqB": { uid: "coachB", kind: "join-class", classCode: A, org: "School", note: "", status: "pending", createdAt: past },
+    "requests/reqB": { uid: "coachB", kind: "join-class", classCode: A, note: "", status: "pending", createdAt: past },
   };
   for (const [path, data] of Object.entries(seeds)) {
     const status = await set("owner", path, data)();
@@ -224,6 +241,14 @@ async function runInside() {
     updatedAt: NOW,
   });
   const long = (n) => "x".repeat(n);
+  // an approved coach making a class: the class and its coaches list, in one commit
+  const newClass = (extra = {}) => ({ name: "6 Hope", institution: "centre-north", status: "active", latest: null, createdAt: NOW, updatedAt: NOW, ...extra });
+  const makeClass = (who, code, { cls = {}, uids = [who], how = "create", only } = {}) => batch(who, [
+    ...(only === "coaches" ? [] : [W[how](`classes/${code}`, newClass(cls))]),
+    ...(only === "class" ? [] : [W[how](`classCoaches/${code}`, { uids })]),
+  ]);
+  const profile = (uid, extra = {}) => ({ name: "New Coach", note: "Ask Ms Tan", institutions: ["centre-north"], email: `${uid}@example.com`, status: "pending", createdAt: NOW, ...extra });
+  const joinRequest = (uid, extra = {}) => ({ uid, kind: "join-class", classCode: A, note: "", status: "pending", createdAt: NOW, ...extra });
 
   const cases = [
     "— learner (not signed in)",
@@ -241,10 +266,13 @@ async function runInside() {
     ["cannot read limits", get("learner", "config/limits"), NO],
     ["cannot read a class's coaches", get("learner", `classCoaches/${A}`), NO],
     ["cannot read coaches", get("learner", "coaches/coachA"), NO],
+    ["cannot list coaches", list("learner", "coaches"), NO],
+    ["cannot read an institution", get("learner", "institutions/centre-north"), NO],
+    ["cannot list institutions", list("learner", "institutions"), NO],
     ["cannot read requests", get("learner", "requests/reqA"), NO],
     ["cannot write a class", update("learner", `classes/${A}`, { name: "Hacked" }), NO],
 
-    "— a class's coach (coachA)",
+    "— an approved coach, a class's coach (coachA)",
     ["lists the class's pages", list("coachA", `classes/${A}/pages`), OK],
     ["creates a page", create("coachA", `classes/${A}/pages/page2`, page()), OK],
     ["cannot create a page with an extra field", create("coachA", `classes/${A}/pages/page3`, page({ html: "<b>" })), NO],
@@ -298,21 +326,66 @@ async function runInside() {
     ["changes its name", update("coachA", "coaches/coachA", { name: "Coach Ann" }), OK],
     ["cannot suspend or unsuspend itself", update("coachA", "coaches/coachA", { suspended: false }), NO],
     ["cannot change its email", update("coachA", "coaches/coachA", { email: "other@example.com" }), NO],
+    ["cannot change its own status", update("coachA", "coaches/coachA", { status: "pending" }), NO],
+    ["cannot stamp its own decision", update("coachA", "coaches/coachA", { decidedAt: NOW }), NO],
+    ["cannot change institutions without stamping when",
+      update("coachA", "coaches/coachA", { institutions: ["centre-north", "centre-south"] }), NO],
+    ["changes its institutions, stamped (stays approved)",
+      update("coachA", "coaches/coachA", { institutions: ["centre-north", "old-school", "centre-west"], institutionsChangedAt: NOW }), OK],
+    ["cannot stamp a change it did not make", update("coachA", "coaches/coachA", { institutionsChangedAt: NOW }), NO],
+    ["cannot choose no institution", update("coachA", "coaches/coachA", { institutions: [], institutionsChangedAt: NOW }), NO],
+    ["cannot choose 11 institutions",
+      update("coachA", "coaches/coachA", { institutions: Array.from({ length: 11 }, (_, i) => `i${i}`), institutionsChangedAt: NOW }), NO],
+    ["cannot choose one institution twice",
+      update("coachA", "coaches/coachA", { institutions: ["centre-north", "centre-north"], institutionsChangedAt: NOW }), NO],
+    ["cannot choose an institution id with a comma or slash",
+      update("coachA", "coaches/coachA", { institutions: ["centre-north", "a/b,c"], institutionsChangedAt: NOW }), NO],
+    ["cannot choose a non-string institution",
+      update("coachA", "coaches/coachA", { institutions: ["centre-north", 7], institutionsChangedAt: NOW }), NO],
+    ["reads an institution", get("coachA", "institutions/centre-north"), OK],
+    ["lists institutions", list("coachA", "institutions"), OK],
+    ["cannot add an institution", create("coachA", "institutions/mine", { name: "Mine", org: "Me", type: "", area: "", active: true, updatedAt: NOW }), NO],
+    ["cannot retire an institution", update("coachA", "institutions/centre-south", { active: false, updatedAt: NOW }), NO],
     ["cannot read another coach", get("coachA", "coaches/coachB"), NO],
     ["cannot list coaches", list("coachA", "coaches"), NO],
     ["looks for its own admin doc (there is none)", get("coachA", "admins/coachA"), NF],
     ["cannot read someone else's admin doc", get("coachA", "admins/admin1"), NO],
     ["cannot make itself an admin", create("coachA", "admins/coachA", {}), NO],
-    ["asks for a new class", create("coachA", "requests/r1", { uid: "coachA", kind: "new-class", className: "6 Hope", org: "School", note: "Call the office", status: "pending", createdAt: NOW }), OK],
-    ["asks to join a class by code", create("coachA", "requests/r2", { uid: "coachA", kind: "join-class", classCode: P, org: "School", note: "", status: "pending", createdAt: NOW }), OK],
-    ["cannot ask with a bad class code", create("coachA", "requests/r3", { uid: "coachA", kind: "join-class", classCode: "K7M-3RQ-P9T", status: "pending", createdAt: NOW }), NO],
-    ["cannot ask for a class with a name over 30", create("coachA", "requests/r4", { uid: "coachA", kind: "new-class", className: long(31), status: "pending", createdAt: NOW }), NO],
-    ["cannot file a request already approved", create("coachA", "requests/r5", { uid: "coachA", kind: "new-class", className: "7", status: "approved", createdAt: NOW }), NO],
-    ["cannot file a request for someone else", create("coachA", "requests/r6", { uid: "coachB", kind: "new-class", className: "7", status: "pending", createdAt: NOW }), NO],
+    ["cannot ask the admin for a new class (it makes its own)",
+      create("coachA", "requests/r1", { uid: "coachA", kind: "new-class", className: "6 Hope", note: "", status: "pending", createdAt: NOW }), NO],
+    ["asks to join a class by code", create("coachA", "requests/r2", joinRequest("coachA", { classCode: P, note: "Ms Tan's class" })), OK],
+    ["cannot ask with an organisation (institutions now)", create("coachA", "requests/r2b", joinRequest("coachA", { org: "School" })), NO],
+    ["cannot ask with a bad class code", create("coachA", "requests/r3", joinRequest("coachA", { classCode: "K7M-3RQ-P9T" })), NO],
+    ["cannot ask with a note over 300", create("coachA", "requests/r4", joinRequest("coachA", { note: long(301) })), NO],
+    ["cannot file a request already approved", create("coachA", "requests/r5", joinRequest("coachA", { status: "approved" })), NO],
+    ["cannot file a request for someone else", create("coachA", "requests/r6", joinRequest("coachB")), NO],
     ["lists its own requests (uid ==)", query("coachA", "", where("requests", "uid", "EQUAL", "coachA")), OK],
     ["cannot list every request", list("coachA", "requests"), NO],
     ["cannot read another coach's request", get("coachA", "requests/reqB"), NO],
     ["cannot approve its own request", update("coachA", "requests/reqA", { status: "approved", decidedAt: NOW, decidedBy: "coachA" }), NO],
+
+    "— an approved coach makes a class (coachA works at centre-north; old-school is retired)",
+    ["looks for a code nobody has (not found)", get("coachA", "classes/H4W9NEK3R"), NF],
+    ["makes a class for its institution, listing itself", makeClass("coachA", "H4W9NEK3R"), OK],
+    ["then works in it: lists its pages", list("coachA", "classes/H4W9NEK3R/pages"), OK],
+    ["... and reads its coaches", get("coachA", "classCoaches/H4W9NEK3R"), OK],
+    ["learners can read the new class", get("learner", "classes/H4W9NEK3R"), OK],
+    ["cannot make a class under a code already taken", makeClass("coachA", A, { how: "set" }), NO],
+    ["cannot take a code whose coaches list exists", makeClass("coachA", "ZZZZZZZZ2", { how: "set" }), NO],
+    ["cannot make a class without its coaches list", makeClass("coachA", "H4W9NEK3S", { only: "class" }), NO],
+    ["cannot make a coaches list without a class", makeClass("coachA", "H4W9NEK3T", { only: "coaches" }), NO],
+    ["cannot list another coach in its new class", makeClass("coachA", "H4W9NEK3U", { uids: ["coachA", "coachB"] }), NO],
+    ["cannot make a class for someone else", makeClass("coachA", "H4W9NEK3V", { uids: ["coachB"] }), NO],
+    ["cannot make a class for an institution not its own", makeClass("coachA", "H4W9NEK3W", { cls: { institution: "centre-south" } }), NO],
+    ["cannot make a class for a retired institution", makeClass("coachA", "H4W9NEK3X", { cls: { institution: "old-school" } }), NO],
+    ["cannot make a class for an institution that doesn't exist", makeClass("coachA", "H4W9NEK3Y", { cls: { institution: "nowhere" } }), NO],
+    ["cannot make a class with no institution", makeClass("coachA", "H4W9NEK3Z", { cls: { institution: undefined } }), NO],
+    ["cannot make a class with an organisation", makeClass("coachA", "H4W9NEK32", { cls: { org: "School" } }), NO],
+    ["cannot make a paused class", makeClass("coachA", "H4W9NEK33", { cls: { status: "suspended" } }), NO],
+    ["cannot make a class already published", makeClass("coachA", "H4W9NEK34", { cls: { latest: { pageId: "p", title: "t", markdown: "m", publishedAt: NOW, publishedBy: "coachA" } } }), NO],
+    ["cannot make a class with a name over 30", makeClass("coachA", "H4W9NEK35", { cls: { name: long(31) } }), NO],
+    ["cannot make a class with a look-alike code", makeClass("coachA", "O0IL1Q2W3"), NO],
+    ["cannot make a class dated in the past", makeClass("coachA", "H4W9NEK36", { cls: { createdAt: past } }), NO],
 
     "— a coach of another class (coachB)",
     ["reads the active class like anyone", get("coachB", `classes/${A}`), OK],
@@ -322,40 +395,90 @@ async function runInside() {
     ["cannot read the class's coaches", get("coachB", `classCoaches/${A}`), NO],
     ["cannot read the video shelf", list("coachB", `classes/${A}/videos`), NO],
 
-    "— a suspended coach (coachS, still listed)",
+    "— a coach waiting for the admin (coachP, even though listed for the active class)",
+    ["reads its own profile", get("coachP", "coaches/coachP"), OK],
+    ["reads the institutions (for About you)", list("coachP", "institutions"), OK],
+    ["changes its name and institutions", update("coachP", "coaches/coachP", { name: "Coach Pat", institutions: ["centre-south"], institutionsChangedAt: NOW }), OK],
+    ["cannot approve itself", update("coachP", "coaches/coachP", { status: "approved", decidedAt: NOW, decidedBy: "coachP" }), NO],
+    ["cannot read the class's pages", list("coachP", `classes/${A}/pages`), NO],
+    ["cannot create a page", create("coachP", `classes/${A}/pages/pageP`, page({ createdBy: "coachP", updatedBy: "coachP" })), NO],
+    ["cannot publish", publish("coachP", A), NO],
+    ["cannot shelve a picture", create("coachP", `classes/${A}/pictures/picP`, picture("picP", { createdBy: "coachP" })), NO],
+    ["cannot read the video shelf", list("coachP", `classes/${A}/videos`), NO],
+    ["cannot read the class's coaches", get("coachP", `classCoaches/${A}`), NO],
+    ["cannot make a class", makeClass("coachP", "H4W9NEK37", { cls: { institution: "centre-south" } }), NO],
+    ["cannot look for a free code", get("coachP", "classes/H4W9NEK37"), NO],
+    ["cannot ask to join a class", create("coachP", "requests/rP", joinRequest("coachP")), NO],
+
+    "— a coach the admin declined (coachD)",
+    ["cannot make a class", makeClass("coachD", "H4W9NEK38"), NO],
+    ["cannot ask to join a class", create("coachD", "requests/rD", joinRequest("coachD")), NO],
+    ["cannot undo the decision", update("coachD", "coaches/coachD", { status: "pending", decidedAt: NOW, decidedBy: "coachD" }), NO],
+    ["may still change its profile", update("coachD", "coaches/coachD", { note: "I teach at Centre North, call Ms Tan" }), OK],
+
+    "— a suspended coach (coachS, approved, still listed)",
     ["cannot read the class's pages", list("coachS", `classes/${A}/pages`), NO],
     ["cannot create a page", create("coachS", `classes/${A}/pages/page7`, page({ createdBy: "coachS", updatedBy: "coachS" })), NO],
     ["cannot publish", publish("coachS", A), NO],
     ["cannot shelve a picture", create("coachS", `classes/${A}/pictures/pic8`, picture("pic8", { createdBy: "coachS" })), NO],
-    ["cannot ask for a class", create("coachS", "requests/r7", { uid: "coachS", kind: "new-class", className: "8", status: "pending", createdAt: NOW }), NO],
+    ["cannot ask to join a class", create("coachS", "requests/r7", joinRequest("coachS")), NO],
+    ["cannot make a class", makeClass("coachS", "H4W9NEK39"), NO],
     ["cannot lift its suspension", update("coachS", "coaches/coachS", { suspended: false }), NO],
 
     "— signed in, no coach profile yet (newbie)",
-    ["cannot ask for a class before saying who it is", create("newbie", "requests/r8", { uid: "newbie", kind: "new-class", className: "9", status: "pending", createdAt: NOW }), NO],
-    ["cannot write a profile with someone else's email", create("newbie", "coaches/newbie", { name: "New", email: "boss@example.com", createdAt: NOW }), NO],
-    ["cannot write a profile that says suspended: false", create("newbie", "coaches/newbie", { name: "New", email: "newbie@example.com", createdAt: NOW, suspended: false }), NO],
-    ["cannot write a profile with an empty name", create("newbie", "coaches/newbie", { name: " ", email: "newbie@example.com", createdAt: NOW }), NO],
-    ["cannot write a profile with a note over 300", create("newbie", "coaches/newbie", { name: "New", note: long(301), email: "newbie@example.com", createdAt: NOW }), NO],
-    ["cannot write someone else's profile", create("newbie", "coaches/other", { name: "New", email: "newbie@example.com", createdAt: NOW }), NO],
-    ["writes its profile", create("newbie", "coaches/newbie", { name: "New Coach", org: "Centre", note: "Ask Ms Tan", email: "newbie@example.com", createdAt: NOW }), OK],
-    ["then asks for a class", create("newbie", "requests/r9", { uid: "newbie", kind: "new-class", className: "9 Calm", org: "Centre", note: "", status: "pending", createdAt: NOW }), OK],
+    ["cannot ask to join a class before saying who it is", create("newbie", "requests/r8", joinRequest("newbie")), NO],
+    ["reads the institutions", list("newbie", "institutions"), OK],
+    ["cannot write a profile with someone else's email", create("newbie", "coaches/newbie", profile("newbie", { email: "boss@example.com" })), NO],
+    ["cannot write a profile that is already approved", create("newbie", "coaches/newbie", profile("newbie", { status: "approved" })), NO],
+    ["cannot write a profile with no status", create("newbie", "coaches/newbie", profile("newbie", { status: undefined })), NO],
+    ["cannot write a profile that says suspended: false", create("newbie", "coaches/newbie", profile("newbie", { suspended: false })), NO],
+    ["cannot write a profile with an empty name", create("newbie", "coaches/newbie", profile("newbie", { name: " " })), NO],
+    ["cannot write a profile with a note over 300", create("newbie", "coaches/newbie", profile("newbie", { note: long(301) })), NO],
+    ["cannot write a profile with no institution", create("newbie", "coaches/newbie", profile("newbie", { institutions: [] })), NO],
+    ["cannot write a profile with an organisation", create("newbie", "coaches/newbie", profile("newbie", { org: "Centre" })), NO],
+    ["cannot write someone else's profile", create("newbie", "coaches/other", profile("newbie")), NO],
+    ["writes its profile, waiting for the admin", create("newbie", "coaches/newbie", profile("newbie")), OK],
+    ["then still cannot ask to join a class", create("newbie", "requests/r9", joinRequest("newbie")), NO],
+    ["nor make a class", makeClass("newbie", "Q2W3E4R5V"), NO],
     ["cannot read the limits' neighbours", get("newbie", "config/other"), NO],
 
     "— admin",
+    ["lists coaches waiting (status == pending)", query("admin", "", where("coaches", "status", "EQUAL", "pending")), OK],
+    ["cannot approve a coach in someone else's name", update("admin", "coaches/newbie", { status: "approved", decidedAt: NOW, decidedBy: "coachA" }), NO],
+    ["cannot approve a coach without stamping when", update("admin", "coaches/newbie", { status: "approved", decidedBy: "admin1" }), NO],
+    ["cannot give a coach a made-up status", update("admin", "coaches/newbie", { status: "boss", decidedAt: NOW, decidedBy: "admin1" }), NO],
+    ["cannot approve and suspend in one go", update("admin", "coaches/newbie", { status: "approved", decidedAt: NOW, decidedBy: "admin1", suspended: false }), NO],
+    ["cannot change a coach's institutions", update("admin", "coaches/newbie", { institutions: ["centre-south"], institutionsChangedAt: NOW }), NO],
+    ["approves a coach", update("admin", "coaches/newbie", { status: "approved", decidedAt: NOW, decidedBy: "admin1" }), OK],
+    ["... who then makes a class", makeClass("newbie", "Q2W3E4R5T"), OK],
+    ["declines a coach", update("admin", "coaches/coachP", { status: "declined", decidedAt: NOW, decidedBy: "admin1" }), OK],
+    ["puts a decision back to waiting (Undo)", update("admin", "coaches/coachP", { status: "pending", decidedAt: NOW, decidedBy: "admin1" }), OK],
+    ["approves a declined coach later", update("admin", "coaches/coachD", { status: "approved", decidedAt: NOW, decidedBy: "admin1" }), OK],
+    ["approves a coach made before approvals (no status)", update("admin", "coaches/legacy", { status: "approved", decidedAt: NOW, decidedBy: "admin1" }), OK],
+    ["adds an institution", create("admin", "institutions/centre-east", { name: "Centre East", org: "A Society", type: "Day activity centre", area: "Tampines", active: true, updatedAt: NOW }), OK],
+    ["cannot add one with a name over 80", create("admin", "institutions/x1", { name: long(81), org: "A", type: "", area: "", active: true, updatedAt: NOW }), NO],
+    ["cannot add one with no organisation", create("admin", "institutions/x2", { name: "X", org: " ", type: "", area: "", active: true, updatedAt: NOW }), NO],
+    ["cannot add one with an extra field", create("admin", "institutions/x3", { name: "X", org: "A", type: "", area: "", active: true, updatedAt: NOW, source: "web" }), NO],
+    ["cannot add one with a bad id", create("admin", "institutions/a.b", { name: "X", org: "A", type: "", area: "", active: true, updatedAt: NOW }), NO],
+    ["edits an institution", update("admin", "institutions/centre-east", { name: "Centre East (Tampines)", updatedAt: NOW }), OK],
+    ["cannot edit one without stamping when", update("admin", "institutions/centre-east", { area: "Pasir Ris" }), NO],
+    ["retires an institution", update("admin", "institutions/centre-east", { active: false, updatedAt: NOW }), OK],
+    ["cannot delete an institution", remove("admin", "institutions/centre-east"), NO],
+    ["cannot make a class through the back door (no approved profile)", makeClass("admin", "Q2W3E4R5W", { uids: ["admin1"] }), NO],
     ["lists pending requests", query("admin", "", where("requests", "status", "EQUAL", "pending")), OK],
     ["approves a request", update("admin", "requests/reqA", { status: "approved", decidedAt: NOW, decidedBy: "admin1", resultCode: "Q2W3E4R5T" }), OK],
     ["cannot decide a request twice", update("admin", "requests/reqA", { status: "declined", decidedAt: NOW, decidedBy: "admin1" }), NO],
     ["cannot change who asked", update("admin", "requests/reqB", { uid: "coachA", status: "declined", decidedAt: NOW, decidedBy: "admin1" }), NO],
     ["declines a request", update("admin", "requests/reqB", { status: "declined", decidedAt: NOW, decidedBy: "admin1" }), OK],
-    ["creates a class", create("admin", "classes/Q2W3E4R5T", { name: "5 Joy", org: "School", status: "active", latest: null, createdAt: NOW, updatedAt: NOW }), OK],
-    ["cannot create a class with a look-alike code", create("admin", "classes/O0IL1Q2W3", { name: "X", org: "", status: "active", latest: null, createdAt: NOW, updatedAt: NOW }), NO],
-    ["cannot create a class with a name over 30", create("admin", "classes/Q2W3E4R5U", { name: long(31), status: "active", latest: null, createdAt: NOW, updatedAt: NOW }), NO],
-    ["lists the class's coaches", create("admin", "classCoaches/Q2W3E4R5T", { uids: ["coachA"] }), OK],
+    ["adds a coach to a class (approving a join request)", update("admin", "classCoaches/Q2W3E4R5T", { uids: ["newbie", "coachA"] }), OK],
+    ["cannot list 51 coaches for a class", update("admin", "classCoaches/Q2W3E4R5T", { uids: Array.from({ length: 51 }, (_, i) => `c${i}`) }), NO],
     ["lists all classes", list("admin", "classes"), OK],
     ["reads a paused class", get("admin", `classes/${P}`), OK],
     ["takes a page down (latest: null)", update("admin", `classes/${A}`, { latest: null, updatedAt: NOW }), OK],
     ["pauses a class", update("admin", `classes/${A}`, { status: "suspended", updatedAt: NOW }), OK],
     ["un-pauses a class", update("admin", `classes/${A}`, { status: "active", updatedAt: NOW }), OK],
+    ["un-pauses a class made before institutions (org)", update("admin", `classes/${P}`, { status: "active", updatedAt: NOW }), OK],
+    ["cannot give a class a bad institution id", update("admin", `classes/${A}`, { institution: "a/b", updatedAt: NOW }), NO],
     ["cannot give a class a made-up status", update("admin", `classes/${A}`, { status: "deleted", updatedAt: NOW }), NO],
     ["suspends a coach", update("admin", "coaches/coachB", { suspended: true }), OK],
     ["cannot rename a coach", update("admin", "coaches/coachA", { name: "Someone" }), NO],
@@ -387,9 +510,11 @@ async function runInside() {
     ["another class's coach cannot upload", upload("coachB", `classes/${A}/pictures/new6.jpg`), NO],
     ["a suspended coach cannot upload", upload("coachS", `classes/${A}/pictures/new7.jpg`), NO],
     ["someone with no profile cannot upload", upload("newbie", `classes/${A}/pictures/new8.jpg`), NO],
+    ["a listed coach still waiting for the admin cannot upload", upload("coachP", `classes/${A}/pictures/new8b.jpg`), NO],
     ["learner cannot upload", upload("learner", `classes/${A}/pictures/new9.jpg`), NO],
     ["another class's coach cannot delete a picture", deleteFile("coachB", `classes/${A}/pictures/new1.jpg`), NO],
     ["a suspended coach cannot delete a picture", deleteFile("coachS", `classes/${A}/pictures/new1.jpg`), NO],
+    ["a listed coach waiting for the admin cannot delete a picture", deleteFile("coachP", `classes/${A}/pictures/new1.jpg`), NO],
     ["coach deletes a picture", deleteFile("coachA", `classes/${A}/pictures/new1.jpg`), OK],
     ["admin deletes a picture", deleteFile("admin", `classes/${A}/pictures/new4.jpg`), OK],
     ["nobody may upload outside classes/", upload("coachA", "hello.jpg"), NO],
@@ -402,6 +527,7 @@ async function runInside() {
     ["learner cannot see a draft", download("learner", `classes/${A}/video-drafts/vid2.mp4`), NO],
     ["another class's coach cannot see a draft", download("coachB", `classes/${A}/video-drafts/vid2.mp4`), NO],
     ["a suspended coach cannot see a draft", download("coachS", `classes/${A}/video-drafts/vid2.mp4`), NO],
+    ["a listed coach waiting for the admin cannot see a draft", download("coachP", `classes/${A}/video-drafts/vid2.mp4`), NO],
     ["the class's coach sees a draft", download("coachA", `classes/${A}/video-drafts/vid2.mp4`), OK],
     ["coach cannot upload a draft", upload("coachA", `classes/${A}/video-drafts/vid3.mp4`, { type: "video/mp4" }), NO],
     ["coach cannot upload a video", upload("coachA", `classes/${A}/videos/vid3.mp4`, { type: "video/mp4" }), NO],
