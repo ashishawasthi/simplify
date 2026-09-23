@@ -156,7 +156,7 @@ export default [
   ...Object.entries(GUIDE)
     .filter(([name]) => name !== "menu") // the menu grew groups; the guide reshoots it later
     .map(([name, scene]) => ({
-      name: `money: guide scene "${name}"`,
+      name: `guide scene "${name}"`,
       path: scene.path,
       viewport: { width: scene.width, height: scene.height },
       setup: scene.setup,
@@ -221,7 +221,7 @@ export default [
       document.getElementById('screen-title').textContent === ${JSON.stringify(title)} &&
       document.title === ${JSON.stringify(`${title} — Simplify`)} &&
       document.activeElement === document.getElementById('screen-title') &&
-      document.getElementById('guide-link').getAttribute('href') === '/guide'`,
+      document.getElementById('guide-link').getAttribute('href') === '/guide/${id}'`,
   })),
   {
     name: "an address with params (#wait?m=2) opens its tool",

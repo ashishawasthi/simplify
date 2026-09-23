@@ -158,7 +158,7 @@ export const GROUPS = Object.freeze([
 // set-up page has a class for this device. Its set-up section is
 // class-setup.js, which a class's QR code opens on its own (#join=).
 export const TOOLS = Object.freeze([
-  { id: "my-class", title: "My class", group: null, mount: myClass.mount },
+  { id: "my-class", title: "My class", group: null, mount: myClass.mount, guide: "/guide/my-class" },
 
   { id: "can-i-buy", title: "Can I buy?", group: "money", guide: "/guide/can-i-buy", mount: mountMoneyTool },
   { id: "change", title: "What is the change?", group: "money", guide: "/guide/change", mount: mountMoneyTool },
@@ -167,10 +167,10 @@ export const TOOLS = Object.freeze([
   { id: "make-amount", title: "Make the amount", group: "money", guide: "/guide/make-amount", mount: mountMoneyTool },
   { id: "shopping-list", title: "Make a shopping list", group: "money", guide: "/guide/shopping-list", mount: mountMoneyTool },
 
-  { id: "now-next", title: "Now and next", group: "my-day", mount: nowNext.mount, setup: nowNext.setup },
-  { id: "wait", title: "Wait", group: "my-day", mount: wait.mount, setup: wait.setup },
-  { id: "steps", title: "Steps", group: "my-day", mount: steps.mount, setup: steps.setup },
+  { id: "now-next", title: "Now and next", group: "my-day", mount: nowNext.mount, setup: nowNext.setup, guide: "/guide/now-next" },
+  { id: "wait", title: "Wait", group: "my-day", mount: wait.mount, setup: wait.setup, guide: "/guide/wait" },
+  { id: "steps", title: "Steps", group: "my-day", mount: steps.mount, setup: steps.setup, guide: "/guide/steps" },
 
-  { id: "i-need", title: "I need", group: "talk", mount: iNeed.mount, setup: iNeed.setup },
-  { id: "show-card", title: "Show a card", group: "talk", mount: showCard.mount, setup: showCard.setup },
+  { id: "i-need", title: "I need", group: "talk", mount: iNeed.mount, setup: iNeed.setup, guide: "/guide/i-need" },
+  { id: "show-card", title: "Show a card", group: "talk", mount: showCard.mount, setup: showCard.setup, guide: "/guide/show-card" },
 ].map(Object.freeze));

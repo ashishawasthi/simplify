@@ -2,7 +2,11 @@
 //
 //   node tools/shoot-guide.mjs yes        (one scene per run)
 //   for s in menu yes no picker show-me change next-dollar next-note \
-//            make-amount shopping-list; do node tools/shoot-guide.mjs $s; done
+//            make-amount shopping-list menu-more menu-class now-next my-day \
+//            wait-pick wait steps steps-step i-need i-need-card i-need-hurts \
+//            show-card show-card-stop my-class class-join setup-hold setup; \
+//     do node tools/shoot-guide.mjs $s; done
+//   SHOOT_DIR=/some/folder node tools/shoot-guide.mjs wait   (to look first)
 //
 // The guide's pictures are the one part of the docs that cannot be checked by
 // reading the code, so they quietly go stale — an old speak-dialog shot kept
@@ -120,8 +124,9 @@ const send = (method, params = {}) =>
     ws.send(JSON.stringify({ id, method, params }));
   });
 
+// userGesture: a setup stands in for someone tapping, as in the smoke tests
 async function evaluate(expression) {
-  const r = await send("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true });
+  const r = await send("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true, userGesture: true });
   if (r.exceptionDetails) throw new Error(r.exceptionDetails.exception?.description ?? "eval failed");
   return r.result.value;
 }
@@ -141,18 +146,26 @@ await send("Emulation.setDeviceMetricsOverride", {
 await send("Page.navigate", { url: new URL(scene.path ?? "/", url).href });
 for (let i = 0; i < 100 && !seen.has("Page.loadEventFired"); i++) await sleep(100);
 
-await evaluate(`(() => { ${scene.setup} })()`);
+// A setup may await (tap, wait for a card to open), as in the smoke tests,
+// which run the same scenes.
+await evaluate(`(async () => { ${scene.setup} })()`);
 await evaluate(`document.fonts.ready.then(() => true)`);
 await sleep(500); // let emoji/webfont paint settle
 
-if (scene.expect && !(await evaluate(scene.expect))) {
-  throw new Error(`scene "${name}" did not reach its expected state; nothing written`);
+// polled, like the smoke tests' expect: a card or a picture may still be on its way
+let reached = !scene.expect;
+for (let i = 0; i < 25 && !reached; i++) {
+  reached = !!(await evaluate(scene.expect));
+  if (!reached) await sleep(200);
 }
+if (!reached) throw new Error(`scene "${name}" did not reach its expected state; nothing written`);
+await sleep(300); // anything the last change moved has settled
 
 const { data } = await send("Page.captureScreenshot", { format: "png" });
-const out = join(ROOT, scene.out);
+// SHOOT_DIR=<folder> writes there instead, to look before replacing the guide's
+const out = process.env.SHOOT_DIR ? join(process.env.SHOOT_DIR, scene.out.split("/").pop()) : join(ROOT, scene.out);
 writeFileSync(out, Buffer.from(data, "base64"));
-console.log(`wrote ${scene.out} (${scene.width * 2}x${scene.height * 2})`);
+console.log(`wrote ${out} (${scene.width * 2}x${scene.height * 2})`);
 console.log("remember to bump CACHE in public/sw.js before pushing");
 
 ws.close();

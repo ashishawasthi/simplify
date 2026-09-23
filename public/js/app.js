@@ -116,7 +116,7 @@ if (navigator.standalone === true) guideLink.removeAttribute("target");
 
 // Not on the menu: the user guide links to it (#setup), and a class's QR
 // code opens it (#join=<CODE>).
-const SETUP = { id: "setup", title: "Set up this device", mount: mountSetup };
+const SETUP = { id: "setup", title: "Set up this device", mount: mountSetup, guide: "/guide/set-up" };
 
 const screens = new Map(); // id → { entry, block, tool, shell }
 const broken = new Set(); // tools that could not start: off the menu, not the others' problem
