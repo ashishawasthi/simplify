@@ -115,7 +115,8 @@
 //                      message over the whole screen, to show someone, with
 //                      optional choices; closeCard()
 //   say-aloud.js       canSpeak(), say(text or [{ text, lang }]), stop(): the
-//                      device's own voice, started from a tap
+//                      recorded voice for a card's fixed words, the device's
+//                      own for anything else, started from a tap
 //   picture-picker.js  pickPicture({ title, allowWords, current }): choose a
 //                      picture and a few words for a card
 //   pictures.js        the bundled pictures: PICTURES, PICTURE_GROUPS,
