@@ -93,7 +93,9 @@ function show(screen, ...args) {
   }
   leave = typeof result === "function" ? result : null;
   const title = main.querySelector("h1");
-  document.title = title ? `${title.textContent} · Simplify for coaches` : "Simplify for coaches";
+  // the sign-in screen's own heading is the app's name: don't say it twice
+  const name = title?.textContent.trim();
+  document.title = name && name !== "Simplify for coaches" ? `${name} · Simplify for coaches` : "Simplify for coaches";
   if (title) {
     title.tabIndex = -1; // focus lands on the new screen's title, for screen readers
     title.focus({ preventScroll: true });
