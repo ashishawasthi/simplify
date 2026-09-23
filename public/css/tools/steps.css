@@ -169,6 +169,9 @@ html[data-pictures-only] #tool-steps .steps-choose-picture img {
 }
 /* #1b5e20 on white is 7.9:1 */
 #tool-steps .is-done .steps-words { color: var(--color-yes-text); }
+/* the end line is the longest words a deck has: a size smaller keeps it in
+   the same three lines even in the wide fonts many Android phones use */
+#tool-steps .is-done .steps-words { font-size: calc(var(--steps-font) * 0.85); }
 
 /* a small way to another tool, under the step's words: not a step of its own */
 #tool-steps .steps-open {

@@ -84,6 +84,8 @@ function setWords(el, card) {
   el.classList.toggle("pic-words", !!card.picture);
   const longest = Math.max(0, ...card.words.split(" ").map((w) => w.length));
   el.classList.toggle("is-long", card.words.length > 18 || longest > 11);
+  // wide fonts (many Android phones) take three lines here: a step smaller
+  el.classList.toggle("is-longer", card.words.length > 24);
 }
 
 // The Changed mark: its picture, and the word beside it
