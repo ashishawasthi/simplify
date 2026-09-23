@@ -1,1 +1,169 @@
-/* Show a card (js/tools/show-card.js): styles go here, each inside #tool-show-card. */
+/* Show a card (js/tools/show-card.js). The card that opens over the whole
+   screen is the shared one (js/show-card.js, styled in styles.css). */
+
+/* ---------- the cards ---------- */
+/* Two columns everywhere — on an iPad and on a phone on its side too — so no
+   card ever changes place. A card switched off keeps its cell, empty. */
+#tool-show-card .sc-cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: 1fr; /* every row as tall as the tallest */
+  gap: 14px;
+}
+#tool-show-card .sc-slot {
+  display: flex;
+  min-width: 0;
+}
+#tool-show-card .sc-slot.is-off { visibility: hidden; }
+
+/* A big tile: the picture over its few words. No text selection or iOS
+   picture menu on a long press — a finger resting on a card just opens it. */
+#tool-show-card .sc-card {
+  flex: 1;
+  min-width: 0;
+  min-height: 168px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 8px;
+  font-family: inherit;
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.15;
+  text-align: center;
+  text-wrap: balance;
+  color: var(--color-text);
+  background: #fff;
+  border: 3px solid var(--color-border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+#tool-show-card .sc-card:active { background: #e3f2fd; }
+/* room for two lines on every card, so a one-line label keeps its picture
+   level with the picture beside it */
+#tool-show-card .sc-card-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.3em;
+}
+#tool-show-card .sc-card img {
+  display: block;
+  flex: none;
+  width: 84px;
+  height: 84px;
+  object-fit: contain;
+}
+/* with no words under them, the pictures take the room */
+html[data-pictures-only] #tool-show-card .sc-card img {
+  width: 112px;
+  height: 112px;
+}
+
+/* an iPad: the same two columns, bigger */
+@media (min-width: 600px) {
+  #tool-show-card .sc-card {
+    min-height: 208px;
+    font-size: 24px;
+  }
+  #tool-show-card .sc-card img {
+    width: 112px;
+    height: 112px;
+  }
+  html[data-pictures-only] #tool-show-card .sc-card img {
+    width: 144px;
+    height: 144px;
+  }
+}
+
+/* every card switched off: a line for the adult */
+#tool-show-card .sc-none {
+  margin: 8px 0;
+  font-size: 20px;
+  color: var(--color-muted);
+}
+
+/* ---------- its section on the set-up page ---------- */
+/* setup() builds it inside #tool-setup, whose setup.css draws the switch
+   rows and notes. These rules reach only the parts of its own: every class
+   here (sc-…) is used by that section alone. */
+#tool-setup .sc-setup > .setup-note { margin-bottom: 14px; }
+
+/* under each card's name, what the card says, word for word */
+#tool-setup .sc-says {
+  display: block;
+  margin-top: 4px;
+  font-size: 17px;
+  font-weight: 400;
+  line-height: 1.3;
+  color: var(--color-muted);
+}
+
+/* a card's own setting, under its switch and set in from it */
+#tool-setup .sc-extra {
+  min-width: 0;
+  margin: 12px 0 8px 18px;
+  padding: 0 0 0 16px;
+  border: none;
+  border-left: 4px solid #e0e0e0;
+}
+#tool-setup .sc-extra-label {
+  display: block;
+  margin: 0 0 8px;
+  padding: 0;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--color-text);
+}
+#tool-setup .sc-extra .setup-note {
+  margin: 8px 0 0;
+  font-size: 18px;
+}
+#tool-setup .sc-extra legend + .setup-note { margin: 0 0 4px; }
+
+/* the second line: one of three, each a whole row to tap. Picked: a blue
+   ring, a tint and the filled circle — as a picked picture in the picker. */
+#tool-setup .sc-choice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  margin-top: 10px;
+  padding: 8px 14px;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.25;
+  background: #fff;
+  border: 3px solid var(--color-border);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+#tool-setup .sc-choice:active { background: #e3f2fd; }
+#tool-setup .sc-choice input {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  accent-color: var(--color-primary-dark);
+  cursor: pointer;
+}
+#tool-setup .sc-choice:has(input:checked) {
+  background: #e3f2fd;
+  border-color: var(--color-primary-dark);
+  box-shadow: 0 0 0 2px var(--color-primary-dark);
+}
+/* the ring goes round the whole row, not the small circle */
+#tool-setup .sc-choice input:focus-visible { outline: none; }
+#tool-setup .sc-choice:has(input:focus-visible) {
+  outline: 4px solid var(--color-primary);
+  outline-offset: 3px;
+}
