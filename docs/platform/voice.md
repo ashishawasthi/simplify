@@ -109,10 +109,11 @@ changed anything: `node tools/test-voice.mjs`, `node tools/test-assets.mjs`, and
 
 No one could listen, so every clip was checked two ways. **Durations** (ffprobe): 0.86–4.7 s, none out of line for
 its words once leading silence was cut. **Heard back**: each clip transcribed by `gemini-3.7-flash` on Vertex AI
-(`global`) with no context. Takes heard wrong were retaken until heard right; what remains differs only as a
-listener without context expects — "I want: Kopi" heard as "copy", "We are OK" as "okay", "I am" as "I'm" — except
-**"I want: Halal side"**, heard as "hillside" in every take: the British voice's "halal" is not Singapore's. That
-clip should be listened to by a person.
+(`global`) with no context; a take heard wrong ("I won't stop", "It hurts here, here") was retaken until heard right,
+and doubtful ones transcribed three times (the transcriber itself varies). What remains differs only as a listener
+without context would guess — "Kopi" heard as "copy", "We are OK" as "okay", "I want: Shop" and "I want: Use soap"
+with a "to" added — except **"I want: Halal side"**, heard as "hillside" in every take: the British voice's "halal"
+is not Singapore's. That clip should be listened to by a person.
 
 ## Costs
 
