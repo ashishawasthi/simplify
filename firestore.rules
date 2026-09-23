@@ -1,0 +1,285 @@
+rules_version = '2';
+
+// Simplify coach platform — who may read and write what (docs/daily-life-tools.md
+// section 8). Deny by default: nothing is allowed unless a rule below says so.
+//
+// Learners never sign in: all they may do is GET one active class by its code
+// (never list). Coaches sign in with Google and reach only the classes the admin
+// approved them for. The Cloud Functions use the Admin SDK, which skips these
+// rules — so videos, video plans and usage are written by the functions only.
+//
+// Tests: node tools/test-rules.mjs (starts the emulators itself).
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- who is asking ----------
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // admins/{uid} exists — created by the owner in the console, never by a client
+    function isAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // has a coach profile that the admin has not suspended
+    function isActiveCoach() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/coaches/$(request.auth.uid))
+        && get(/databases/$(database)/documents/coaches/$(request.auth.uid)).data
+             .get('suspended', false) != true;
+    }
+
+    // an active coach listed for the class (the class itself may be paused)
+    function isListedCoach(code) {
+      return isActiveCoach()
+        && request.auth.uid in get(/databases/$(database)/documents/classCoaches/$(code)).data.uids;
+    }
+
+    // "a class's coach": listed, not suspended, and the class is active
+    function isClassCoach(code) {
+      return isListedCoach(code)
+        && get(/databases/$(database)/documents/classes/$(code)).data.status == 'active';
+    }
+
+    // ---------- what they send ----------
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    // only these fields change in an update (the rest stay exactly as they were)
+    function onlyChanged(keys) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys);
+    }
+
+    function text(value, max) {
+      return value is string && value.size() <= max;
+    }
+
+    function filledText(value, max) {
+      return text(value, max) && value.trim().size() > 0;
+    }
+
+    // 9 characters from the class-code alphabet (no 0, 1, I, L, O), stored without dashes
+    function isCode(value) {
+      return value is string && value.matches('^[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{9}$');
+    }
+
+    // a document id that is also safe in a Storage path and in markdown (pictures/<id>.jpg)
+    function isId(value) {
+      return value is string && value.matches('^[A-Za-z0-9_-]{1,40}$');
+    }
+
+    // ---------- admins ----------
+
+    // Anyone signed in may look for their OWN admin doc (the coach app shows the
+    // admin section when it exists); nobody may list or write.
+    match /admins/{uid} {
+      allow get: if signedIn() && request.auth.uid == uid;
+    }
+
+    // ---------- coaches: name, organisation, how the admin can check who they are ----------
+
+    match /coaches/{uid} {
+      function validProfile(d) {
+        return filledText(d.name, 60)
+          && text(d.get('org', ''), 80)
+          && text(d.get('note', ''), 300);
+      }
+
+      allow get: if (signedIn() && request.auth.uid == uid) || isAdmin();
+      allow list: if isAdmin();
+
+      // a coach writes their own profile; the email must be the one they signed in with
+      allow create: if signedIn() && request.auth.uid == uid
+        && incoming().keys().hasOnly(['name', 'org', 'note', 'email', 'createdAt'])
+        && incoming().keys().hasAll(['name', 'email', 'createdAt'])
+        && validProfile(incoming())
+        && incoming().email == request.auth.token.email
+        && incoming().createdAt == request.time;
+
+      // the coach changes name / org / note only; an admin changes `suspended` only
+      allow update: if (signedIn() && request.auth.uid == uid
+                         && onlyChanged(['name', 'org', 'note'])
+                         && validProfile(incoming()))
+                    || (isAdmin()
+                         && onlyChanged(['suspended'])
+                         && incoming().suspended is bool);
+    }
+
+    // ---------- requests: a new class, or joining a colleague's class ----------
+
+    match /requests/{requestId} {
+      function validRequest(d) {
+        return d.keys().hasOnly(['uid', 'kind', 'className', 'classCode', 'org', 'note', 'status', 'createdAt'])
+          && d.keys().hasAll(['uid', 'kind', 'status', 'createdAt'])
+          && d.uid == request.auth.uid
+          && d.status == 'pending'
+          && d.createdAt == request.time
+          && text(d.get('org', ''), 80)
+          && text(d.get('note', ''), 300)
+          && ((d.kind == 'new-class'
+                && filledText(d.get('className', ''), 30)
+                && !('classCode' in d))
+              || (d.kind == 'join-class'
+                && isCode(d.get('classCode', ''))
+                && text(d.get('className', ''), 30)));
+      }
+
+      allow create: if isActiveCoach() && validRequest(incoming());
+      // a coach reads (and lists, with where("uid", "==", uid)) only their own
+      allow get, list: if (signedIn() && resource.data.uid == request.auth.uid) || isAdmin();
+      // the admin decides once: only status, decidedAt, decidedBy and resultCode change
+      allow update: if isAdmin()
+        && resource.data.status == 'pending'
+        && onlyChanged(['status', 'decidedAt', 'decidedBy', 'resultCode'])
+        && incoming().status in ['approved', 'declined']
+        && incoming().decidedAt == request.time
+        && incoming().decidedBy == request.auth.uid
+        && (!('resultCode' in incoming()) || isCode(incoming().resultCode));
+    }
+
+    // ---------- classes: the public part (name + the latest published page) ----------
+
+    match /classes/{code} {
+      function validLatest(l) {
+        return l == null
+          || (l is map
+            && l.keys().hasOnly(['pageId', 'title', 'markdown', 'publishedAt', 'publishedBy'])
+            && l.keys().hasAll(['pageId', 'title', 'markdown', 'publishedAt', 'publishedBy'])
+            && isId(l.pageId)
+            && text(l.title, 80)
+            && text(l.markdown, 20000)
+            && l.publishedAt is timestamp
+            && l.publishedBy is string);
+      }
+
+      function validClass(d) {
+        return d.keys().hasOnly(['name', 'org', 'status', 'latest', 'createdAt', 'updatedAt'])
+          && d.keys().hasAll(['name', 'status', 'createdAt', 'updatedAt'])
+          && filledText(d.name, 30)
+          && text(d.get('org', ''), 80)
+          && d.status in ['active', 'suspended']
+          && validLatest(d.get('latest', null))
+          && d.createdAt is timestamp
+          && d.updatedAt is timestamp;
+      }
+
+      // Learners: GET by the exact code while the class is active — never list.
+      // A listed coach may also read their class while the admin has paused it,
+      // so the coach app can say so instead of failing.
+      allow get: if resource.data.status == 'active' || isAdmin() || isListedCoach(code);
+      allow list: if isAdmin();
+
+      // admins create (on approving a request), suspend, and take a page down (latest: null)
+      allow create: if isAdmin() && isCode(code) && validClass(incoming());
+
+      // the class's coaches publish / unpublish: only `latest` and `updatedAt` change
+      allow update: if (isAdmin() && validClass(incoming()))
+                    || (isClassCoach(code)
+                         && onlyChanged(['latest', 'updatedAt'])
+                         && incoming().updatedAt == request.time
+                         && (incoming().latest == null
+                             || (validLatest(incoming().latest)
+                                 && incoming().latest.publishedAt == request.time
+                                 && incoming().latest.publishedBy == request.auth.uid)));
+
+      // ---------- pages: drafts and older pages (coaches only) ----------
+
+      match /pages/{pageId} {
+        function validPage(d) {
+          return d.keys().hasOnly(['title', 'markdown', 'createdAt', 'createdBy', 'updatedAt', 'updatedBy', 'publishedAt'])
+            && d.keys().hasAll(['title', 'markdown', 'createdAt', 'createdBy', 'updatedAt', 'updatedBy'])
+            && text(d.title, 80)
+            && text(d.markdown, 20000)
+            && d.updatedAt == request.time
+            && d.updatedBy == request.auth.uid
+            && (!('publishedAt' in d) || d.publishedAt is timestamp);
+        }
+
+        allow get, list: if isClassCoach(code) || isAdmin();
+        allow create: if isClassCoach(code) && isId(pageId)
+          && validPage(incoming())
+          && incoming().createdAt == request.time
+          && incoming().createdBy == request.auth.uid;
+        // a save (title / markdown, stamped updatedAt + updatedBy), or only marking it published
+        allow update: if isClassCoach(code)
+          && ((validPage(incoming())
+                && incoming().createdAt == resource.data.createdAt
+                && incoming().createdBy == resource.data.createdBy)
+              || (onlyChanged(['publishedAt'])
+                && (!('publishedAt' in incoming()) || incoming().publishedAt == request.time)));
+        allow delete: if isClassCoach(code) || isAdmin();
+      }
+
+      // ---------- pictures: the class's picture shelf ----------
+
+      match /pictures/{pictureId} {
+        allow get, list: if isClassCoach(code) || isAdmin();
+        allow create: if isClassCoach(code) && isId(pictureId)
+          && incoming().keys().hasOnly(['words', 'file', 'width', 'height', 'createdAt', 'createdBy'])
+          && incoming().keys().hasAll(['words', 'file', 'width', 'height', 'createdAt', 'createdBy'])
+          && text(incoming().words, 80)
+          && incoming().file == 'pictures/' + pictureId + '.jpg'
+          && incoming().width is int && incoming().width > 0 && incoming().width <= 1600
+          && incoming().height is int && incoming().height > 0 && incoming().height <= 1600
+          && incoming().createdAt == request.time
+          && incoming().createdBy == request.auth.uid;
+        allow update: if isClassCoach(code) && onlyChanged(['words']) && text(incoming().words, 80);
+        allow delete: if isClassCoach(code) || isAdmin();
+      }
+
+      // ---------- videos: the video shelf, written only by the Cloud Functions ----------
+
+      match /videos/{videoId} {
+        allow get, list: if isClassCoach(code) || isAdmin();
+        allow delete: if isAdmin();
+      }
+
+      // classes/{code}/videoPlans/{planId}: no client access at all (functions only)
+    }
+
+    // ---------- classCoaches: which coaches a class has (admins write) ----------
+
+    match /classCoaches/{code} {
+      allow get: if isAdmin() || (isActiveCoach() && request.auth.uid in resource.data.uids);
+      // a coach finds their classes with where("uids", "array-contains", uid)
+      allow list: if isAdmin() || (signedIn() && request.auth.uid in resource.data.uids);
+      allow create, update: if isAdmin() && isCode(code)
+        && incoming().keys().hasOnly(['uids'])
+        && incoming().uids is list
+        && incoming().uids.size() <= 50;
+      allow delete: if isAdmin();
+    }
+
+    // ---------- usage/{uid}_{YYYY-MM}: written only by the Cloud Functions ----------
+
+    match /usage/{docId} {
+      // a coach reads their own months (a month with no use yet reads as "not found")
+      allow get: if isAdmin()
+        || (signedIn()
+            && docId.split('_').size() == 2
+            && docId.split('_')[0] == request.auth.uid
+            && docId.split('_')[1].matches('^[0-9]{4}-[0-9]{2}$'));
+      allow list: if isAdmin();
+    }
+
+    // ---------- config/limits: monthly limits per coach (admins set them) ----------
+
+    match /config/limits {
+      allow get: if signedIn();
+      allow create, update: if isAdmin()
+        && incoming().keys().hasOnly(['flashPerMonth', 'videosPerMonth', 'updatedAt', 'updatedBy'])
+        && (!('flashPerMonth' in incoming())
+            || (incoming().flashPerMonth is int
+                && incoming().flashPerMonth >= 0 && incoming().flashPerMonth <= 5000))
+        && (!('videosPerMonth' in incoming())
+            || (incoming().videosPerMonth is int
+                && incoming().videosPerMonth >= 0 && incoming().videosPerMonth <= 100));
+    }
+  }
+}
