@@ -4,7 +4,7 @@ rules_version = '2';
 // (docs/platform/data-model.md). Deny by default; nothing may be listed.
 //
 //   classes/{code}/pictures/{id}.jpg      anyone may GET the exact path; the class's
-//                                         coaches upload (JPEG < 2 MB, never overwrite)
+//                                         approved coaches upload (JPEG < 2 MB, never overwrite)
 //                                         and delete; admins delete
 //   classes/{code}/video-drafts/{id}.mp4  the class's coaches may GET; functions write
 //   classes/{code}/videos/{id}.mp4        anyone may GET the exact path; functions write
@@ -23,15 +23,22 @@ service firebase.storage {
     }
 
     // Storage rules may read at most TWO Firestore documents per request, so a
-    // class's coach is checked here as: listed in classCoaches/{code}, with a coach
-    // profile the admin has not suspended. Whether the class is active is checked
-    // by firestore.rules, which decides whether a picture can go on the class's
-    // shelf (classes/{code}/pictures/{id}) — and only shelf pictures are ever used.
+    // class's coach is checked here as: listed in classCoaches/{code} (read 1),
+    // with a coach profile the admin has approved and not suspended (read 2 —
+    // one get, handed to approved() so it is read once). Whether the class is
+    // active is checked by firestore.rules, which decides whether a picture can
+    // go on the class's shelf (classes/{code}/pictures/{id}, which needs an
+    // approved listed coach AND an active class) — and only shelf pictures are
+    // ever used. A file that never makes it onto a shelf is deleted by the
+    // coach app, and in any case is never linked from anything a learner sees.
+    function approved(profile) {
+      return profile.get('status', '') == 'approved' && profile.get('suspended', false) != true;
+    }
+
     function isClassCoach(code) {
       return signedIn()
         && request.auth.uid in firestore.get(/databases/(default)/documents/classCoaches/$(code)).data.uids
-        && firestore.get(/databases/(default)/documents/coaches/$(request.auth.uid)).data
-             .get('suspended', false) != true;
+        && approved(firestore.get(/databases/(default)/documents/coaches/$(request.auth.uid)).data);
     }
 
     function isAdmin() {

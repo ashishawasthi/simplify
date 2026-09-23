@@ -39,8 +39,8 @@ export function cleanId(input, what) {
 
 // ---------- who is calling ----------
 
-// Signed in; has a coach profile the admin has not suspended; listed for the
-// class; and the class is active. Returns what the callable needs.
+// Signed in; has a coach profile the admin has approved and not suspended;
+// listed for the class; and the class is active. Returns what the callable needs.
 export async function requireClassCoach(request, rawCode) {
   const uid = request.auth?.uid;
   if (!uid) fail("unauthenticated", "Please sign in again.");
@@ -53,6 +53,11 @@ export async function requireClassCoach(request, rawCode) {
   );
   if (!coach.exists) fail("permission-denied", "Fill in About you first.");
   if (coach.get("suspended") === true) fail("permission-denied", "Your account is paused. Ask the admin.");
+  if (coach.get("status") !== "approved") {
+    fail("permission-denied", coach.get("status") === "declined"
+      ? "The admin has not approved you as a coach. Contact the admin."
+      : "The admin has not approved you yet.");
+  }
   const uids = members.get("uids");
   if (!klass.exists || !Array.isArray(uids) || !uids.includes(uid)) {
     fail("permission-denied", "You are not a coach of this class.");

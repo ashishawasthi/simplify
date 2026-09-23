@@ -4,9 +4,12 @@ rules_version = '2';
 // docs/platform/data-model.md). Deny by default: nothing is allowed unless a rule below says so.
 //
 // Learners never sign in: all they may do is GET one active class by its code
-// (never list). Coaches sign in with Google and reach only the classes the admin
-// approved them for. The Cloud Functions use the Admin SDK, which skips these
-// rules — so videos, video plans and usage are written by the functions only.
+// (never list). Coaches sign in with Google, say who they are and which
+// institutions they work at, and can do nothing more until an admin approves
+// them (coaches/{uid}.status == 'approved'). An approved coach makes their own
+// classes; joining a colleague's class is a request the admin approves. The
+// Cloud Functions use the Admin SDK, which skips these rules — so videos,
+// video plans and usage are written by the functions only.
 //
 // Tests: node tools/test-rules.mjs (starts the emulators itself).
 
@@ -25,17 +28,24 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
-    // has a coach profile that the admin has not suspended
-    function isActiveCoach() {
-      return signedIn()
-        && exists(/databases/$(database)/documents/coaches/$(request.auth.uid))
-        && get(/databases/$(database)/documents/coaches/$(request.auth.uid)).data
-             .get('suspended', false) != true;
+    // the caller's coach profile (only call after checking it exists)
+    function myProfile() {
+      return get(/databases/$(database)/documents/coaches/$(request.auth.uid)).data;
     }
 
-    // an active coach listed for the class (the class itself may be paused)
+    // an approved coach: a profile the admin has approved and not suspended.
+    // Everything a coach does needs this — until then they can only fill in
+    // and change their own profile.
+    function isApprovedCoach() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/coaches/$(request.auth.uid))
+        && myProfile().get('status', '') == 'approved'
+        && myProfile().get('suspended', false) != true;
+    }
+
+    // an approved coach listed for the class (the class itself may be paused)
     function isListedCoach(code) {
-      return isActiveCoach()
+      return isApprovedCoach()
         && request.auth.uid in get(/databases/$(database)/documents/classCoaches/$(code)).data.uids;
     }
 
@@ -74,6 +84,11 @@ service cloud.firestore {
       return value is string && value.matches('^[A-Za-z0-9_-]{1,40}$');
     }
 
+    // an institution's id (institutions/{id}): the seed file's slugs, or an auto id
+    function isInstitutionId(value) {
+      return value is string && value.matches('^[A-Za-z0-9_-]{1,60}$');
+    }
+
     // ---------- admins ----------
 
     // Anyone signed in may look for their OWN admin doc (the coach app shows the
@@ -82,55 +97,104 @@ service cloud.firestore {
       allow get: if signedIn() && request.auth.uid == uid;
     }
 
-    // ---------- coaches: name, organisation, how the admin can check who they are ----------
+    // ---------- institutions: where coaches work (admins keep the list) ----------
+
+    // One entry per place (an organisation with several centres has several).
+    // Anyone signed in reads them (the coach app's picker); learners never sign
+    // in, so they can't. Admins add and edit; an entry is retired with
+    // active: false, never deleted, because profiles and classes point at it.
+    match /institutions/{id} {
+      function validInstitution(d) {
+        return d.keys().hasOnly(['name', 'org', 'type', 'area', 'active', 'updatedAt'])
+          && d.keys().hasAll(['name', 'org', 'type', 'area', 'active', 'updatedAt'])
+          && filledText(d.name, 80)
+          && filledText(d.org, 60)
+          && text(d.type, 60)
+          && text(d.area, 40)
+          && d.active is bool
+          && d.updatedAt == request.time;
+      }
+
+      allow get, list: if signedIn();
+      allow create, update: if isAdmin() && isInstitutionId(id) && validInstitution(incoming());
+    }
+
+    // ---------- coaches: who they are, where they work, and the admin's decision ----------
 
     match /coaches/{uid} {
+      // 1 to 10 different institution ids. The rules can't loop, so the ids are
+      // checked as one comma-joined string — and splitting it again must give
+      // back the same list, which only a list of strings does (join() would
+      // turn a number into digits).
+      function validInstitutions(v) {
+        return v is list && v.size() >= 1 && v.size() <= 10
+          && v.toSet().size() == v.size()
+          && v.join(',').matches('^[A-Za-z0-9_-]{1,60}(,[A-Za-z0-9_-]{1,60})*$')
+          && v.join(',').split(',') == v;
+      }
+
       function validProfile(d) {
         return filledText(d.name, 60)
-          && text(d.get('org', ''), 80)
-          && text(d.get('note', ''), 300);
+          && text(d.get('note', ''), 300)
+          && validInstitutions(d.get('institutions', null));
+      }
+
+      // a coach who changes their institutions stamps when (the admin's list
+      // says so if it was after approval); otherwise the stamp stays as it was
+      function institutionsStamped() {
+        return (incoming().institutions == resource.data.get('institutions', null)
+                 && incoming().get('institutionsChangedAt', null) == resource.data.get('institutionsChangedAt', null))
+          || (incoming().institutions != resource.data.get('institutions', null)
+                 && incoming().get('institutionsChangedAt', null) == request.time);
       }
 
       allow get: if (signedIn() && request.auth.uid == uid) || isAdmin();
       allow list: if isAdmin();
 
-      // a coach writes their own profile; the email must be the one they signed in with
+      // a coach writes their own profile, waiting for the admin: status 'pending',
+      // and the email must be the one they signed in with
       allow create: if signedIn() && request.auth.uid == uid
-        && incoming().keys().hasOnly(['name', 'org', 'note', 'email', 'createdAt'])
-        && incoming().keys().hasAll(['name', 'email', 'createdAt'])
+        && incoming().keys().hasOnly(['name', 'note', 'institutions', 'email', 'status', 'createdAt'])
+        && incoming().keys().hasAll(['name', 'institutions', 'email', 'status', 'createdAt'])
         && validProfile(incoming())
+        && incoming().status == 'pending'
         && incoming().email == request.auth.token.email
         && incoming().createdAt == request.time;
 
-      // the coach changes name / org / note only; an admin changes `suspended` only
+      // the coach changes name / note / institutions only (any time, whatever the
+      // admin decided); an admin decides (status, stamped) or suspends — never both
+      // at once, and never the coach's own words
       allow update: if (signedIn() && request.auth.uid == uid
-                         && onlyChanged(['name', 'org', 'note'])
-                         && validProfile(incoming()))
+                         && onlyChanged(['name', 'note', 'institutions', 'institutionsChangedAt'])
+                         && validProfile(incoming())
+                         && institutionsStamped())
+                    || (isAdmin()
+                         && onlyChanged(['status', 'decidedAt', 'decidedBy'])
+                         && incoming().status in ['pending', 'approved', 'declined']
+                         && incoming().decidedAt == request.time
+                         && incoming().decidedBy == request.auth.uid)
                     || (isAdmin()
                          && onlyChanged(['suspended'])
                          && incoming().suspended is bool);
     }
 
-    // ---------- requests: a new class, or joining a colleague's class ----------
+    // ---------- requests: joining a colleague's class (the admin approves) ----------
 
+    // (Older documents may also hold kind 'new-class', className and org: an
+    // approved coach now makes their own classes, so no new ones are written.)
     match /requests/{requestId} {
       function validRequest(d) {
-        return d.keys().hasOnly(['uid', 'kind', 'className', 'classCode', 'org', 'note', 'status', 'createdAt'])
-          && d.keys().hasAll(['uid', 'kind', 'status', 'createdAt'])
+        return d.keys().hasOnly(['uid', 'kind', 'classCode', 'note', 'status', 'createdAt'])
+          && d.keys().hasAll(['uid', 'kind', 'classCode', 'status', 'createdAt'])
           && d.uid == request.auth.uid
+          && d.kind == 'join-class'
+          && isCode(d.classCode)
           && d.status == 'pending'
           && d.createdAt == request.time
-          && text(d.get('org', ''), 80)
-          && text(d.get('note', ''), 300)
-          && ((d.kind == 'new-class'
-                && filledText(d.get('className', ''), 30)
-                && !('classCode' in d))
-              || (d.kind == 'join-class'
-                && isCode(d.get('classCode', ''))
-                && text(d.get('className', ''), 30)));
+          && text(d.get('note', ''), 300);
       }
 
-      allow create: if isActiveCoach() && validRequest(incoming());
+      allow create: if isApprovedCoach() && validRequest(incoming());
       // a coach reads (and lists, with where("uid", "==", uid)) only their own
       allow get, list: if (signedIn() && resource.data.uid == request.auth.uid) || isAdmin();
       // the admin decides once: only status, decidedAt, decidedBy and resultCode change
@@ -158,10 +222,13 @@ service cloud.firestore {
             && l.publishedBy is string);
       }
 
+      // `institution` is the institution the class belongs to; `org` is only
+      // kept on classes made before institutions existed
       function validClass(d) {
-        return d.keys().hasOnly(['name', 'org', 'status', 'latest', 'createdAt', 'updatedAt'])
+        return d.keys().hasOnly(['name', 'institution', 'org', 'status', 'latest', 'createdAt', 'updatedAt'])
           && d.keys().hasAll(['name', 'status', 'createdAt', 'updatedAt'])
           && filledText(d.name, 30)
+          && (!('institution' in d) || isInstitutionId(d.institution))
           && text(d.get('org', ''), 80)
           && d.status in ['active', 'suspended']
           && validLatest(d.get('latest', null))
@@ -171,12 +238,31 @@ service cloud.firestore {
 
       // Learners: GET by the exact code while the class is active — never list.
       // A listed coach may also read their class while the admin has paused it,
-      // so the coach app can say so instead of failing.
-      allow get: if resource.data.status == 'active' || isAdmin() || isListedCoach(code);
+      // so the coach app can say so instead of failing. An approved coach may
+      // look for a code that is not taken (the read before making a class).
+      allow get: if resource.data.status == 'active' || isAdmin() || isListedCoach(code)
+        || (resource == null && isApprovedCoach());
       allow list: if isAdmin();
 
-      // admins create (on approving a request), suspend, and take a page down (latest: null)
-      allow create: if isAdmin() && isCode(code) && validClass(incoming());
+      // An approved coach makes a class of their own: exactly this shape, for
+      // one of their own institutions (still active), under a code nobody has,
+      // together with classCoaches/{code} listing only them — both in one
+      // transaction (getAfter sees the other write). A code already taken
+      // can't be created (that would be an update), and its classCoaches
+      // already exists.
+      allow create: if isApprovedCoach() && isCode(code)
+        && incoming().keys().hasOnly(['name', 'institution', 'status', 'latest', 'createdAt', 'updatedAt'])
+        && validClass(incoming())
+        && incoming().status == 'active'
+        && incoming().latest == null
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && incoming().institution in myProfile().get('institutions', [])
+        && get(/databases/$(database)/documents/institutions/$(incoming().institution)).data.active == true
+        && !exists(/databases/$(database)/documents/classCoaches/$(code))
+        && getAfter(/databases/$(database)/documents/classCoaches/$(code)).data.uids == [request.auth.uid];
+
+      // admins suspend and take a page down (latest: null)
 
       // the class's coaches publish / unpublish: only `latest` and `updatedAt` change
       allow update: if (isAdmin() && validClass(incoming()))
@@ -243,12 +329,20 @@ service cloud.firestore {
       // classes/{code}/videoPlans/{planId}: no client access at all (functions only)
     }
 
-    // ---------- classCoaches: which coaches a class has (admins write) ----------
+    // ---------- classCoaches: which coaches a class has ----------
 
     match /classCoaches/{code} {
-      allow get: if isAdmin() || (isActiveCoach() && request.auth.uid in resource.data.uids);
+      allow get: if isAdmin() || (isApprovedCoach() && request.auth.uid in resource.data.uids);
       // a coach finds their classes with where("uids", "array-contains", uid)
       allow list: if isAdmin() || (signedIn() && request.auth.uid in resource.data.uids);
+      // an approved coach lists only themself, and only beside a new class
+      // made in the same transaction (see classes/{code} create)
+      allow create: if isApprovedCoach() && isCode(code)
+        && incoming().keys().hasOnly(['uids'])
+        && incoming().uids == [request.auth.uid]
+        && !exists(/databases/$(database)/documents/classes/$(code))
+        && existsAfter(/databases/$(database)/documents/classes/$(code));
+      // admins add a coach who asked to join (at most 50 coaches a class)
       allow create, update: if isAdmin() && isCode(code)
         && incoming().keys().hasOnly(['uids'])
         && incoming().uids is list
