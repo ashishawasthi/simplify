@@ -15,7 +15,7 @@ This document owns how the learner app is stored on a device and how a new deplo
 ### `CACHE` and `ASSETS`
 
 - `CACHE` is one string constant near the top of `public/sw.js`, named `simplify-v<N>`. Each release that changes `public/` raises `N` by one. (The very first versions were named `afford-v<N>`, when the app was only "Can I buy?"; that is why the cleanup below recognises both.)
-- `ASSETS` lists every file the learner app needs offline, by the URL Hosting serves it at: pages by their clean URLs (`"/"`, `"/guide"`, `"/guide/speak"`), never as `.html`, because Hosting's `cleanUrls` 301s the `.html` form and a cached redirect breaks offline navigation. It covers the app page, every guide page and screenshot, all CSS and JS, the manifest, favicon, icons and every bundled picture in `/img/pic/`.
+- `ASSETS` lists every file the learner app needs offline, by the URL Hosting serves it at: pages by their clean URLs (`"/"`, `"/guide"`, `"/guide/speak"`), never as `.html`, because Hosting's `cleanUrls` 301s the `.html` form and a cached redirect breaks offline navigation. It covers the app page, every guide page and screenshot, all CSS and JS, the manifest, favicon, icons, every bundled picture in `/img/pic/` and every clip of [the recorded voice](/platform/voice.md) in `/audio/voice/` (that part of the list, between two marked comment lines, is written by `tools/make-voice.mjs`).
 
 ### Install
 
@@ -32,7 +32,7 @@ On `activate` the worker deletes every cache whose name matches `/^(afford|simpl
 
 ### Fetch
 
-For a `GET` to this origin, the worker answers from `CACHE` with `ignoreSearch: true` (so `/?utm_source=…` finds `/`) and falls back to the network on a miss. It never writes to the cache at fetch time, so only `ASSETS` is ever stored.
+For a `GET` to this origin, the worker answers from `CACHE` with `ignoreSearch: true` (so `/?utm_source=…` finds `/`) and falls back to the network on a miss. It never writes to the cache at fetch time, so only `ASSETS` is ever stored. A request with a `Range: bytes=…` header — an `<audio>` element fetching a voice clip — gets that range of the cached file as a `206` (`ranged()`), since Safari plays nothing from a whole-file answer; a range past the end gets `416`.
 
 It does not answer (the browser fetches as if no worker were there):
 

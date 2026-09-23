@@ -53,8 +53,9 @@ decision in the [decision log](/product/decisions.md) first. The research behind
 ## Calm
 
 - **Silent by default.** No ticking or alarm sounds. Any sound is soft, optional, set by an adult, and starts from a
-  tap (Wait's one chime). Speech happens only on a tap, in the device's own voice (`speechSynthesis`, output only —
-  the microphone stays off for the whole site).
+  tap (Wait's one chime). Speech happens only on a tap, in one recorded clear voice for a card's fixed words and the
+  device's own voice for words someone typed (output only — the microphone stays off for the whole site; see
+  [the recorded voice](/platform/voice.md)).
 - **Age-neutral.** Many users are teens: no mascots, confetti, streaks, points or "good boy" praise. Neutral names
   (Wait, Steps, Show a card).
 - **`prefers-reduced-motion` is respected** everywhere; Wait shows only the number instead of a moving disc.

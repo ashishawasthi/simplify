@@ -42,6 +42,7 @@ rather than edit the old one. The research behind the 2026-09-23 decisions is in
 | 2026-09-23 | I need and Show a card keep **fixed positions**; a switched-off card leaves a gap | AAC motor planning: a card is always where the hand expects it |
 | 2026-09-23 | Show a card uses **LTA's Helping Hand wording word for word**, with our own design; a diagnosis line is opt-in | Staff recognise the wording; disclosure is the student's choice |
 | 2026-09-23 | A Steps deck **untouched for 30 minutes opens at step 1** | The next student on a shared class iPad shouldn't land in someone else's routine |
+| 2026-09-24 | **Speak plays pre-recorded clips** in one Google Cloud Chirp 3 HD female voice (`en-GB-Chirp3-HD-Erinome`, "clear"), kept on the device; the device's own voice reads only words someone typed (a stop name, I want words). A British voice because Google has no Singapore English (`en-SG`) Chirp 3 HD voice | The owner asked for a clear female voice close to Singapore accents, the same on every device: the device voices differ per phone, Singapore English is rarely installed, and a network voice fails offline. Clips of fixed sentences (137, 1.2 MB) are made once by `tools/make-voice.mjs`, so they cost nothing per tap and work offline. See [the recorded voice](/platform/voice.md) |
 
 ## Coach platform
 
