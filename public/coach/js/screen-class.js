@@ -117,7 +117,7 @@ export function classScreen(root, ctx, code) {
       document.title = `${klass.name} · Simplify for coaches`;
       if (klass.status !== "active" && !problems.querySelector(".is-paused-note")) {
         problems.append(h("div", { class: "is-paused-note" },
-          notice("The admin has paused this class. You can read it here, but nothing can be changed or published.", { tone: "warning" })));
+          notice("The admin has paused this class. Learners can't see it, and its pages, pictures and videos can't be opened or changed until the admin lets it back in.", { tone: "warning" })));
       }
       ws.emit("class");
     }, listProblem),

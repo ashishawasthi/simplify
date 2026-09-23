@@ -176,7 +176,7 @@ a.class-card-body:active { background: var(--c-accent-soft); }
 .request-when { font-size: 15px; color: var(--c-muted); }
 
 /* ---------- a class ---------- */
-.back-link { display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; }
+.back-link { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; font-weight: 600; }
 .class-title-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-bottom: 8px; }
 .class-heading { margin: 0; }
 .code-pill {

@@ -1,7 +1,7 @@
 {
   "name": "Simplify",
   "short_name": "Simplify",
-  "description": "Simple money tools: can I buy it, what is my change, next dollar, next note, make the amount, and a shopping list.",
+  "description": "Simple tools for every day: money, now and next, wait, steps, I need, show a card, and My class.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

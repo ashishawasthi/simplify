@@ -6,9 +6,9 @@
 name: Tests
 on:
   pull_request:
-  push:
-    branches:
-      - main
+  # a push to main runs these through firebase-hosting-merge.yml, which
+  # deploys only when they pass
+  workflow_call:
 permissions:
   contents: read
 jobs:
