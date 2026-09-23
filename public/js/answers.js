@@ -10,7 +10,8 @@
 //             empty boxes already say it), so it carries nothing else.
 //   icon      an emoji, or { picture: valueCents } for a note or coin drawing
 //   subline   HTML, built only from formatted numbers and denomination
-//             labels — never from anything the user typed
+//             labels — never from anything the user typed (ANSWERS marks
+//             these answers with MARKUP, below, so result.js trusts them)
 //   badge     short plain text ("$6 more") on a yes/no answer only, echoed
 //             on the floating badge at the top of the screen — the on-screen
 //             keyboard hides the bottom panel far more often than it hides
@@ -131,13 +132,22 @@ export function shoppingList({ money, total, hasPrices }) {
   };
 }
 
+// Marks an answer from this file, whose subline may be markup (<strong>)
+// built only from formatted numbers and fixed words. result.js puts a
+// subline on screen with innerHTML only when its answer carries this mark;
+// every other answer — any new tool's, with words a person typed — is shown
+// as plain text. A Symbol, so no JSON (saved state, a class post) can claim it.
+export const MARKUP = Symbol("markup built by answers.js");
+
+const marked = (answer) => (amounts) => ({ ...answer(amounts), [MARKUP]: true });
+
 // The tools, by the id used in the URL (#change) and in the guide
 // (/guide/change).
 export const ANSWERS = {
-  "can-i-buy": canIBuy,
-  "change": change,
-  "next-dollar": nextDollarAnswer,
-  "next-note": nextNote,
-  "make-amount": makeAmount,
-  "shopping-list": shoppingList,
+  "can-i-buy": marked(canIBuy),
+  "change": marked(change),
+  "next-dollar": marked(nextDollarAnswer),
+  "next-note": marked(nextNote),
+  "make-amount": marked(makeAmount),
+  "shopping-list": marked(shoppingList),
 };

@@ -42,6 +42,14 @@
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/img/icons/apple-touch-icon.png">
   <link rel="stylesheet" href="/css/styles.css">
+  <!-- one stylesheet per tool, each styling only inside its own #tool-<id> -->
+  <link rel="stylesheet" href="/css/tools/my-class.css">
+  <link rel="stylesheet" href="/css/tools/now-next.css">
+  <link rel="stylesheet" href="/css/tools/wait.css">
+  <link rel="stylesheet" href="/css/tools/steps.css">
+  <link rel="stylesheet" href="/css/tools/i-need.css">
+  <link rel="stylesheet" href="/css/tools/show-card.css">
+  <link rel="stylesheet" href="/css/tools/setup.css">
 </head>
 
 <body>
@@ -52,7 +60,7 @@
        aria-label. The floating yes/no pill sits between the two. Hidden on
        the menu itself, which has nowhere to go back to. -->
   <header id="app-header" class="app-header" hidden>
-    <a id="to-menu" class="round-btn" href="/" aria-label="Menu: pick another money tool">
+    <a id="to-menu" class="round-btn" href="/" aria-label="Menu">
       <span aria-hidden="true">🏠</span>
     </a>
     <div id="clear-all-wrap" hidden>
@@ -65,22 +73,73 @@
   <main>
     <h1 id="screen-title" class="screen-title" tabindex="-1">Simplify</h1>
 
-    <!-- The menu: the app always opens here. One big button per money tool,
-         each a plain link, so Back returns here and a tool can be shared. -->
-    <nav id="menu" aria-label="Money tools">
-      <ul class="tool-list">
-        <li><a class="tool-link" href="#can-i-buy">
-            <span class="tool-icon" aria-hidden="true">🛒</span> Can I buy?</a></li>
-        <li><a class="tool-link" href="#change">
-            <span class="tool-icon" aria-hidden="true" data-picture="50"></span> What is the change?</a></li>
-        <li><a class="tool-link" href="#next-dollar">
-            <span class="tool-icon" aria-hidden="true">💲</span> Next dollar</a></li>
-        <li><a class="tool-link" href="#next-note">
-            <span class="tool-icon" aria-hidden="true" data-picture="1000"></span> Next note</a></li>
-        <li><a class="tool-link" href="#make-amount">
-            <span class="tool-icon" aria-hidden="true" data-picture="200 100"></span> Make the amount</a></li>
-        <li><a class="tool-link" href="#shopping-list">
-            <span class="tool-icon" aria-hidden="true">📝</span> Make a shopping list</a></li>
+    <!-- The menu: the app always opens here. One big button per tool, each a
+         plain link, so Back returns here and a tool can be shared. Grouped
+         under quiet headings, in the order of GROUPS and TOOLS in
+         js/tools.js; the set-up page can take tools off a device's menu, and
+         a group with none left loses its heading. The words are .pic-words:
+         a pictures-only device shows just the pictures. The money tools
+         keep their emoji and drawn notes; every other tile and heading gets
+         its picture from the app's own set (data-menu-icon, filled in by
+         app.js from js/pictures.js), so it looks the same on every phone and
+         iPad — a system emoji can even be an empty box on an older phone. -->
+    <nav id="menu" aria-label="Tools">
+      <!-- My class: on top, and only once this device follows a class -->
+      <ul class="tool-list my-class-list" data-group="my-class">
+        <li data-tool="my-class" hidden><a class="tool-link" href="#my-class">
+            <span class="tool-icon" aria-hidden="true" data-menu-icon="my-class"></span>
+            <span class="pic-words">My class</span></a></li>
+      </ul>
+
+      <h2 class="group-label" data-group="money">
+        <span aria-hidden="true">💰</span> <span class="pic-words">Money</span>
+      </h2>
+      <ul class="tool-list" data-group="money">
+        <li data-tool="can-i-buy"><a class="tool-link" href="#can-i-buy">
+            <span class="tool-icon" aria-hidden="true">🛒</span>
+            <span class="pic-words">Can I buy?</span></a></li>
+        <li data-tool="change"><a class="tool-link" href="#change">
+            <span class="tool-icon" aria-hidden="true" data-picture="50"></span>
+            <span class="pic-words">What is the change?</span></a></li>
+        <li data-tool="next-dollar"><a class="tool-link" href="#next-dollar">
+            <span class="tool-icon" aria-hidden="true">💲</span>
+            <span class="pic-words">Next dollar</span></a></li>
+        <li data-tool="next-note"><a class="tool-link" href="#next-note">
+            <span class="tool-icon" aria-hidden="true" data-picture="1000"></span>
+            <span class="pic-words">Next note</span></a></li>
+        <li data-tool="make-amount"><a class="tool-link" href="#make-amount">
+            <span class="tool-icon" aria-hidden="true" data-picture="200 100"></span>
+            <span class="pic-words">Make the amount</span></a></li>
+        <li data-tool="shopping-list"><a class="tool-link" href="#shopping-list">
+            <span class="tool-icon" aria-hidden="true">📝</span>
+            <span class="pic-words">Make a shopping list</span></a></li>
+      </ul>
+
+      <h2 class="group-label" data-group="my-day">
+        <span aria-hidden="true" data-menu-icon="my-day"></span> <span class="pic-words">My day</span>
+      </h2>
+      <ul class="tool-list" data-group="my-day">
+        <li data-tool="now-next"><a class="tool-link" href="#now-next">
+            <span class="tool-icon" aria-hidden="true" data-menu-icon="now-next"></span>
+            <span class="pic-words">Now and next</span></a></li>
+        <li data-tool="wait"><a class="tool-link" href="#wait">
+            <span class="tool-icon" aria-hidden="true" data-menu-icon="wait"></span>
+            <span class="pic-words">Wait</span></a></li>
+        <li data-tool="steps"><a class="tool-link" href="#steps">
+            <span class="tool-icon" aria-hidden="true" data-menu-icon="steps"></span>
+            <span class="pic-words">Steps</span></a></li>
+      </ul>
+
+      <h2 class="group-label" data-group="talk">
+        <span aria-hidden="true" data-menu-icon="talk"></span> <span class="pic-words">Talk</span>
+      </h2>
+      <ul class="tool-list" data-group="talk">
+        <li data-tool="i-need"><a class="tool-link" href="#i-need">
+            <span class="tool-icon" aria-hidden="true" data-menu-icon="i-need"></span>
+            <span class="pic-words">I need</span></a></li>
+        <li data-tool="show-card"><a class="tool-link" href="#show-card">
+            <span class="tool-icon" aria-hidden="true" data-menu-icon="show-card"></span>
+            <span class="pic-words">Show a card</span></a></li>
       </ul>
     </nav>
 
@@ -248,6 +307,20 @@
       </section>
     </div>
 
+    <!-- ============ The other tools ============
+         Each builds itself inside its own block: js/tools/<id>.js, styled by
+         css/tools/<id>.css. The contract they follow is in js/tools.js. -->
+    <div id="tool-my-class" class="tool" hidden></div>
+    <div id="tool-now-next" class="tool" hidden></div>
+    <div id="tool-wait" class="tool" hidden></div>
+    <div id="tool-steps" class="tool" hidden></div>
+    <div id="tool-i-need" class="tool" hidden></div>
+    <div id="tool-show-card" class="tool" hidden></div>
+
+    <!-- ============ Set up this device (#setup) ============
+         For adults, reached from the guide, never from the menu: js/setup.js -->
+    <div id="tool-setup" class="tool" hidden></div>
+
     <footer class="app-footer">
       <a id="guide-link" class="guide-link" href="/guide" target="_blank" rel="noopener">
         <span class="guide-icon" aria-hidden="true">ℹ️</span> <span id="guide-link-text">How to use this app</span>
@@ -285,11 +358,16 @@
     </div>
   </section>
 
-  <!-- Undo toast -->
+  <!-- Undo toast (js/toast.js). Screen readers hear it from the status line
+       after it, which is always on the page, empty until a toast shows: a
+       live region that appears only when needed is often not read out. -->
   <div id="toast" class="toast" hidden>
     <span id="toast-text"></span>
-    <button id="toast-undo" class="toast-btn" type="button">Put it back</button>
+    <button id="toast-undo" class="toast-btn" type="button">
+      <span aria-hidden="true">↩</span> Put it back
+    </button>
   </div>
+  <p id="toast-status" class="visually-hidden" role="status"></p>
 
   <!-- Money picker: full-screen sheet -->
   <dialog id="picker" class="picker" aria-labelledby="picker-total">
