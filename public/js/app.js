@@ -1,105 +1,73 @@
-// Entry point: owns the app state, wires the three zones together.
+// Entry point: the menu, the six money tools, and what they share — the
+// answer panel, the notes-and-coins picker, the speak window, "Show me" and
+// the undo toast. Each tool is one block in index.html whose boxes are marked
+// data-box="money|spend|need" and whose list is data-list="items|named"; one
+// controller below runs whichever of those a tool has.
 
-import { parseToCents, formatCents, sum } from "./money.js";
-import { initItems, setItems, getItems, itemsTotalCents, hasAnyPrice, addItem, restoreItem,
-         lastItemHasValue, anyItemHasValue } from "./items.js";
-import { initResult, renderResult } from "./result.js";
-import { initPicker, openPicker } from "./note-picker.js";
-import { initSpeak, openSpeak } from "./speak.js";
+import { parseToCents, formatCents } from "./money.js";
+import { createItems } from "./items.js";
+import { createMoneyField } from "./money-field.js";
+import { initResult, renderResult, setResultVisible } from "./result.js";
+import { initPicker } from "./note-picker.js";
+import { initSpeak } from "./speak.js";
+import { initShowMoney, openShowMoney, renderPictureGroups } from "./show-money.js";
+import { ANSWERS } from "./answers.js";
+import { DEFAULT_CURRENCY, moneySvg } from "./currency-data.js";
 import { load, save, flush } from "./storage.js";
 import { initUpdates } from "./update.js";
 
 const $ = (id) => document.getElementById(id);
 
-const state = {
-  moneyValue: "",      // raw text in the money field
-  moneySource: "typed", // "typed" | "notes"
-  pickedNotes: [],      // cents per tapped note/coin, in tap order
+// the tools, in menu order, by the id used in the URL (#change) and the guide
+const TITLES = {
+  "can-i-buy": "Can I buy?",
+  "change": "What is the change?",
+  "next-dollar": "Next dollar",
+  "next-note": "Next note",
+  "make-amount": "Make the amount",
+  "shopping-list": "Make a shopping list",
 };
 
-const moneyInput = $("money-input");
-const speakMoneyBtn = $("speak-money");
-const clearMoneyBtn = $("clear-money");
-const openPickerBtn = $("open-picker");
-const clearAllBtn = $("clear-all");
+// Can I buy? keeps the key it had when it was the whole app, so numbers
+// saved before the menu existed are still there after the update.
+const storageKey = (id) => (id === "can-i-buy" ? "afford-it-v1" : `simplify-${id}-v1`);
+
+const header = $("app-header");
+const title = $("screen-title");
+const menu = $("menu");
+const toMenu = $("to-menu");
 const clearAllWrap = $("clear-all-wrap");
-const addItemBtn = $("add-item");
-const moneyChip = $("money-chip");
-const itemsTotalEl = $("items-total");
+const guideLink = $("guide-link");
+const guideLinkText = $("guide-link-text");
 const toast = $("toast");
 const toastText = $("toast-text");
 const toastUndo = $("toast-undo");
 
-// ---------- wiring ----------
+// ---------- shared parts ----------
 
-initItems($("items-list"), {
-  onChange: update,
-  onRemove: (item, index) => {
-    showToast(`Took away ${formatCents(parseToCents(item.value) ?? 0)}`, () =>
-      restoreItem(item, index));
-  },
-  onClear: (item, undo) => {
-    showToast(`Cleared ${formatCents(parseToCents(item.value) ?? 0)}`, undo);
-  },
-});
-
-initResult({
-  panel: $("result"),
-  icon: $("result-icon"),
-  headline: $("result-headline"),
-  subline: $("result-subline"),
-  float: $("result-float"),
-});
-
-initPicker(
+initResult(
   {
-    dialog: $("picker"),
-    total: $("picker-total"),
-    trayList: $("tray-list"),
-    trayEmpty: $("tray-empty"),
-    undo: $("picker-undo"),
-    clear: $("picker-clear"),
-    done: $("picker-done"),
-    noteGrid: $("note-grid"),
-    coinGrid: $("coin-grid"),
+    panel: $("result"),
+    icon: $("result-icon"),
+    headline: $("result-headline"),
+    subline: $("result-subline"),
+    float: $("result-float"),
+    actionWrap: $("result-action-wrap"),
+    action: $("result-action"),
   },
-  {
-    onDone: (picked) => {
-      state.pickedNotes = picked;
-      if (picked.length > 0) {
-        state.moneySource = "notes";
-        const cents = sum(picked);
-        state.moneyValue = centsToInputText(cents);
-        moneyInput.value = state.moneyValue;
-      }
-      update();
-      // 💵 hides itself once the box is filled, so land on the ✕ that
-      // replaced it rather than letting focus fall to the page body
-      (openPickerBtn.hidden ? clearMoneyBtn : openPickerBtn).focus();
-    },
-  },
+  { onShowMe: openShowMoney },
 );
 
-moneyInput.addEventListener("input", () => {
-  state.moneyValue = moneyInput.value;
-  // typing takes over from the picker: the picked notes no longer match
-  state.moneySource = "typed";
-  state.pickedNotes = [];
-  update();
-});
-
-// tidy the field once the user is done ("5.5" → "5.50", "abc" left alone)
-moneyInput.addEventListener("blur", () => {
-  const cents = parseToCents(state.moneyValue);
-  if (cents != null) {
-    state.moneyValue = centsToInputText(cents);
-    moneyInput.value = state.moneyValue;
-    save(snapshot());
-  }
-});
-
-openPickerBtn.addEventListener("click", () => {
-  openPicker(state.moneySource === "notes" ? state.pickedNotes : []);
+initPicker({
+  dialog: $("picker"),
+  total: $("picker-total"),
+  trayList: $("tray-list"),
+  trayEmpty: $("tray-empty"),
+  undo: $("picker-undo"),
+  clear: $("picker-clear"),
+  done: $("picker-done"),
+  noteGrid: $("note-grid"),
+  coinGrid: $("coin-grid"),
 });
 
 initSpeak({
@@ -110,88 +78,181 @@ initSpeak({
   close: $("speak-close"),
 });
 
-speakMoneyBtn.addEventListener("click", () =>
-  openSpeak((text) => {
-    moneyInput.value = text;
-    // run the normal typing path: sets state, drops stale picked notes
-    moneyInput.dispatchEvent(new Event("input"));
-  }));
-
-clearMoneyBtn.addEventListener("click", () => {
-  const before = snapshot();
-  state.moneyValue = "";
-  state.moneySource = "typed";
-  state.pickedNotes = [];
-  moneyInput.value = "";
-  update();
-  // this button just hid itself; hand focus to the 🎤 that took its place
-  // rather than the input, whose keypad would bury the mic on mobile
-  speakMoneyBtn.focus();
-  showToast(`Cleared ${formatCents(parseToCents(before.moneyValue) ?? 0)}`, () =>
-    restore(before));
+initShowMoney({
+  dialog: $("show-money"),
+  label: $("show-money-label"),
+  title: $("show-money-title"),
+  words: $("show-money-words"),
+  note: $("show-money-note"),
+  pieces: $("show-money-pieces"),
+  done: $("show-money-done"),
 });
 
-$("add-item").addEventListener("click", addItem);
-
-clearAllBtn.addEventListener("click", () => {
-  const before = snapshot();
-  state.moneyValue = "";
-  state.moneySource = "typed";
-  state.pickedNotes = [];
-  moneyInput.value = "";
-  setItems([]);
-  update();
-  speakMoneyBtn.focus(); // clear-all hides itself once everything is empty
-  showToast("Everything cleared", () => restore(before));
-});
-
-// ---------- state helpers ----------
-
-function centsToInputText(cents) {
-  return formatCents(cents, ""); // no "$" — the field has its own prefix
+// menu pictures are the app's own note and coin drawings
+for (const slot of document.querySelectorAll("[data-picture]")) {
+  slot.innerHTML = slot.dataset.picture
+    .split(" ")
+    .map((cents) => moneySvg(DEFAULT_CURRENCY, Number(cents)))
+    .join("");
 }
 
-function snapshot() {
-  return {
-    moneyValue: state.moneyValue,
-    moneySource: state.moneySource,
-    pickedNotes: [...state.pickedNotes],
-    items: getItems(),
-  };
-}
+// ---------- one controller per tool ----------
 
-function restore(snap) {
-  state.moneyValue = snap.moneyValue || "";
-  state.moneySource = snap.moneySource || "typed";
-  state.pickedNotes = snap.pickedNotes || [];
-  moneyInput.value = state.moneyValue;
-  setItems(snap.items || []);
-  update();
-}
+let active = null; // id of the tool on screen; null while the menu shows
+const tools = {};
 
-function update() {
-  const moneyCents = parseToCents(state.moneyValue);
-  itemsTotalEl.textContent = formatCents(itemsTotalCents());
-  moneyChip.hidden = state.moneySource !== "notes";
+function mountTool(id) {
+  const block = $(`tool-${id}`);
+  const answer = ANSWERS[id];
+  const key = storageKey(id);
 
-  // 🎤 while the money box is empty, ✕ once it holds something
-  const moneyFilled = moneyInput.value.trim() !== "";
-  speakMoneyBtn.hidden = moneyFilled;
-  clearMoneyBtn.hidden = !moneyFilled;
-  // 💵 is another way to fill an empty box, so it goes with the 🎤
-  openPickerBtn.hidden = moneyFilled;
-  // nothing entered anywhere yet means nothing to clear
-  clearAllWrap.hidden = !moneyFilled && !anyItemHasValue();
-  // one empty row at a time: fill it before another can be added
-  addItemBtn.hidden = !lastItemHasValue();
-  renderResult({
-    moneyCents: moneyCents ?? 0,
-    hasMoney: moneyCents != null,
-    itemsCents: itemsTotalCents(),
-    hasPrices: hasAnyPrice(),
+  const boxes = {};
+  for (const wrap of block.querySelectorAll("[data-box]")) {
+    const name = wrap.dataset.box;
+    boxes[name] = createMoneyField(
+      {
+        input: wrap.querySelector("input"),
+        speakBtn: wrap.querySelector(".mic-btn"),
+        clearBtn: wrap.querySelector(".clear-btn"),
+        pickerBtn: block.querySelector(`[data-picker-for="${name}"]`),
+        chip: block.querySelector(`[data-chip-for="${name}"]`),
+      },
+      {
+        onChange: update,
+        onCleared: (before) =>
+          showToast(`Cleared ${formatCents(parseToCents(before.value) ?? 0)}`, () => {
+            boxes[name].set(before.value, before.source, before.picked);
+            update();
+          }),
+      },
+    );
+  }
+
+  const listEl = block.querySelector("[data-list]");
+  const items = listEl && createItems(listEl, {
+    withNames: listEl.dataset.list === "named",
+    onChange: update,
+    onRemove: (item, index) =>
+      showToast(`Took away ${item.name.trim() || formatCents(parseToCents(item.value) ?? 0)}`,
+        () => items.restore(item, index)),
+    onClear: (item, undo) =>
+      showToast(`Cleared ${formatCents(parseToCents(item.value) ?? 0)}`, undo),
   });
-  save(snapshot());
+  const addBtn = block.querySelector("[data-add-item]");
+  addBtn?.addEventListener("click", () => items.add());
+  const totalEl = block.querySelector("[data-total]");
+  const picturesEl = block.querySelector("[data-pictures]");
+
+  // Saved shape: { moneyValue, moneySource, pickedNotes, spendValue,
+  // needValue, items } — only the parts this tool has. Can I buy?'s is the
+  // exact shape the single-screen app used to save.
+  function snapshot() {
+    const snap = {};
+    if (boxes.money) {
+      const money = boxes.money.get();
+      snap.moneyValue = money.value;
+      snap.moneySource = money.source;
+      snap.pickedNotes = money.picked;
+    }
+    if (boxes.spend) snap.spendValue = boxes.spend.get().value;
+    if (boxes.need) snap.needValue = boxes.need.get().value;
+    if (items) snap.items = items.get();
+    return snap;
+  }
+
+  function restore(snap = {}) {
+    boxes.money?.set(snap.moneyValue || "", snap.moneySource || "typed", snap.pickedNotes || []);
+    boxes.spend?.set(snap.spendValue || "");
+    boxes.need?.set(snap.needValue || "");
+    items?.set(snap.items);
+    update();
+  }
+
+  const hasAnything = () =>
+    Object.values(boxes).some((box) => box.filled()) || !!items?.anyHasValue();
+
+  function update() {
+    if (items) {
+      totalEl.textContent = formatCents(items.totalCents());
+      // one empty row at a time: fill it before another can be added
+      addBtn.hidden = !items.lastHasValue();
+    }
+    const said = answer({
+      money: boxes.money ? boxes.money.cents() : null,
+      spend: boxes.spend ? boxes.spend.cents() : null,
+      need: boxes.need ? boxes.need.cents() : null,
+      total: items ? items.totalCents() : 0,
+      hasPrices: !!items?.hasAnyPrice(),
+    });
+    if (picturesEl) renderPictureGroups(picturesEl, said.pictures);
+    if (active === id) {
+      renderResult(said);
+      // nothing entered anywhere yet means nothing to clear
+      clearAllWrap.hidden = !hasAnything();
+    }
+    save(key, snapshot());
+  }
+
+  function clearAll() {
+    const before = snapshot();
+    restore({});
+    showToast("Everything cleared", () => restore(before));
+  }
+
+  restore(load(key) || {});
+  return { block, update, clearAll };
 }
+
+for (const id of Object.keys(TITLES)) tools[id] = mountTool(id);
+
+// ---------- menu ⇄ tools ----------
+// The address says where you are (/#next-note), so the browser's and
+// Android's back button work, and a teacher can share a link to one tool.
+
+let shown; // what route() showed last: a tool id, null for the menu
+let cameFromMenu = false;
+
+function route() {
+  const id = location.hash.slice(1);
+  const next = id in TITLES ? id : null;
+  // opened from the menu in this visit: then 🏠 can simply step back to it
+  cameFromMenu = next !== null && shown === null;
+  shown = next;
+  active = next;
+
+  menu.hidden = next !== null;
+  for (const [toolId, tool] of Object.entries(tools)) tool.block.hidden = toolId !== next;
+  header.hidden = next === null;
+  title.textContent = next ? TITLES[next] : "Simplify";
+  document.title = next ? `${TITLES[next]} — Simplify` : "Simplify";
+  guideLink.href = next ? `/guide/${next}` : "/guide";
+  guideLinkText.textContent = next ? "How to use this tool" : "How to use this app";
+  hideToast();
+  setResultVisible(next !== null);
+  if (next) tools[next].update();
+
+  window.scrollTo(0, 0);
+  // a screen reader lands on the new screen's name, not the old button
+  title.focus({ preventScroll: true });
+}
+
+addEventListener("hashchange", route);
+
+toMenu.addEventListener("click", (e) => {
+  e.preventDefault();
+  if (cameFromMenu) {
+    history.back(); // no new history entry, so Back from the menu leaves the app
+  } else {
+    // opened straight into a tool (a shared link): swap it for the menu
+    history.replaceState(null, "", location.pathname);
+    route();
+  }
+});
+
+$("clear-all").addEventListener("click", () => {
+  tools[active]?.clearAll();
+  title.focus({ preventScroll: true }); // Start over just hid itself
+});
 
 // ---------- undo toast ----------
 
@@ -218,7 +279,7 @@ toastUndo.addEventListener("click", () => {
 
 // ---------- boot ----------
 
-restore(load() || { items: [{ value: "" }] });
+route();
 
 // a phone may kill a backgrounded app without warning, so save first
 document.addEventListener("visibilitychange", () => {

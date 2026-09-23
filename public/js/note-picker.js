@@ -1,9 +1,10 @@
 // Full-screen money picker: tap pictures of notes and coins to count cash,
-// like laying money out on a table. Undo takes back the last tap.
+// like laying money out on a table. Undo takes back the last tap. Shared by
+// every "My money" box; each opening says where its total goes.
 
 import { formatCents, sum } from "./money.js";
 import {
-  CURRENCIES, DEFAULT_CURRENCY, findDenomination, isCoin, noteSvg, coinSvg,
+  CURRENCIES, DEFAULT_CURRENCY, findDenomination, isCoin, noteSvg, coinSvg, pictureScale,
 } from "./currency-data.js";
 
 let els = {};
@@ -12,9 +13,8 @@ let picked = []; // cents value of each tap, in tap order
 let currency = DEFAULT_CURRENCY;
 const buttons = new Map(); // cents value → { btn, badge, denom }, for the ×N counts
 
-export function initPicker(elements, options) {
+export function initPicker(elements) {
   els = elements;
-  onDone = options.onDone;
 
   buildGrids();
 
@@ -34,15 +34,17 @@ export function initPicker(elements, options) {
   });
 }
 
-export function openPicker(existingPicked = []) {
+// done(picked) receives the cents of every note and coin tapped
+export function openPicker(existingPicked, done) {
   picked = [...existingPicked];
+  onDone = done;
   update();
   els.dialog.showModal();
 }
 
 function close() {
   els.dialog.close();
-  onDone([...picked]);
+  onDone?.([...picked]);
 }
 
 function buildGrids() {
@@ -65,6 +67,8 @@ function moneyButton(denom, className, svg) {
   btn.className = className;
   btn.setAttribute("aria-label", `Add ${denom.speech}`);
   btn.innerHTML = svg;
+  // bigger money is drawn bigger, as in a wallet
+  btn.style.setProperty("--scale", pictureScale(currency, denom).toFixed(3));
   // "×2" on the picture itself: the tray at the top has scrolled out of view
   // by the time the big notes and the coins are in reach, so the count has
   // to sit where the finger is
@@ -103,6 +107,7 @@ function update() {
     const li = document.createElement("li");
     li.className = "tray-item" + (isCoin(currency, valueCents) ? " is-coin" : "");
     li.style.background = denom.color;
+    li.style.color = denom.ink;
     li.textContent = count > 1 ? `${denom.label} × ${count}` : denom.label;
     els.trayList.append(li);
   }

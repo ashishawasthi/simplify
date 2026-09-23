@@ -4,8 +4,8 @@
 // old one until it reloads. This reloads at a moment that cannot disrupt:
 // straight away if the screen hasn't been touched since the app opened or
 // came back to the front, otherwise the next time it goes to the background.
-// Never while the picker or speak window is open, so a count in progress
-// can't vanish.
+// Never while a window is open (the picker, speak, Show me), so a count in
+// progress can't vanish.
 
 import { flush } from "./storage.js";
 

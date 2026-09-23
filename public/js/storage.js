@@ -1,21 +1,21 @@
 // localStorage persistence so the app remembers everything offline —
 // count your notes at home, reopen at the shop, the numbers are still there.
+// Each tool keeps its own key, so switching tools never loses anything.
 
-const KEY = "afford-it-v1";
 let saveTimer = null;
-let pending = null; // latest state not yet written
+const pending = new Map(); // key → latest state not yet written
 
-export function load() {
+export function load(key) {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = localStorage.getItem(key);
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
   }
 }
 
-export function save(state) {
-  pending = state;
+export function save(key, state) {
+  pending.set(key, state);
   clearTimeout(saveTimer);
   saveTimer = setTimeout(flush, 200);
 }
@@ -24,11 +24,12 @@ export function save(state) {
 // may be killed in the background, and the last keystroke must survive.
 export function flush() {
   clearTimeout(saveTimer);
-  if (pending == null) return;
-  try {
-    localStorage.setItem(KEY, JSON.stringify(pending));
-  } catch {
-    // storage full or blocked — the app still works, just without memory
+  for (const [key, state] of pending) {
+    try {
+      localStorage.setItem(key, JSON.stringify(state));
+    } catch {
+      // storage full or blocked — the app still works, just without memory
+    }
   }
-  pending = null;
+  pending.clear();
 }

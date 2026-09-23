@@ -38,8 +38,9 @@ body {
   line-height: 1.4;
   color: var(--color-text);
   background: var(--color-bg);
-  /* leave room for the sticky result panel */
-  padding-bottom: 160px;
+  /* leave room for the sticky result panel; result.js keeps --panel-h at
+     its real height, which grows with a longer answer */
+  padding-bottom: calc(var(--panel-h, 160px) + 24px);
 }
 
 main {
@@ -61,11 +62,24 @@ main {
      jump down the moment the first amount is entered */
   min-height: calc(var(--target-small) + 24px);
 }
-h1 { font-size: 26px; margin: 0; }
 
-/* A quiet text label beside a round icon button — used for "Start over" in
-   the header and for the picker's two actions, so a circle always reads as
-   a small action and ✕ always means "clear". */
+/* The screen's name: "Simplify" on the menu, the tool's name inside one.
+   It takes focus on every screen change (for screen readers), so no ring. */
+.screen-title {
+  font-size: 30px;
+  line-height: 1.2;
+  margin: 4px 0 16px;
+}
+.screen-title:focus { outline: none; }
+/* the menu has no header row above its title */
+.app-header[hidden] + main .screen-title {
+  margin-top: 20px;
+  font-size: 34px;
+}
+
+/* A quiet text label beside a round icon button — used for "Menu" and
+   "Start over" in the header and for the picker's two actions, so a circle
+   always reads as a small action and ✕ always means "clear". */
 .labelled-btn {
   display: flex;
   align-items: center;
@@ -158,6 +172,13 @@ h2 {
   font-size: 28px;
   font-weight: 700;
   color: var(--color-muted);
+}
+/* 🏠 Menu is a link (Back returns to the menu too), drawn as the same circle */
+a.round-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
 }
 .round-btn:disabled { cursor: default; }
 .mic-btn:active,
@@ -270,6 +291,112 @@ h2 {
 }
 .items-total strong { font-size: var(--font-amount); }
 
+/* A shopping-list row: the name above the price, both full width, so a
+   phone never has to squeeze two boxes side by side. */
+.item-fields {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.name-field {
+  width: 100%;
+  min-height: var(--target-small);
+  padding: 8px 16px;
+  font-family: inherit;
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--color-text);
+  background: #fff;
+  border: 3px solid var(--color-border);
+  border-radius: var(--radius);
+}
+.name-field:focus {
+  border-color: var(--color-primary);
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* ---------- the menu ---------- */
+/* One big button per tool: a picture, the name, and a › — the same shape
+   as the guide's topic buttons, so the two read as one family. */
+.menu-intro {
+  margin: 0 0 16px;
+  font-size: 22px;
+  color: var(--color-muted);
+}
+.tool-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.tool-link {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 84px;
+  padding: 12px 16px;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--color-text);
+  text-decoration: none;
+  background: #fff;
+  border: 3px solid var(--color-border);
+  border-radius: var(--radius);
+}
+.tool-link::after {
+  content: "›";
+  margin-left: auto;
+  padding-left: 8px;
+  font-size: 38px;
+  line-height: 1;
+  color: var(--color-muted);
+}
+.tool-link:active { background: #e3f2fd; }
+.tool-link:focus-visible {
+  outline: 4px solid var(--color-primary);
+  outline-offset: 3px;
+}
+.tool-icon {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 68px;
+  font-size: 40px;
+  line-height: 1;
+}
+.tool-icon svg { display: block; height: auto; }
+/* a note is drawn wide, a coin round: both sized to sit in the same slot */
+.tool-icon .note-svg { width: 62px; }
+.tool-icon .coin-svg { width: 44px; }
+/* "Make the amount": a coin laid on the corner of a note */
+.tool-icon .note-svg + .coin-svg {
+  width: 30px;
+  margin: 18px 0 0 -24px;
+}
+
+/* ---------- answer pictures (Next note, Make the amount) ---------- */
+.answer-pictures {
+  margin: 8px 0 28px;
+  padding: 16px;
+  background: #f5f9ff;
+  border: 3px solid #bbdefb;
+  border-radius: var(--radius);
+}
+.money-caption {
+  margin: 18px 0 10px;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-muted);
+}
+
 /* ---------- footer: link to the user guide ---------- */
 .app-footer {
   margin: 28px 0 8px;
@@ -337,7 +464,18 @@ h2 {
   border-top-right-radius: 24px;
   box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.18);
 }
-.result-icon { font-size: 52px; line-height: 1; }
+/* the part screen readers follow: icon + words, not the Show me button */
+.result-live {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.result-icon { flex: none; font-size: 52px; line-height: 1; }
+/* a drawn note or coin in place of the emoji (Next note, Make the amount…) */
+.result-icon.is-picture .note-svg { display: block; width: 84px; height: auto; }
+.result-icon.is-picture .coin-svg { display: block; width: 56px; height: auto; }
 .result-headline {
   margin: 0;
   font-size: var(--font-headline);
@@ -353,14 +491,47 @@ h2 {
 
 .result.is-yes  { background: var(--color-yes-bg);  color: var(--color-yes-text); }
 .result.is-no   { background: var(--color-no-bg);   color: var(--color-no-text); }
+/* an amount rather than a yes/no — change, next dollar, next note … —
+   so neither the green nor the red; #0d47a1 on #e3f2fd is 7.5:1 */
+.result.is-answer { background: #e3f2fd; color: var(--color-primary-dark); }
 .result.is-neutral { background: var(--color-neutral-bg); color: var(--color-neutral-text); }
 .result.is-neutral .result-headline { font-size: 24px; font-weight: 700; }
+
+/* 💵 Show me: the notes and coins for the amount in the answer. A full row
+   under the words, so the answer keeps the whole width and the button reads
+   as the one thing to do next. */
+.result { flex-wrap: wrap; }
+.result-action { flex: 1 0 100%; }
+.show-me-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: var(--target-small);
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 21px;
+  font-weight: 800;
+  /* the panel's own colour on white: 6.5:1 on red, 9:1 on blue */
+  color: inherit;
+  background: #fff;
+  border: 3px solid currentColor;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.show-me-btn:active { background: #e3f2fd; }
+.show-me-btn:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
 
 /* ---------- toast ---------- */
 .toast {
   position: fixed;
   left: 50%;
-  bottom: 170px;
+  /* just above the answer panel, however tall it is */
+  bottom: calc(var(--panel-h, 160px) + 10px);
   transform: translateX(-50%);
   display: flex;
   align-items: center;
@@ -494,7 +665,12 @@ h2 {
 @media (min-width: 420px) {
   .note-grid { grid-template-columns: 1fr 1fr; }
 }
+/* --scale (set per note and coin from its real size) keeps the wallet's
+   order on screen: a $2 note is 78% the length of a $100, a 5¢ coin 68%
+   the width of a $1. Left-aligned, so the difference shows at a glance. */
 .note-btn {
+  justify-self: start;
+  width: calc(100% * var(--scale, 1));
   padding: 0;
   background: none;
   border: none;
@@ -512,11 +688,13 @@ h2 {
 .coin-grid {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: var(--gap);
 }
+/* even the smallest coin stays a 65px target */
 .coin-btn {
-  width: 96px;
-  height: 96px;
+  width: calc(96px * var(--scale, 1));
+  height: calc(96px * var(--scale, 1));
   padding: 0;
   background: none;
   border: none;
@@ -525,6 +703,49 @@ h2 {
 }
 .coin-btn svg { display: block; width: 100%; height: 100%; }
 .coin-btn:active svg { transform: scale(0.94); }
+/* an iPad has room: coins as big as a finger-tip or bigger */
+@media (min-width: 600px) {
+  .coin-btn {
+    width: calc(128px * var(--scale, 1));
+    height: calc(128px * var(--scale, 1));
+  }
+}
+
+/* ---------- money drawn for an amount (Show me, Next note, Make the amount) ---------- */
+.money-notes {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--gap);
+}
+.money-coins {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gap);
+}
+.money-notes + .money-coins { margin-top: var(--gap); }
+.money-piece { position: relative; }
+.money-piece svg { display: block; width: 100%; height: auto; }
+.money-piece.is-note { width: calc(min(100%, 300px) * var(--scale, 1)); }
+.money-piece.is-coin { width: calc(88px * var(--scale, 1)); }
+.money-piece .count-badge { top: -12px; right: -12px; }
+
+/* the Show me sheet: the amount in words, then the pictures */
+.show-money-title { font-size: 36px; }
+.money-words {
+  margin: 20px 0 6px;
+  font-size: 30px;
+  font-weight: 800;
+}
+.money-note {
+  margin: 0 0 6px;
+  font-size: 20px;
+  color: var(--color-muted);
+}
+.money-pieces { margin-top: 20px; }
+/* the sheet has the whole screen for them: draw the coins bigger */
+.money-pieces .money-piece.is-coin { width: calc(120px * var(--scale, 1)); }
 
 /* ×N on a note or coin: how many of it are in the count so far. Pinned to
    the picture's corner so it is read at the moment of tapping. */
@@ -557,6 +778,17 @@ h2 {
 .note-btn .count-badge {
   top: -10px;
   right: -8px;
+}
+/* coins are small (the 5¢ is 65px): a smaller badge, set further out, so
+   the coin's own value stays readable beside it */
+.coin-btn .count-badge {
+  top: -20px;
+  right: -22px;
+  min-width: 40px;
+  height: 40px;
+  padding: 0 8px;
+  font-size: 20px;
+  line-height: 40px;
 }
 
 /* tap feedback: quick pop on the picker total */

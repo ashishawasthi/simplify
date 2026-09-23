@@ -39,8 +39,9 @@ page cannot tell dictation from typing.
 
 ### The obstacle
 
-The money fields (`#money-input` and each item row's price box, in
-[`public/index.html`](../public/index.html)) carry `inputmode="decimal"`,
+The money fields (every `[data-box]` amount box in
+[`public/index.html`](../public/index.html) — My money, I spend, I need — and
+each item row's price box) carry `inputmode="decimal"`,
 because the app's whole point is entering amounts and a numeric keypad is far
 easier to hit accurately.
 
