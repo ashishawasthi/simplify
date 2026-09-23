@@ -1,0 +1,198 @@
+---
+type: System Reference
+title: Architecture
+description: How the learner app is put together with no framework or build — the module map, the tool registry and the shell contract every tool mounts against, routing (#tool, #setup, #join=, #wait?m=, #steps?deck=), device settings, the storage wrapper, and the checklist for adding a tool.
+tags: [architecture, pwa, tool-registry, shell-contract, routing, device-settings, storage, modules]
+status: stable
+---
+
+This document owns the shape of the learner app in `public/`: which module does what, the contract between the shell and each tool, how an address becomes a screen, and what adding a tool takes. The service worker and updates are in [offline and updates](/platform/offline-and-updates.md); every stored key and its shape is in [data model](/platform/data-model.md).
+
+## A static PWA with no build
+
+- The learner app is plain HTML, CSS and ES modules served as they are from `public/` by Firebase Hosting. There is no framework, no bundler, no transpiler and no npm dependency: `public/index.html` loads `/css/styles.css`, one stylesheet per tool from `public/css/tools/`, and a single `<script type="module" src="/js/app.js">`. Every other module is reached by a static `import`.
+- The coach app at `/coach/` (`public/coach/`) is a separate app on the same origin. It is also build-free, but it vendors its two libraries into `public/coach/vendor/` with `tools/vendor-firebase.mjs`: the Firebase JS SDK (`vendor/firebase/12.19.0/`, modular ESM builds with their gstatic imports rewritten to relative ones) and `uqr` for the poster's QR code. It imports the learner app's `/js/class-markdown.js` for its preview. See [the coach app](/coach/coach-app.md).
+- The Cloud Functions in `functions/` are the only code with npm dependencies (`@google/genai`, `firebase-admin`, `firebase-functions`). `functions/class-markdown.js` is a byte-identical copy of `public/js/class-markdown.js`, made by `tools/copy-class-markdown.mjs` (a functions predeploy step in `firebase.json`; `--check` in `tools/test-functions.mjs`).
+- Pages: `public/index.html` (the app, `/`), `public/guide.html` and `public/guide/*.html` (the user guide, served by clean URL as `/guide` and `/guide/<topic>`), `public/coach/index.html`.
+
+## Module map
+
+`public/js/`, grouped by role. Tool modules live in `public/js/tools/`.
+
+**Shell**
+
+| Module | What it does |
+|---|---|
+| `app.js` | Entry point: builds each tool's shell, mounts every tool and the set-up page, owns routing, history, the header (🏠, ✕, title), the footer's guide link, menu visibility, and boot |
+| `tools.js` | The registry (`GROUPS`, `TOOLS`) and, in its header comment, the full shell contract and the "adding a tool" steps |
+| `result.js` | The answer panel at the bottom and the floating yes/no pill |
+| `toast.js` | The one undo toast ("↩ Put it back"), with an always-present status line for screen readers |
+| `storage.js` | Debounced JSON in localStorage (`load`, `save`, `flush`) |
+| `device.js` | This device's settings (`simplify-device-v1`) and each tool's own settings |
+| `update.js` | Registers `/sw.js` and reloads into a new version at a safe moment |
+| `setup.js` | The set-up page (`#setup`): the press-and-hold gate, menu switches, words and sound, each tool's `setup()` section |
+| `guide-links.js` | Guide pages only: sends an old `/guide#<section>` link to the section's own page |
+
+**Shared parts** (imported by any tool that needs them)
+
+| Module | What it does |
+|---|---|
+| `show-card.js` | `openCard()` / `closeCard()`: one message over the whole screen, Turn around, Speak, optional actions, Wake Lock while open |
+| `say-aloud.js` | `canSpeak()`, `say()`, `stop()`: the device's own speech synthesis, started from a tap |
+| `picture-picker.js` | `pickPicture()` / `closePicturePicker()`: choose a picture and up to 40 characters of words |
+| `pictures.js` | The bundled picture set: `PICTURES`, `PICTURE_GROUPS`, `MENU_ICONS`, `pictureImg()`, `pictureSrc()`, `menuIconSrc()` — see [pictures](/learner/pictures.md) |
+
+**Money** (the six money tools — see [money tools](/learner/money-tools.md))
+
+| Module | What it does |
+|---|---|
+| `money-tool.js` | `mountMoneyTool`: one controller for all six, driven by `data-box` / `data-list` markup in each tool's block |
+| `answers.js` | What each tool's answer panel says (pure); `MARKUP` marks answers whose subline is trusted HTML |
+| `money.js` | Integer-cent parsing and formatting |
+| `money-field.js` | One money box: type, 🎤 speak, 💵 count notes, ✕ clear |
+| `items.js` | The list of price rows (named for Make a shopping list) |
+| `note-picker.js` | The notes-and-coins picker dialog |
+| `show-money.js` | Drawings of the notes and coins that make an amount ("Show me") |
+| `currency-data.js` | Currency definitions and the note and coin drawings (`moneySvg`) |
+| `speak.js` | The dictation dialog and its parser — see [voice input](/learner/voice-input.md) |
+
+**Daily-life tools**
+
+| Module | What it does |
+|---|---|
+| `tools/now-next.js`, `tools/now-next-list.js` | Now and next / My day: the screen, and the pure list rules — [now and next](/learner/now-next.md) |
+| `tools/wait.js`, `tools/wait-time.js` | Wait: the screen, and the pure time maths — [wait](/learner/wait.md) |
+| `tools/steps.js`, `tools/steps-decks.js` | Steps: the screen and its set-up section, and the decks and moves — [steps](/learner/steps.md) |
+| `tools/i-need.js`, `tools/i-need-cards.js`, `tools/i-need-body.js`, `tools/i-need-hurts.js` | I need: the grid and set-up section, the cards and words, the body drawing, the Hurts sheet — [I need](/learner/i-need.md) |
+| `tools/show-card.js`, `tools/show-card-cards.js` | Show a card: the screen and set-up section, the cards and settings — [show a card](/learner/show-card.md) |
+
+**Class** (My class — see [my class](/learner/my-class.md))
+
+| Module | What it does |
+|---|---|
+| `class-data.js` | The class code, the one HTTPS read of `classes/<code>`, the saved copy and the media cache |
+| `class-markdown.js` | The markdown subset parser and renderer, shared with the coach preview and the functions — [markdown pages](/coach/markdown-pages.md) |
+| `class-setup.js` | The class section of the set-up page, and the `#join=` flow |
+| `tools/my-class.js` | The reader, one screen at a time, and the menu tile |
+
+## The tool registry
+
+`public/js/tools.js` exports two frozen arrays. `GROUPS` is the menu's group order, each `{ id, icon, label }`: `money`, `my-day`, `talk`. `TOOLS` is every tool in menu order, each entry frozen:
+
+| Field | Meaning |
+|---|---|
+| `id` | The tool's route (`#<id>`), its block (`div#tool-<id>`), its menu item (`li[data-tool="<id>"]`) and its storage key |
+| `title` | The header title, `document.title` ("<title> — Simplify") and the set-up page's section name |
+| `group` | A `GROUPS` id, or `null` for My class, whose tile sits above the groups |
+| `guide` | Optional: the tool's guide page (`/guide/can-i-buy`). With it the footer says "How to use this tool" and links there; without it, "How to use this app" and `/guide`. Only the six money tools set it today |
+| `mount` | `mount(block, shell)` — the contract below. The six money tools all use `mountMoneyTool` |
+| `setup` | Optional: `setup(section, shell)` — the tool's section on the set-up page. Entries reference `<module>.setup`; a module that does not export one leaves it `undefined`, and `setup.js` only builds sections where it is a function (today I need, Steps and Show a card) |
+
+The set-up page is not in `TOOLS`: `app.js` mounts it as a screen of its own, `{ id: "setup", title: "Set up this device", mount: mountSetup }`.
+
+## The tool contract
+
+`app.js` calls every `mount(block, shell)` once at boot, with the tool's hidden `div#tool-<id>`. It returns an object:
+
+| Member | Required | Called when |
+|---|---|---|
+| `show(params, { fresh })` | yes | Every time the tool is put on screen, and again (with no `hide()` between) when only the params change or `go()` names the address already on show. `params` is a `URLSearchParams` from the address. `fresh` is true when this history step is new (a menu tap, `go()`, a shared link, a QR code) and false when the same step is shown again (Back, Forward, a reload). One-off instructions in params are acted on only when `fresh` |
+| `hide()` | no | The tool is leaving the screen: stop sounds and moving things |
+| `clearAll()` | no | The header ✕ was tapped: clear everything and offer it back with `shell.showToast("Everything cleared", undo)` — never an "are you sure?" |
+| `hasAnything()` | no | After `show()` and after `clearAll()`, the shell sets the ✕ from it |
+| `clearLabel` | no | The ✕'s accessible name when it does not clear everything (Now and next: "Start the day again: nothing done, the cards stay"); default "Start over: clear everything in this tool" |
+
+Before `show()` the shell has already closed any open card (`closeCard`) and picture pick (`closePicturePicker`), stopped speech, hidden the answer panel and the ✕, and hidden the toast, so a tool never inherits another screen's leftovers. Every call into a tool is wrapped (`safely`): a throw is logged and the app carries on. A tool whose `mount()` throws, or returns no `show()`, is marked broken and taken off the menu; so is one with no `div#tool-<id>` in `index.html`.
+
+### What the shell provides
+
+`makeShell(id)` in `app.js` gives each tool its own frozen shell:
+
+| Member | What it does |
+|---|---|
+| `id` | The tool's id |
+| `load()` / `save(state)` | The tool's own JSON under `simplify-<id>-v1` (Can I buy? keeps `afford-it-v1`). `save` is debounced through `storage.js` |
+| `showToast(text, undo)` | The undo toast |
+| `setClearAll(visible)` | Show or hide the header ✕; ignored for a tool with no `clearAll` |
+| `result.render(answer)` | The answer panel: `{ tone: "yes" \| "no" \| "answer" \| "neutral", icon, headline, subline?, badge?, showMe? }`. `icon` is an emoji string, an element (a `pictureImg()`), or `{ picture: cents }` for a note or coin drawing. `badge` is what the floating pill repeats for a yes/no. `"neutral"` hides the panel. The last answer is remembered per tool |
+| `result.setVisible(on)` | Hide the panel, or bring back this tool's last answer |
+| `device` | This device's settings, read-only (`getDevice()`) |
+| `settings` | This tool's own settings, read-only: `{}` until its set-up section saves some |
+| `onDeviceChange(fn)` | `fn(device)` after any device-settings change (including one made in another tab); returns an unsubscribe |
+| `onScreenChange(fn)` | `fn(id)` each time a screen is put on show (`null` for the menu); returns an unsubscribe. My class uses it to refresh while the menu shows |
+| `setBusy(on)` | Tell `update.js` a reload would disrupt now (a running Wait, a playing class video) |
+| `go(id, params)` | Open another screen as a new history step: `go("wait", { m: 2 })`. The new screen's `show()` gets `fresh: true`. An unknown id is a console error and nothing happens |
+| `back()` | What Back does — except on the first screen of a visit, where it shows the menu instead of leaving the app |
+
+`showToast`, `setClearAll`, `result.*`, `go` and `back` do nothing unless this tool is the one on screen, so a tool may call them from a timer or a promise without checking. Tools never set `location.hash` or call `history` themselves: the shell keeps its own notes in `history.state`.
+
+**Trusted markup.** The answer panel writes `subline` with `textContent` unless the answer object carries the `MARKUP` symbol from `answers.js`, whose answers are built only from formatted amounts and denomination labels; only then is it set as HTML. The rule for everything else is in [security](/platform/security.md#no-innerhtml-in-the-learner-app).
+
+### The set-up section
+
+A tool module that exports `setup(section, shell)` gets a section on `#setup`, under the tool's name and picture, in menu order after "Words and sound". It runs once, the first time an adult opens the settings, into an empty `<div>`, and may return `{ show?(), hide?() }` for later openings. Its shell is different from the tool's: `id`, `title`, `settings`, `saveSettings(next)` (replaces the tool's settings, saved at once), `device`, `onDeviceChange(fn)` and the set-up page's `showToast`. A section whose `setup()` throws is left out. What the page offers is described in [menu and set-up](/learner/menu-and-setup.md).
+
+## Routing
+
+The address fragment is the whole route; nothing else in the URL matters to the app. `parseAddress()` in `app.js`:
+
+| Address | Screen | Params |
+|---|---|---|
+| `/` or `#` | The menu | — |
+| `#<tool-id>` | That tool | none |
+| `#<tool-id>?<query>` | That tool | the query, e.g. `#wait?m=2` (start a 2-minute wait when fresh, clamped to 1–60), `#steps?deck=wash-hands` (one deck; an unknown deck shows the chooser) |
+| `#setup` | The set-up page, behind the press-and-hold gate every time it is shown | — |
+| `#join=<CODE>` | The set-up page, class section only, no hold | `join=<CODE>` (`#setup?join=<CODE>` works the same) |
+| anything else | The menu | — |
+
+- **Lookup is by `Map.has`**, never `id in …`, so `#toString` or `#__proto__` finds no screen and shows the menu. The same guard pattern (`Object.hasOwn`) protects `toolSettings()` in `device.js`, `menuIconSrc()` in `pictures.js` and the saved progress in `steps-decks.js`.
+- **History notes.** Every history step showing a screen carries `history.state = { steps, seen }`. `steps` counts how far back the start of the visit is (0 for the menu or for the screen a shared link opened, 1 for a tool opened from the menu, 2 for one it opened with `go()` …); `seen` marks a step already shown, which is what makes `fresh` false on Back, Forward and reload. `go()` uses `pushState` and calls `route()` itself.
+- **🏠** goes `history.go(-steps)` back to the start of the visit, so no screen is left behind the menu for Back to find. When the start is a screen (a shared link), or the history is shorter than `steps`, the menu replaces the current step (`showMenuHere`), so Back from the menu leaves the app.
+- **Leaving a screen** calls the old tool's `hide()`, then the new one's `show()`, sets the title (with `pic-words` except on the set-up page), `document.title` and the guide link, scrolls to the top, focuses the title for screen readers and notifies `onScreenChange` listeners. If `show()` itself calls `go()`, the inner route finishes the work.
+- **The guide link** in the footer points at the entry's `guide` or `/guide` and opens in a new tab — except in an iOS home-screen app (`navigator.standalone`), where the target is removed so the guide opens in the app's own window and its links lead back into the app's storage. The guide's `public/js/guide-links.js` forwards old one-page anchors (`/guide#privacy`) to the pages that replaced them; Hosting 301s `/guide/` to `/guide`.
+
+**Static imports only.** Tools are imported statically in `tools.js`, never with `import()`. After an update the new service worker takes over the running page (`skipWaiting` + `clients.claim`), so a module fetched later could come from a newer version than the page that asked for it.
+
+## The menu
+
+The menu is static markup in `public/index.html`: a `ul[data-group="my-class"]` holding the My class tile, then for each group an `h2[data-group]` heading and a `ul[data-group]` of `li[data-tool="<id>"]` links to `#<id>`. `app.js` does not generate it; at boot it:
+
+- fills every `[data-menu-icon]` with an `<img>` from `MENU_ICONS` (a console error if one is missing) and every `[data-picture]` with money drawings from `moneySvg`;
+- checks that `index.html` and `TOOLS` name the same tools, logging a console error either way (which fails the smoke tests);
+- on every device-settings change (`applyDevice`), hides an item that the device hides, that is broken, or — for My class — when the device follows no class; hides a group's heading and list when every item in it is hidden; and toggles `data-pictures-only` on `<html>`.
+
+What adults can hide and why is in [menu and set-up](/learner/menu-and-setup.md).
+
+## Device settings
+
+`public/js/device.js` holds this device's settings under `simplify-device-v1`: `{ hidden, picturesOnly, speak, classCode, className, tools }` (shapes in [data model](/platform/data-model.md#device-settings)).
+
+- `getDevice()` returns a deep-frozen copy, so only `setDevice(patch)` can change it. `setDevice` merges, cleans, writes at once (not debounced — an adult may close the app right after) and notifies listeners.
+- `clean()` turns anything stored — an older shape, a hand edit, junk — into usable settings: bad values fall back to defaults, `hidden` keeps unique strings, `className` is dropped without a code and cut to 60 characters, and `tools` keeps only kebab-case ids whose value is an object (built with `Object.fromEntries`, so `__proto__` cannot reach a prototype). Unknown top-level keys are kept, so a newer version's settings survive an older one.
+- `toolSettings(id)` / `setToolSettings(id, settings)` read and replace one tool's settings.
+- A `storage` event for the key (or a full clear) re-reads the settings and notifies, so a change made on the set-up page in another tab (the guide opens in its own) shows without a reload.
+
+## Storage wrapper
+
+`public/js/storage.js` is three functions over localStorage:
+
+- `load(key)` parses the key's JSON, or returns `null` when it is missing, unreadable or storage is blocked.
+- `save(key, state)` records the latest state per key and writes all pending keys 200 ms after the last call.
+- `flush()` writes everything pending now. `app.js` calls it when the page is hidden (`visibilitychange`) and on `pagehide`; `update.js` calls it before reloading. A write that fails (storage full or blocked) is ignored: the app keeps working without memory.
+
+Device settings and the class copy bypass it and write at once (`device.js`, `class-data.js`).
+
+## Adding a tool
+
+What the code requires today (the steps in `tools.js`'s header, checked against `app.js`, `setup.js` and the tests):
+
+1. `public/js/tools/<id>.js` exporting `mount(block, shell)`, and `setup(section, shell)` if an adult sets anything up for it. Keep pure logic in a sibling module with no DOM so a test can pin it.
+2. Its entry in `TOOLS` in `public/js/tools.js`, in menu order, and a static `import * as … from "./tools/<id>.js"` there.
+3. `public/index.html`: an `<li data-tool="<id>">` in its group's list with a `<span class="tool-icon" aria-hidden="true" data-menu-icon="<id>">`, and an empty `<div id="tool-<id>" class="tool" hidden></div>`. The menu and `TOOLS` must match, or boot logs an error.
+4. The menu icon in `MENU_ICONS` in `public/js/pictures.js` (the file made by `tools/make-pictures.mjs`), and any new pictures it needs.
+5. `public/css/tools/<id>.css`, linked from `index.html`, styling only inside `#tool-<id>`.
+6. Every new file under `public/` in `ASSETS` in `public/sw.js`, and a `CACHE` bump. `node tools/test-assets.mjs` fails on a file missing from `ASSETS` (or listed but absent); it cannot tell whether `CACHE` was bumped. See [offline and updates](/platform/offline-and-updates.md#the-cache-bump-rule).
+7. A `tools/test-<id>.mjs` for the pure logic — CI runs every `tools/test-*.mjs` — and smoke scenes in `tools/smoke/<id>.mjs` (`node tools/smoke.mjs <id>`); the smoke runner picks up every file in `tools/smoke/`.
+8. Only after it has been tested on an Android phone and an iPad: its guide page `public/guide/<id>.html` (added to `ASSETS`), its screenshots via `tools/shoot-guide.mjs`, and the `guide` field on its registry entry. See [release and deploy](/operations/release-and-deploy.md).
+
+A tool that needs a new host, header or permission is no longer "just a tool": the headers are in [security](/platform/security.md).

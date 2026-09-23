@@ -1,7 +1,7 @@
 // The class this device follows, for My class: its code, the coach's latest
 // page read from Firestore with one plain HTTPS request (no SDK, no account),
 // and a copy on the device — the page, its pictures and its videos — so it
-// opens offline too. docs/daily-life-tools.md section 8 has the design.
+// opens offline too. docs/learner/my-class.md.
 //
 // ---- The class code ----
 // 9 characters from ALPHABET (no 0, 1, I, L or O to mix up), kept without

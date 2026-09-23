@@ -1,9 +1,21 @@
-# Daily-life tools for autistic learners — research and roadmap
+---
+type: White Paper
+title: Daily-life Tools for Autistic Learners — Research and Roadmap
+description: The 2026-09-23 research that chose Simplify's daily-life tools and coach platform — needs, existing apps, evidence (NCAEP 2020), Singapore facts, a scored tool catalogue with what is deliberately not built, and the coach platform as designed.
+tags: [research, autism, daily-living, evidence, singapore, tool-catalogue, coach-platform, white-paper]
+status: stable
+---
 
 Research done on 2026-09-23 to decide which tools Simplify should add beyond money, for autistic children and
-teens in Singapore. It is kept here so future features can start from it instead of from scratch: the needs, what
+teens in Singapore. It is kept so future features can start from it instead of from scratch: the needs, what
 already exists, the evidence, Singapore facts that must be right, a scored catalogue of candidate tools (including the
-ones deliberately **not** built, and why), the coach platform design, and the decisions taken.
+ones deliberately **not** built, and why), and the coach platform design.
+
+This is the research as written, not a specification. Everything in the first release and the coach platform has
+since been built; the [learner](/learner/index.md), [coach](/coach/index.md) and [platform](/platform/index.md) areas
+describe what the code does, and win wherever they differ from sections 6, 8 and 9 below. The design rules of
+section 5 now live in [design principles](/product/design-principles.md), the decisions of section 10 in the
+[decision log](/product/decisions.md), and the tools and coach features still to come in [plans](/plans/index.md).
 
 Every Singapore fact below was checked on 2026-09-23 against the source linked in [Sources](#sources). Numbers,
 schemes and services change — re-check before relying on one in the app or guide.
@@ -85,33 +97,11 @@ NCAEP studies targeted self-help skills — so new tools are trials, and teacher
 
 ## 5. Design rules for new tools
 
-These extend the principles in the [README](../README.md#design-principles-for-special-needs-users):
-
-- **Positions never move.** Fixed cards stay in the same place on every visit (the AAC motor-planning principle);
-  hiding a card leaves a gap rather than shifting the others.
-- **Picture + colour + 1–4 plain words**, one bundled picture set (emoji look different on Android and iPad), and an
-  adult-set "pictures only" switch per device for students who don't read.
-- **Age-neutral.** Many users are teens: no mascots, confetti, streaks, points or "good boy" praise. Neutral names
-  (Wait, Steps, Show a card).
-- **Silent by default.** No ticking or alarm sounds; any sound is soft, optional and starts from a tap. Speech only on
-  a tap, using the device's own voice (`speechSynthesis`, output only — the microphone stays off).
-- **Literal language.** No idioms or figures of speech; buttons say exactly what happens next.
-- **Short, purposeful use.** Each tool ends by pointing back to the real task (MOH 2025: under 2 hours a day of
-  non-school screens for ages 7–12).
-- **No logs of feelings, behaviour or location.** Nothing a student taps is recorded or sent; no health claims
-  ("reduces anxiety", "treats").
-- **The student's own supports, not compliance tools.** A break is a right, not a reward; the feelings tool is for the
-  student, not for adults to monitor; never "calm down" as an instruction. Communication tools are the student's voice
-  and are never taken away as a consequence (standard AAC practice) — the guide says so.
-- **Fading built in**: "fewer steps", hide pictures the student knows.
-- **Adult set-up out of the child's way**: a set-up page reached from the guide (press-and-hold to enter, no PIN, no
-  errors), never on the menu.
-- **Disclosure is the student's choice.** Cards default to no diagnosis label; "autistic" or "hidden disability" is
-  opt-in.
-- **Personal details only on personal devices.** A family phone number or About me never lives on a shared iPad.
-- **Local, respectful pictures**: multiracial people (including hijab), halal-safe food by default, no operator,
-  government or brand logos (LTA card design, Sunflower logo, EZ-Link, SimplyGo, Milo packaging) — drawn generic
-  versions, as with the money pictures.
+The rules this research set for new tools — positions never move, picture + colour + 1–4 plain words, age-neutral,
+silent by default, literal language, short purposeful use, no logs, the student's own supports, fading, adult set-up
+out of the child's way, disclosure as the student's choice, personal details only on personal devices, local and
+respectful pictures — are maintained in [design principles](/product/design-principles.md), together with the
+principles the money tools already followed.
 
 ## 6. Tool catalogue
 
@@ -381,25 +371,7 @@ device's menu, video edits and longer videos (Veo), portrait (9:16) videos.
 
 ## 10. Decisions
 
-| Date | Decision | Why |
-|---|---|---|
-| 2026-09-23 | First release adds **Wait, I need, Now and next (My day), Show a card, Steps** | One tool per core need; all offline with no security-header change; builds the shared parts later tools reuse |
-| 2026-09-23 | Design for **both** picture users and readers: pictures + 1–3 words by default, an adult can set a device to pictures-only | Covers minimally-speaking children and teens who read |
-| 2026-09-23 | Menu: **group headings + an adult hides unused tools per device** | Keeps each child's menu short and one level deep |
-| 2026-09-23 | **Coach platform pilot with photos**: coaches approved by an admin for each class; only coaches upload; learners subscribe once by QR code and see only the latest content of their class | whiz.coach is a coaches-and-learners platform; simplify.whiz.coach mirrors it for coaches of autistic learners (section 8) |
-| 2026-09-23 | **Blaze plan with a Cloud Storage bucket** in Singapore for photos, Firestore in Singapore for classes and pages | Full-size photos; pilot cost is cents a month; a budget alert warns (it does not cap) |
-| 2026-09-23 | **Trust coaches** with what they post; show a clear warning that posts are public — never pictures of students or private or sensitive information | Coaches are responsible for their learners and are the experts |
-| 2026-09-23 | Sign in with **Google, any Google account** (Gmail or one made on a school address); Microsoft later if a school needs it | Most Singapore SPED operators checked use Microsoft 365, so Gmail-only would shut many coaches out |
-| 2026-09-23 | A **random class code** in the QR, the class name only a label | Learners read without signing in, so the code is the only lock; names collide and are guessable |
-| 2026-09-23 | **Standalone** in `simplify-special`, not inside the whiz.coach platform | Singapore data location, learners without accounts, narrow coach permissions, separate rules and deploys |
-| 2026-09-23 | Coach content is **one simple markdown page**: a markdown editor, pictures uploaded to the class and placed in the page, `---` for the next screen; learners see the latest published page | The coach interface stays very simple — the opposite of whiz.coach's generation pipeline |
-| 2026-09-23 | **AI instructions** create or update the markdown (Gemini through a Cloud Function that checks the coach and a monthly limit); the coach reviews every draft and publishes | Coaches say what they want in their own words; nothing reaches learners without the coach |
-| 2026-09-23 | **Separate monthly AI limits per coach: 200 Gemini Flash requests** (markdown and video planning) **and 5 Gemini Omni videos** (first set at 20, lowered to 5 because video is expensive) | Video costs about 100 times more than a markdown request |
-| 2026-09-23 | **Short educational videos with Gemini Omni are built now**, planned by Flash and approved by the coach before a credit is spent, private until approved | Verified on the project: text-to-video works on the `global` endpoint |
-| 2026-09-23 | **One Flash call decides** write / ask / decline, always with "I understood: …"; no separate Flash-Lite router | Same protection with one call; a cheaper router saves under a cent, adds delay, and misjudges sensitive daily-living topics |
-| 2026-09-23 | The coach app and coach guide live at **/coach/** and **/coach/guide.html** on the same site; **learners have no links to them** | Keep coach and learner interfaces separate on one domain |
-| 2026-09-23 | Coaches can add **public and unlisted YouTube videos**, played inside the learner's page (tap to load, privacy-enhanced player) | Lots of good teaching video already exists |
-| 2026-09-23 | Project docs move to the **Open Knowledge Format** (OKF 0.2, as in the whiz.coach repository) | Future work starts from docs that describe what exists |
+The decisions taken on 2026-09-23, and those taken since, are kept in the [decision log](/product/decisions.md).
 
 ## Sources
 

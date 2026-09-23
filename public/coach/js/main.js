@@ -1,7 +1,7 @@
 // Simplify for coaches (/coach/): sign in with Google, say who you are, ask
 // for a class; then write the class's page, with pictures, videos and an AI
 // helper, and publish it to the class's learners. The admin approves
-// coaches for classes here too. docs/daily-life-tools.md section 8.
+// coaches for classes here too. docs/coach/coach-app.md.
 //
 // One page; the address says which screen:
 //   #classes        My classes (the start)

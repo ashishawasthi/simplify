@@ -2,7 +2,7 @@
 // each takes { text, start, end } (a textarea's value, selectionStart and
 // selectionEnd) and returns the new { text, start, end }. The markdown they
 // write is the subset learners see (public/js/class-markdown.js; specs in
-// docs/daily-life-tools.md section 8). No DOM: node tools/test-coach.mjs.
+// docs/coach/markdown-pages.md). No DOM: node tools/test-coach.mjs.
 
 export const MAX_WORDS = 80;
 export const NEXT_SCREEN = "---";

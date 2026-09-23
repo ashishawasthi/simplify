@@ -1,5 +1,5 @@
 // Everything the coach app asks of Firebase, in one place: sign-in, the
-// Firestore documents and Storage files of docs/daily-life-tools.md section 8
+// Firestore documents and Storage files of docs/platform/data-model.md
 // (firestore.rules and storage.rules say who may do what), and the Cloud
 // Functions (functions/). The screens never touch the SDK themselves — and a
 // smoke test swaps this one file for a stand-in (tools/smoke/coach.mjs).

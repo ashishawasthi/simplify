@@ -1,4 +1,4 @@
-// Class codes (docs/daily-life-tools.md section 8): 9 characters from a set
+// Class codes (docs/platform/data-model.md): 9 characters from a set
 // of 31 with no look-alikes (no 0, 1, I, L or O), stored without dashes and
 // shown in threes, "K7M-3RQ-P9T". A typed code is forgiven, never refused:
 // upper-cased, then every character outside the set is dropped, so

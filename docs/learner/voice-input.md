@@ -1,9 +1,17 @@
-# Voice input without a speech API or a model
+---
+type: System Reference
+title: Voice Input
+description: How a spoken amount reaches a money box with no speech API, model or microphone permission — why the Web Speech API was rejected, the 🎤 button and the #speak dialog that summons the full keyboard's dictation, speechToCents() and its word-number rules, the live "That is $10.50" preview, the tests and the parser's known gaps.
+tags: [voice-input, dictation, speech, parser, money-box, accessibility, keyboard]
+status: stable
+---
 
 This app accepts spoken amounts — "ten dollars fifty" becomes `10.50` in the
 money box — with **no speech recognition code, no model, no network call, and
 no microphone permission**. It borrows the dictation the user's keyboard
-already has, then parses the text it types.
+already has, then parses the text it types. The money boxes themselves are
+described in [the money tools](/learner/money-tools.md#the-money-box); this
+document owns the voice path into them.
 
 Two problems have to be solved, and they are independent:
 
@@ -11,8 +19,6 @@ Two problems have to be solved, and they are independent:
    keypad which has no mic button.
 2. **Turning that text into an amount**, given that dictation writes numbers
    inconsistently.
-
----
 
 ## Why not the Web Speech API
 
@@ -24,6 +30,8 @@ Two problems have to be solved, and they are independent:
   worse than none.
 - **It prompts for microphone access.** The audience is users with cognitive
   or motor difficulties; a permission dialog is a hard stop for many of them.
+  (The site's `Permissions-Policy` turns the microphone off for every page
+  anyway — see [security](/platform/security.md).)
 - **It needs a network round trip** on several implementations. The rest of the
   app works offline from the service worker cache, and voice entry should not
   be the one thing that fails in a shop with no signal.
@@ -33,17 +41,15 @@ user has already granted it whatever it needs, it works offline on modern
 Android and iOS, and — critically — **the web page is never involved**. The
 page cannot tell dictation from typing.
 
----
-
 ## Part 1 — Opening a text input so the keyboard offers a mic
 
 ### The obstacle
 
-The money fields (every `[data-box]` amount box in
-[`public/index.html`](../public/index.html) — My money, I spend, I need — and
-each item row's price box) carry `inputmode="decimal"`,
-because the app's whole point is entering amounts and a numeric keypad is far
-easier to hit accurately.
+The money fields — every `[data-box]` amount box in `public/index.html` (My
+money, I spend, I need) and each item row's price box, which
+`public/js/items.js` builds — carry `inputmode="decimal"`, because the app's
+whole point is entering amounts and a numeric keypad is far easier to hit
+accurately.
 
 That attribute asks the OS for the number pad. **Neither Gboard nor the
 iOS keyboard offers voice typing on the number pad.** Tapping the mic there
@@ -53,27 +59,42 @@ is declining, not the browser, and no page-level code can change that.
 So the amount cannot be dictated *into the field the user is looking at*. It
 has to be dictated somewhere that gets a full keyboard.
 
+(A shopping list's item *name* box is an ordinary `type="text"` field, so the
+full keyboard and its mic come up there directly; it has no 🎤 button.)
+
 ### The workaround: a dialog with a plain text box
 
-The 🎤 button opens the `#speak` `<dialog>` in
-[`public/index.html`](../public/index.html). Its `#speak-input` is an ordinary
-`type="text"` field with **no `inputmode`**, so the OS shows the full
-alphabetic keyboard, mic included. Its placeholder is an example amount rather
-than an instruction, because the field works just as well for typing.
+Each amount box has a 🎤 button beside it (`.mic-btn`; spoken names such as
+"Say how much money I have" or "Say the price of thing 2"). It shows only
+while the box is empty — once the box holds something, a ✕ clear button takes
+the same slot — so it never reads as a step still to do. The wiring is
+`createMoneyField()` in `public/js/money-field.js` for the named boxes and the
+row builder in `public/js/items.js` for price rows; both call `openSpeak()`.
+
+The 🎤 opens the `<dialog id="speak">` in `public/index.html`, set up once at
+boot by `initSpeak()` (called from `public/js/app.js`). Its heading reads
+"Tap 🎤 on keyboard, then say" (the mic drawn as an inline SVG named "mic");
+its `#speak-input` is an ordinary `type="text"` field with **no `inputmode`**,
+so the OS shows the full alphabetic keyboard, mic included. Its placeholder is
+an example amount ("Ten dollars") rather than an instruction, because the
+field works just as well for typing; its spoken name is "Say or type the
+amount". Under it are the `#speak-heard` preview line, a ✔ Done button and a
+✕ Close button in the corner.
 
 The user flow is: tap 🎤 → dialog opens with the keyboard up → tap the
-keyboard's own mic → speak → the words appear as text → tap Done.
+keyboard's own mic → speak → the words appear as text → tap Done (or press
+Enter). Close, or Esc, leaves the box as it was.
 
 ### The one timing detail that matters
 
-`openSpeak()` in [`public/js/speak.js`](../public/js/speak.js) calls
-`showModal()` and then focuses the input **synchronously**, still inside the
-button's click handler. That ordering is load-bearing: mobile browsers only
-raise the on-screen keyboard for a focus call that is part of a user gesture.
-Move that focus into a `setTimeout`, a promise callback, or a transition-end
-handler and the dialog opens with no keyboard — the user then has to tap the
-field themselves before they can reach the mic, which is an extra step for the
-people least able to absorb one.
+`openSpeak()` in `public/js/speak.js` calls `showModal()` and then focuses the
+input **synchronously**, still inside the button's click handler. That
+ordering is load-bearing: mobile browsers only raise the on-screen keyboard
+for a focus call that is part of a user gesture. Move that focus into a
+`setTimeout`, a promise callback, or a transition-end handler and the dialog
+opens with no keyboard — the user then has to tap the field themselves before
+they can reach the mic, which is an extra step for the people least able to
+absorb one.
 
 ### Why a text input and not a `<select>`, buttons, or a custom widget
 
@@ -90,7 +111,13 @@ dictation is unavailable or the user prefers, **they can just type into the
 same box** — the dialog is a working text input either way, which is why the
 placeholder shows an example rather than instructions.
 
----
+### What goes back into the money box
+
+On Done, `finish()` hands the caller the amount as box text,
+`formatCents(cents, "")` — `"12.50"`, or `"12"` for whole dollars — and the
+box treats it like typing: a money box's source becomes "typed" (any
+notes-and-coins count is dropped), a price row's value is replaced, and the
+answer updates at once.
 
 ## Part 2 — Turning the transcript into cents
 
@@ -120,9 +147,9 @@ digit text and word text.
 
 ### The conversion, step by step
 
-All of this lives in [`public/js/speak.js`](../public/js/speak.js) as
-`speechToCents(raw)`, which returns **integer cents** or `null` when no number
-can be found. Integer cents avoids float rounding errors on money.
+All of this lives in `public/js/speak.js` as `speechToCents(raw)`, which
+returns **integer cents** or `null` when no number can be found. Integer cents
+avoids float rounding errors on money.
 
 **Step 1 — normalise the text.** Lowercase, drop `$` and `,` as noise, and
 rewrite a `12:50`-shaped colon into `12.50`. That last rule is the important
@@ -181,15 +208,12 @@ when a heuristic parser might read "twelve fifty" as $12.50 or $1,250. The
 element carries `role="status"`, so screen readers announce it too.
 
 Done with an unparseable value doesn't close the dialog; it shows
-*"Say a number, like 'ten dollars'"* and lets the user try again.
-
----
+*"Say a number, like “ten dollars”"* and lets the user try again.
 
 ## Checking the parser
 
-Every example in this document is a case in
-[`tools/test-speak.mjs`](../tools/test-speak.mjs), which imports the real
-module and needs no dependencies or runner:
+Every example in this document is a case in `tools/test-speak.mjs`, which
+imports the real module and needs no dependencies or runner:
 
 ```sh
 node tools/test-speak.mjs
@@ -197,24 +221,22 @@ node tools/test-speak.mjs
 
 Two bugs found this way had both produced *confident wrong amounts* rather than
 visible failures — the worst outcome for a parser whose result the user is
-asked to approve. Keep the cases and this document in step.
-
----
+asked to approve. Keep the cases and this document in step. The dialog itself
+(focus, keyboard, Done, Close) has no automated browser scene; check it by hand
+on an Android phone and an iPad after changing it.
 
 ## Known gaps in the parser
 
 **A non-cents second number is silently discarded.** `"10 200"` → `$10`. Rule 2
 declines to merge, and rule 3 only ever reads `nums[0]`. This is deliberate:
 guessing at input the parser cannot interpret risks inventing a large amount,
-whereas the *"That is $10.00"* preview shows the user the result before it
+whereas the *"That is $10"* preview shows the user the result before it
 reaches their money. It is also hard to reach in practice — the phrasings that
 would produce it, like "one thousand two hundred" or "1,200", now resolve to a
 single number.
 
 Note that the whole words path is unreachable whenever dictation applies ITN,
 which is the common case on both Gboard and iOS.
-
----
 
 ## Trade-offs of this approach
 

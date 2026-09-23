@@ -3,7 +3,7 @@
 // "All done" on the last screen, which returns to where the learner came
 // from. The page is the coach's markdown (class-markdown.js) with pictures
 // and videos from the class's shelf; class-data.js reads it and keeps a copy
-// on the device, so it opens offline too. docs/daily-life-tools.md section 8.
+// on the device, so it opens offline too. docs/learner/my-class.md.
 //
 // Also the tile on the menu: "My class" over the class's name. app.js shows
 // it only once the set-up page has given this device a class

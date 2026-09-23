@@ -1,0 +1,11 @@
+# Operations
+
+Running what is already built: how to work on it locally (servers, emulators, tests, screenshots), how a change is released and reaches devices that already have the app, what exists in the cloud project and how it was set up, and what things cost.
+
+- [Local Development](/operations/local-development.md) — Which local server to use for what (plain static, Hosting headers, Firebase emulators) and why the CSP and clean URLs decide it, pointing the learner and coach apps at the emulators, fake AI models, every unit test and smoke test with what it needs, the docs check, guide screenshots and the helper scripts.
+- [Cloud Project](/operations/cloud-project.md) — What exists in the Firebase / Google Cloud project simplify-special (billing, APIs, Firestore, the Storage bucket and its CORS, the functions' service account and IAM, the Storage service agent, the budget, Authentication, Cloud Functions, Hosting and the custom domain, the first admin), how each was set up on 2026-09-23 and how to recreate it, and the hosts a school network must allow.
+- [Costs and Limits](/operations/costs-and-limits.md) — What Simplify costs to run and what keeps the bill small — the Blaze plan and the S$50 budget alert (it warns, it does not cap), Hosting transfer and the offline download per device, Firestore and Storage at pilot scale, the AI unit costs and the per-coach monthly limits (200 Flash requests, 5 videos) enforced on the server, and how often learner devices ask for a new page.
+- [Release and Deploy](/operations/release-and-deploy.md) — What CI runs on pull requests and on main, how Hosting reaches the live site and PR previews, what CI does not deploy (rules, indexes, functions) and the manual commands for them, the release checklist (tests, smoke, docs check, CACHE bump, ASSETS, guide only after testing), the one public URL, and the linear-history convention.
+- [Share Card and QR Poster](/operations/share-card.md) — The link-preview card (og-card.png, 1200×630, QR and readable URL inside the middle square WhatsApp keeps), its ?v= cache-buster, the printable qr-poster.png, how tools/make-qr.py draws both offline, and how to make Facebook, WhatsApp and X pick up a new card.
+
+Back to the [documentation index](/index.md).
