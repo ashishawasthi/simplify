@@ -52,8 +52,12 @@ initResult(
     headline: $("result-headline"),
     subline: $("result-subline"),
     float: $("result-float"),
+    floatIcon: $("result-float-icon"),
+    floatAmount: $("result-float-amount"),
     actionWrap: $("result-action-wrap"),
     action: $("result-action"),
+    header,
+    title,
   },
   { onShowMe: openShowMoney },
 );

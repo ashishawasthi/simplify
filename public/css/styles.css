@@ -76,6 +76,16 @@ main {
   margin-top: 20px;
   font-size: 34px;
 }
+/* On a tool screen (never the menu — it never shows a verdict), always
+   reserve a shelf below the title for the floating yes/no badge, whether or
+   not one is showing right now. A constant gap means the zones below never
+   jump as the answer changes between a verdict and a hint or amount, and the
+   badge — positioned by result.js at the top of this same shelf — never
+   lands on a heading instead. Keep this in step with .result-float's own
+   height: 8px clearance + ~48px badge + 8px clearance = 64px. */
+.app-header:not([hidden]) + main .screen-title {
+  margin-bottom: 64px;
+}
 
 /* A quiet text label beside a round icon button — used for "Menu" and
    "Start over" in the header and for the picker's two actions, so a circle
@@ -418,35 +428,58 @@ a.round-btn {
 }
 .guide-link .guide-icon { font-size: 18px; }
 
-/* ---------- floating verdict icon ---------- */
-/* Fixed top-center so the yes/no survives the keyboard hiding the bottom
-   panel. Shown only for a real verdict — a bare emoji can't carry the
-   neutral hints ("type your money") on its own. */
+/* ---------- floating verdict badge ---------- */
+/* Fixed top-center so the yes/no survives the on-screen keyboard hiding the
+   bottom panel — which happens far more than the keyboard reaching the top
+   of the screen. Shown only for a real verdict — an "answer" tone (change,
+   next dollar …) stays bottom-only because a bare icon can't carry that
+   meaning. Carries the short amount too ("$6 more"), not just the icon: the
+   icon alone still says yes/no, but not by how much, and that is exactly
+   the number a student needs while the keyboard is covering it below.
+   result.js keeps --header-h at the height of the "🏠 Menu / Start over" row
+   plus the tool's own name (at scroll position 0, not wherever the header
+   has since scrolled to) — the badge sits just under that, never on top of
+   it, because now that it carries text as well as an icon it is wider than
+   the gap between those two labels. */
 .result-float {
   position: fixed;
-  top: calc(8px + env(safe-area-inset-top));
+  top: calc(var(--header-h, 80px) + 8px + env(safe-area-inset-top));
   left: 50%;
   transform: translateX(-50%);
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 52px;
-  height: 52px;
-  font-size: 30px;
-  line-height: 1;
+  gap: 8px;
+  max-width: calc(100vw - 32px);
+  padding: 7px 18px 7px 14px;
   border: 3px solid;
-  border-radius: 50%;
+  border-radius: 999px;
   /* the page-colored halo separates the badge from whatever it floats
-     over — on narrow screens that includes the tail of the h1 */
+     over once scrolled past its usual spot below the header */
   box-shadow: 0 0 0 5px var(--color-bg), 0 3px 10px rgba(0, 0, 0, 0.25);
   z-index: 40;
 }
-/* The ring reads as the colour of the answer, so it needs to be plainly green
-   or red at a glance. The panel's text colours are too dark for that at 3px —
-   they look near-black — so these are a step brighter, still clearing the 3:1
-   non-text contrast floor against their own fill. */
+.result-float-icon {
+  flex: none;
+  font-size: 28px;
+  line-height: 1;
+}
+.result-float-amount {
+  overflow: hidden;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+/* The ring and the text read as the colour of the answer, so both need to be
+   plainly green or red at a glance. The panel's own text colours are too
+   dark for the ring at 3px — they look near-black — so the ring is a step
+   brighter, still clearing the 3:1 non-text contrast floor against its own
+   fill; the amount keeps the panel's darker, AAA-contrast text colour. */
 .result-float.is-yes { background: var(--color-yes-bg); border-color: #2e7d32; }
 .result-float.is-no  { background: var(--color-no-bg);  border-color: #c62828; }
+.result-float.is-yes .result-float-amount { color: var(--color-yes-text); }
+.result-float.is-no  .result-float-amount { color: var(--color-no-text); }
 
 /* ---------- result panel ---------- */
 .result {

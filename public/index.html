@@ -257,11 +257,16 @@
     </footer>
   </main>
 
-  <!-- Floating mirror of a yes/no answer's icon, pinned top-center so the
-       answer stays visible while the keyboard covers the bottom panel. Icon
-       only; the panel below carries the words, and it alone talks to screen
-       readers, so this stays aria-hidden. -->
-  <span id="result-float" class="result-float" hidden aria-hidden="true"></span>
+  <!-- Floating mirror of a yes/no answer, pinned top-center so it stays
+       visible while the on-screen keyboard covers the bottom panel — which
+       it does far more often than it covers the top of the screen. Icon plus
+       the short amount ("$6 more" / "$4 left"); the panel below carries the
+       full words and alone talks to screen readers, so this stays
+       aria-hidden. -->
+  <div id="result-float" class="result-float" hidden aria-hidden="true">
+    <span id="result-float-icon" class="result-float-icon"></span>
+    <span id="result-float-amount" class="result-float-amount"></span>
+  </div>
 
   <!-- The answer, always visible inside a tool. The Show me button sits
        outside the live region, so screen readers don't re-read it with every

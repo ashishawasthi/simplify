@@ -14,7 +14,10 @@ import {
 } from "../public/js/answers.js";
 
 const text = (html) => (html ?? "").replace(/<[^>]+>/g, "");
-const said = (a) => [a.tone, a.headline, text(a.subline)].filter(Boolean).join(" | ");
+// includes badge (the floating top-of-screen amount, e.g. "$6 more") when the
+// answer has one, so a yes/no wording can't drift without this catching it
+const said = (a) => [a.tone, a.headline, text(a.subline), a.badge && `[${a.badge}]`]
+  .filter(Boolean).join(" | ");
 const pieces = (list) => list.map((p) => `${p.valueCents}x${p.count}`).join(" ");
 
 const cases = [
@@ -44,19 +47,24 @@ const cases = [
   // ---- 1, 2, 4: Can I buy? ----
   ["nothing typed", said(canIBuy({ money: null, total: 0, hasPrices: false })), "neutral | Type your money at the top"],
   ["money, no prices", said(canIBuy({ money: 500, total: 0, hasPrices: false })), "neutral | Add the prices of things to buy"],
-  ["req 2: price, money empty", said(canIBuy({ money: null, total: 100, hasPrices: true })), "no | Cannot buy | You need $1 more"],
-  ["req 4: enough", said(canIBuy({ money: 500, total: 350, hasPrices: true })), "yes | Can buy | Money left: $1.50"],
-  ["exactly enough", said(canIBuy({ money: 350, total: 350, hasPrices: true })), "yes | Can buy | Money left: $0"],
-  ["req 6: short $1.30", said(canIBuy({ money: 500, total: 630, hasPrices: true })), "no | Cannot buy | You need $1.30 more"],
+  ["req 2: price, money empty", said(canIBuy({ money: null, total: 100, hasPrices: true })), "no | Cannot buy | You need $1 more | [$1 more]"],
+  ["req 4: enough", said(canIBuy({ money: 500, total: 350, hasPrices: true })), "yes | Can buy | Money left: $1.50 | [$1.50 left]"],
+  ["exactly enough", said(canIBuy({ money: 350, total: 350, hasPrices: true })), "yes | Can buy | Money left: $0 | [$0 left]"],
+  ["req 6: short $1.30", said(canIBuy({ money: 500, total: 630, hasPrices: true })), "no | Cannot buy | You need $1.30 more | [$1.30 more]"],
   ["req 6: show me", JSON.stringify(canIBuy({ money: 500, total: 630, hasPrices: true }).showMe),
     JSON.stringify({ label: "You need", title: "$1.30 more", cents: 130 })],
+  // the reported bug: My money $10, items $8 + $8 — the bottom panel is
+  // often hidden by the on-screen keyboard, so the floating badge at the
+  // top must carry the shortfall too, not just the ✋ icon
+  ["reported: $10 money, $16 items", said(canIBuy({ money: 1000, total: 1600, hasPrices: true })),
+    "no | Cannot buy | You need $6 more | [$6 more]"],
 
   // ---- 7a: What is the change? ----
   ["req 7a: $5 pay $2.30", said(change({ money: 500, spend: 230 })), "answer | Change: $2.70 | The money you get back"],
   ["change show me", change({ money: 500, spend: 230 }).showMe.cents, 270],
   ["exact money", said(change({ money: 230, spend: 230 })), "answer | No change | You gave the exact money"],
-  ["not enough to pay", said(change({ money: 200, spend: 230 })), "no | Cannot buy | You need $0.30 more"],
-  ["spend, money empty", said(change({ money: null, spend: 230 })), "no | Cannot buy | You need $2.30 more"],
+  ["not enough to pay", said(change({ money: 200, spend: 230 })), "no | Cannot buy | You need $0.30 more | [$0.30 more]"],
+  ["spend, money empty", said(change({ money: null, spend: 230 })), "no | Cannot buy | You need $2.30 more | [$2.30 more]"],
   ["money, no spend", said(change({ money: 500, spend: null })), "neutral | Type how much you spend"],
 
   // ---- 7b: Next dollar ----
@@ -77,9 +85,9 @@ const cases = [
 
   // ---- 7e: Make a shopping list ----
   ["req 7e: $5, 1.20 + 0.80 + 1.50", said(shoppingList({ money: 500, total: 350, hasPrices: true })),
-    "yes | Yes! Within your budget | Money left: $1.50"],
-  ["over budget", said(shoppingList({ money: 300, total: 350, hasPrices: true })), "no | Over your budget | Too much by $0.50"],
-  ["list, money empty", said(shoppingList({ money: null, total: 350, hasPrices: true })), "no | Over your budget | Too much by $3.50"],
+    "yes | Yes! Within your budget | Money left: $1.50 | [$1.50 left]"],
+  ["over budget", said(shoppingList({ money: 300, total: 350, hasPrices: true })), "no | Over your budget | Too much by $0.50 | [$0.50 over]"],
+  ["list, money empty", said(shoppingList({ money: null, total: 350, hasPrices: true })), "no | Over your budget | Too much by $3.50 | [$3.50 over]"],
   ["money, empty list", said(shoppingList({ money: 500, total: 0, hasPrices: false })), "neutral | Add the things you need to buy"],
 ];
 
