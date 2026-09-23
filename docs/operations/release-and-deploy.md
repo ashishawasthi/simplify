@@ -36,6 +36,8 @@ Security rules, Firestore indexes and Cloud Functions are deployed by hand, from
 
 Avoid a bare `firebase deploy`: it deploys everything at once, functions included.
 
+Data the rules depend on is written by the owner's tools, not by a deploy: the institutions (`tools/seed-institutions.mjs`) and, once, the status of coach profiles made before coach approval (`tools/migrate-coaches.mjs`) — both in [admin and approvals](/coach/admin-and-approvals.md#switching-coach-approval-on-once).
+
 Order matters when a change spans them. A change whose new pages or app code need new rules or a new callable: deploy rules and functions first, then merge the Hosting change. A change that removes something: merge the Hosting change first, then tighten the rules or delete the function.
 
 ## Release checklist

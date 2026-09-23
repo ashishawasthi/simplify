@@ -18,9 +18,9 @@ No account, no analytics, no build step. It works offline once opened, and nothi
 is set up — then only the class code. An adult sets each device up (hide tools, pictures only, speech, the class) on a
 set-up page reached from the guide.
 
-The **coach platform** behind My class lets approved coaches write one simple markdown page per class, with pictures,
-YouTube videos, short AI-made videos and an AI helper, backed by Firestore, Cloud Storage and Cloud Functions in
-Singapore.
+The **coach platform** behind My class lets coaches the admin has approved — each choosing the institutions they
+work at — make classes and write one simple markdown page per class, with pictures, YouTube videos, short AI-made
+videos and an AI helper, backed by Firestore, Cloud Storage and Cloud Functions in Singapore.
 
 ## Live
 
@@ -72,6 +72,7 @@ node tools/test-coach.mjs       # the coach app's pure parts
 node tools/test-assets.mjs      # sw.js ASSETS matches exactly the files the app serves
 node tools/test-rules.mjs       # Firestore and Storage rules (starts the emulators; needs Java + Firebase CLI)
 node tools/test-functions.mjs   # the Cloud Functions with fake AI models (starts the emulators too)
+node tools/test-seed.mjs        # seeding the institutions and the coach-status migration (starts the emulator too)
 node tools/smoke.mjs            # every screen in headless Chrome; `node tools/smoke.mjs wait` for one file
 node tools/build-docs-index.mjs --check   # docs frontmatter, generated indexes and links
 ```
