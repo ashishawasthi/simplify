@@ -988,9 +988,11 @@ a.round-btn {
   font-weight: 800;
   line-height: 1.1;
 }
+/* the extra line is often what the other person acts on (My stop: …), so
+   it stays big enough to read at arm's length */
 .card-lines p {
   margin: 0.35em 0 0;
-  font-size: max(0.42em, 20px);
+  font-size: max(0.55em, 24px);
   font-weight: 600;
   line-height: 1.2;
 }
