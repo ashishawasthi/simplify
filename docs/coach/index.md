@@ -1,0 +1,11 @@
+# Coach platform
+
+Everything a coach or the admin does at /coach/, and the Cloud Functions behind it: asking for a class and being approved, writing the one markdown page learners see, the picture and video shelves, YouTube videos, the AI helper that writes, asks or declines, short videos with Gemini Omni, and the monthly limits. Learners never see these screens.
+
+- [The Coach App](/coach/coach-app.md) — What the /coach/ app does and promises — how it is kept apart from the learner app, Google sign-in for the tab only, About you, My classes and requests, the class screen (pages, editor, toolbar, live preview, Publish and Unpublish with Undo), the picture shelf, the QR poster, routing and errors.
+- [Admin and Approvals](/coach/admin-and-approvals.md) — Who the admin is and how the first one is made (admins/{uid} in the console), and every action on the coach app's Admin screen — approving or declining class requests (new class codes, joining), suspending coaches and classes, taking a page down, and setting the monthly helper and video limits — with the writes and rules behind each.
+- [The AI Helper](/coach/ai-helper.md) — How "Tell the helper what to write or change" works — what the coach app sends to writePage, the one Gemini Flash call that answers write / ask / decline with "I understood: …", what is in and out of scope, how the function checks the page before the coach sees it, the draft with Undo, and how each request is counted.
+- [Markdown Pages](/coach/markdown-pages.md) — The exact markdown subset a class page may use (headings, lines, bold and italic, lists, shelf pictures and videos, YouTube cards, link buttons, --- screens), what happens to anything else, the limits, and how public/js/class-markdown.js is the one parser shared by the learner reader, the coach preview and the Cloud Functions.
+- [Videos](/coach/videos.md) — How a coach makes a short AI video for a class page — planVideo (Flash write / ask / decline and the clip's constraints), the exact request and the credit shown before Make, startVideo, checkVideo polling and statuses, approveVideo and discardVideo, credit refund rules, draft versus approved storage, the video shelf UI, and what learners get.
+
+Back to the [documentation index](/index.md).

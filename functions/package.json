@@ -1,7 +1,7 @@
 {
   "name": "simplify-functions",
   "private": true,
-  "description": "Cloud Functions for the Simplify coach platform (docs/daily-life-tools.md section 8)",
+  "description": "Cloud Functions for the Simplify coach platform (docs/coach/)",
   "type": "module",
   "main": "index.js",
   "engines": {

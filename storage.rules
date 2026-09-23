@@ -1,7 +1,7 @@
 rules_version = '2';
 
 // Simplify coach platform — class pictures and videos in the Singapore bucket
-// (docs/daily-life-tools.md section 8). Deny by default; nothing may be listed.
+// (docs/platform/data-model.md). Deny by default; nothing may be listed.
 //
 //   classes/{code}/pictures/{id}.jpg      anyone may GET the exact path; the class's
 //                                         coaches upload (JPEG < 2 MB, never overwrite)

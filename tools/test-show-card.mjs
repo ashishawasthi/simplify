@@ -5,8 +5,8 @@
 //
 // The wording is pinned word for word: these cards speak for a student to a
 // stranger, and three of them must stay exactly as LTA's Helping Hand cards
-// say it, so a bus captain knows them at a glance (docs/daily-life-tools.md,
-// section 7 — checked on caringcommuters.gov.sg, 2026-09-23).
+// say it, so a bus captain knows them at a glance (docs/learner/show-card.md —
+// checked on caringcommuters.gov.sg, 2026-09-23).
 
 import {
   CARDS, DISCLOSURES, STOP_MAX, cleanStop, readSettings, withCard, withStop, withDisclosure, cardLines, cardFor,

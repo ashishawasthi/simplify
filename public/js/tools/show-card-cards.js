@@ -10,7 +10,7 @@
 //   words    what the card says to the person it is shown to
 // Cards 1, 2 and 6 carry the wording of LTA's Helping Hand cards exactly, so
 // bus captains and station staff know it at a glance (checked 2026-09-23 on
-// caringcommuters.gov.sg; docs/daily-life-tools.md, section 7). The wording
+// caringcommuters.gov.sg; docs/learner/show-card.md). The wording
 // only: the cards' design is LTA's, and nothing here copies it.
 //
 // The settings, per device, made on the set-up page (shell.saveSettings):

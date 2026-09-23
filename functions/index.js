@@ -1,5 +1,5 @@
-// Cloud Functions for the Simplify coach platform (docs/daily-life-tools.md
-// section 8). Six callables, all in asia-southeast1:
+// Cloud Functions for the Simplify coach platform (docs/coach/,
+// docs/platform/ai-models.md). Six callables, all in asia-southeast1:
 //
 //   writePage    the page helper: one Gemini Flash call → write / ask / decline
 //   planVideo    the video planner: one Flash call → an exact video request (a plan)

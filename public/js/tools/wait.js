@@ -1,4 +1,4 @@
-// Wait — how long a wait is, made visible (docs/daily-life-tools.md §6).
+// Wait — how long a wait is, made visible (docs/learner/wait.md).
 //
 // Idle: five big buttons, 1 2 5 10 15 minutes, in places that never change;
 // under them the "While I wait" pictures an adult picks (up to 3, each with

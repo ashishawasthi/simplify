@@ -4,7 +4,7 @@
 //
 // speechToCents() is a heuristic over whatever the OS keyboard's dictation
 // happens to type, so its behaviour is easiest to pin down by example. Every
-// case below is also a claim made in docs/voice-input.md — keep them in step.
+// case below is also a claim made in docs/learner/voice-input.md — keep them in step.
 
 import { speechToCents } from "../public/js/speak.js";
 

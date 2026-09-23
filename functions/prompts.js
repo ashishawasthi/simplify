@@ -1,7 +1,7 @@
 // What the page helper (writePage) and the video planner (planVideo) are told:
 // system instructions, the JSON shape of their answer, and how the coach's
 // material is laid out for them. One Gemini Flash call each decides write / ask /
-// decline (docs/daily-life-tools.md section 8).
+// decline (docs/coach/ai-helper.md).
 
 import { Type } from "@google/genai";
 

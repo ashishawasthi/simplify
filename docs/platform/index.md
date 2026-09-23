@@ -1,0 +1,11 @@
+# Platform
+
+The mechanics every screen inherits: how the static app is put together and routed, how a tool plugs in, how it works offline and updates itself, which security headers apply where, what is stored on the device and in the cloud, and which AI models run where. Read these before any change that spans more than one screen.
+
+- [Architecture](/platform/architecture.md) — How the learner app is put together with no framework or build — the module map, the tool registry and the shell contract every tool mounts against, routing (#tool, #setup, #join=, #wait?m=, #steps?deck=), device settings, the storage wrapper, and the checklist for adding a tool.
+- [AI Model Configuration](/platform/ai-models.md) — The two Gemini models the Cloud Functions call (gemini-3.7-flash and gemini-omni-flash-preview on Vertex AI's global endpoint), the exact request shapes verified on 2026-09-23, thinking levels, safety and failure handling, the prompts in functions/prompts.js, the deterministic fakes for tests, how uses are counted against the monthly limits, and what each call costs.
+- [Data Model](/platform/data-model.md) — Every piece of stored data and its shape — the learner app's localStorage keys and Cache Storage, the coach app's session and test keys, every Firestore collection and document with its fields and who reads and writes it, every Cloud Storage path, the declared indexes, and the class code format.
+- [Offline and Updates](/platform/offline-and-updates.md) — How the learner app works offline and gets new versions — the service worker's versioned precache and revalidating install, what it answers and ignores, the CACHE bump rule and what test-assets.mjs enforces, update.js's safe reload, Hosting's Cache-Control headers, and My class's separate media cache.
+- [Security](/platform/security.md) — What the site promises about security and privacy and how the code keeps it — the headers per path (learner CSP, coach CSP, referrer, permissions, noindex), the no-innerHTML rule, Firestore and Storage rule boundaries, what each Cloud Function checks before acting, coach sign-in, and exactly what the learner app sends and to whom.
+
+Back to the [documentation index](/index.md).

@@ -1,7 +1,7 @@
 rules_version = '2';
 
-// Simplify coach platform — who may read and write what (docs/daily-life-tools.md
-// section 8). Deny by default: nothing is allowed unless a rule below says so.
+// Simplify coach platform — who may read and write what (docs/platform/security.md,
+// docs/platform/data-model.md). Deny by default: nothing is allowed unless a rule below says so.
 //
 // Learners never sign in: all they may do is GET one active class by its code
 // (never list). Coaches sign in with Google and reach only the classes the admin
