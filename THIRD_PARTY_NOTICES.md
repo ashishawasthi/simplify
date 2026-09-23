@@ -136,6 +136,14 @@ The other files in `public/img/pic/` are drawn for this project from scratch
 `node tools/test-pictures.mjs` checks that this file, `public/img/pic/LICENSE.txt`
 and the comment at the top of each picture name every Noto file used.
 
+## The logo (Noto Emoji Seedling)
+
+The app's logo — `public/favicon.svg` and the home-screen icons in
+`public/img/icons/` — is the **Seedling** (U+1F331) from Noto Emoji `v2.051`,
+`svg/emoji_u1f331.svg`, minified (the favicon) and rendered on white (the PNG
+icons) by `tools/make-icons.mjs`. Copyright 2013 Google, Inc. Licence: **Apache
+License, Version 2.0** (text below).
+
 ## Firebase JavaScript SDK (coach app only)
 
 `public/coach/vendor/firebase/12.19.0/` holds five modules of the **Firebase
