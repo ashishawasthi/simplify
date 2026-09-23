@@ -1,0 +1,34 @@
+[
+  {
+    "id": "awwa-school-napiri",
+    "name": "AWWA School @ Napiri",
+    "org": "AWWA",
+    "type": "SPED school",
+    "area": "Hougang",
+    "source": "https://www.awwa.org.sg/our-services/awwa-school/"
+  },
+  {
+    "id": "awwa-school-bedok",
+    "name": "AWWA School @ Bedok",
+    "org": "AWWA",
+    "type": "SPED school",
+    "area": "Bedok",
+    "source": "https://www.awwa.org.sg/our-services/awwa-school/"
+  },
+  {
+    "id": "awwa-eic-hougang",
+    "name": "AWWA Early Intervention Centre @ Hougang",
+    "org": "AWWA",
+    "type": "Early intervention",
+    "area": "Hougang",
+    "source": "https://www.awwa.org.sg/our-services/early-intervention-centre/"
+  },
+  {
+    "id": "awwa-eic-fernvale-link",
+    "name": "AWWA Early Intervention Centre @ Fernvale Link",
+    "org": "AWWA",
+    "type": "Early intervention",
+    "area": "Sengkang",
+    "source": "https://www.awwa.org.sg/our-services/early-intervention-centre/"
+  }
+]

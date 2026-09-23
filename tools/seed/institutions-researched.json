@@ -1,0 +1,962 @@
+[
+  {
+    "id": "anglo-chinese-school-academy",
+    "name": "Anglo-Chinese School (Academy)",
+    "org": "Anglo-Chinese School (Academy)",
+    "type": "SPED school",
+    "area": "Choa Chu Kang",
+    "source": "https://www.moe.gov.sg/special-educational-needs/sped-schools"
+  },
+  {
+    "id": "apsn-centre-for-adults-ang-mo-kio",
+    "name": "APSN Centre for Adults @ Ang Mo Kio",
+    "org": "APSN",
+    "type": "Employment / vocational",
+    "area": "Ang Mo Kio",
+    "source": "https://www.apsn.org.sg/contact-us/"
+  },
+  {
+    "id": "apsn-centre-for-adults-eunos",
+    "name": "APSN Centre for Adults @ Eunos",
+    "org": "APSN",
+    "type": "Employment / vocational",
+    "area": "Ubi",
+    "source": "https://www.apsn.org.sg/contact-us/"
+  },
+  {
+    "id": "apsn-chaoyang-school",
+    "name": "APSN Chaoyang School",
+    "org": "APSN",
+    "type": "SPED school",
+    "area": "Ang Mo Kio",
+    "source": "https://www.apsn.org.sg/contact-us/"
+  },
+  {
+    "id": "apsn-chaozheng-programme",
+    "name": "APSN Chaozheng Programme",
+    "org": "APSN",
+    "type": "SPED school",
+    "area": "Ang Mo Kio",
+    "source": "https://www.apsn.org.sg/contact-us/"
+  },
+  {
+    "id": "apsn-delta-senior-school",
+    "name": "APSN Delta Senior School",
+    "org": "APSN",
+    "type": "SPED school",
+    "area": "Choa Chu Kang",
+    "source": "https://www.apsn.org.sg/contact-us/"
+  },
+  {
+    "id": "apsn-katong-school",
+    "name": "APSN Katong School",
+    "org": "APSN",
+    "type": "SPED school",
+    "area": "Bedok",
+    "source": "https://www.apsn.org.sg/contact-us/"
+  },
+  {
+    "id": "apsn-student-care-centre",
+    "name": "APSN Student Care Centre",
+    "org": "APSN",
+    "type": "Other disability service",
+    "area": "Ang Mo Kio",
+    "source": "https://www.enablingguide.sg/docs/default-source/default-document-library/sscc-service-matrix.pdf"
+  },
+  {
+    "id": "apsn-tanglin-school",
+    "name": "APSN Tanglin School",
+    "org": "APSN",
+    "type": "SPED school",
+    "area": "Ang Mo Kio",
+    "source": "https://www.apsn.org.sg/contact-us/"
+  },
+  {
+    "id": "eden-centre-for-adults-clementi",
+    "name": "Eden Centre for Adults (Clementi)",
+    "org": "Autism Association (Singapore)",
+    "type": "Day activity centre",
+    "area": "Clementi",
+    "source": "https://www.autismlinks.org.sg/about-us/locate-us"
+  },
+  {
+    "id": "eden-centre-for-adults-hougang",
+    "name": "Eden Centre for Adults (Hougang)",
+    "org": "Autism Association (Singapore)",
+    "type": "Day activity centre",
+    "area": "Hougang",
+    "source": "https://www.autismlinks.org.sg/about-us/locate-us"
+  },
+  {
+    "id": "eden-childrens-centre",
+    "name": "Eden Children's Centre",
+    "org": "Autism Association (Singapore)",
+    "type": "Early intervention",
+    "area": "Clementi",
+    "source": "https://www.autismlinks.org.sg/about-us/locate-us"
+  },
+  {
+    "id": "eden-school",
+    "name": "Eden School",
+    "org": "Autism Association (Singapore)",
+    "type": "SPED school",
+    "area": "Bukit Batok",
+    "source": "https://www.autismlinks.org.sg/about-us/locate-us"
+  },
+  {
+    "id": "eden-school-campus-2",
+    "name": "Eden School (Campus 2)",
+    "org": "Autism Association (Singapore)",
+    "type": "SPED school",
+    "area": "Bukit Batok",
+    "source": "https://www.autismlinks.org.sg/about-us/locate-us"
+  },
+  {
+    "id": "employability-and-employment-centre-e2c",
+    "name": "Employability & Employment Centre (E2C)",
+    "org": "Autism Resource Centre (Singapore)",
+    "type": "Employment / vocational",
+    "area": "Bukit Merah",
+    "source": "https://www.autism.org.sg/core-services/e2c"
+  },
+  {
+    "id": "pathlight-school-amk-campus-1",
+    "name": "Pathlight School (AMK) Campus 1",
+    "org": "Autism Resource Centre (Singapore)",
+    "type": "SPED school",
+    "area": "Ang Mo Kio",
+    "source": "https://www.pathlight.org.sg/"
+  },
+  {
+    "id": "pathlight-school-amk-campus-2",
+    "name": "Pathlight School (AMK) Campus 2",
+    "org": "Autism Resource Centre (Singapore)",
+    "type": "SPED school",
+    "area": "Ang Mo Kio",
+    "source": "https://www.pathlight.org.sg/"
+  },
+  {
+    "id": "pathlight-school-tampines",
+    "name": "Pathlight School (Tampines)",
+    "org": "Autism Resource Centre (Singapore)",
+    "type": "SPED school",
+    "area": "Tampines",
+    "source": "https://www.pathlight.org.sg/"
+  },
+  {
+    "id": "wecan-early-intervention-programme",
+    "name": "WeCAN Early Intervention Programme",
+    "org": "Autism Resource Centre (Singapore)",
+    "type": "Early intervention",
+    "area": "Ang Mo Kio",
+    "source": "https://www.enablingguide.sg/docs/default-source/default-document-library/a-guide-to-eipic.pdf"
+  },
+  {
+    "id": "awwa-eic-fernvale-link",
+    "name": "AWWA EIC@Fernvale Link",
+    "org": "AWWA",
+    "type": "Early intervention",
+    "area": "Sengkang",
+    "source": "https://www.awwa.org.sg/our-services/early-intervention-centre/"
+  },
+  {
+    "id": "awwa-eic-fernvale-woods",
+    "name": "AWWA EIC@Fernvale Woods",
+    "org": "AWWA",
+    "type": "Early intervention",
+    "area": "Sengkang",
+    "source": "https://www.awwa.org.sg/our-services/early-intervention-centre/"
+  },
+  {
+    "id": "awwa-eic-hougang",
+    "name": "AWWA EIC@Hougang",
+    "org": "AWWA",
+    "type": "Early intervention",
+    "area": "Hougang",
+    "source": "https://www.awwa.org.sg/our-services/early-intervention-centre/"
+  },
+  {
+    "id": "awwa-eic-kim-keat",
+    "name": "AWWA EIC@Kim Keat",
+    "org": "AWWA",
+    "type": "Early intervention",
+    "area": "Toa Payoh",
+    "source": "https://www.awwa.org.sg/our-services/early-intervention-centre/"
+  },
+  {
+    "id": "awwa-eic-napiri",
+    "name": "AWWA EIC@Napiri",
+    "org": "AWWA",
+    "type": "Early intervention",
+    "area": "Hougang",
+    "source": "https://www.awwa.org.sg/our-services/early-intervention-centre/"
+  },
+  {
+    "id": "awwa-home-and-day-activity-centre",
+    "name": "AWWA Home and Day Activity Centre",
+    "org": "AWWA",
+    "type": "Day activity centre",
+    "area": "Pasir Ris",
+    "source": "https://www.awwa.org.sg/our-services/awwa-home-and-day-activity-centre/"
+  },
+  {
+    "id": "awwa-school-bedok",
+    "name": "AWWA School @ Bedok",
+    "org": "AWWA",
+    "type": "SPED school",
+    "area": "Bedok",
+    "source": "https://www.awwa.org.sg/our-services/awwa-school/"
+  },
+  {
+    "id": "awwa-school-napiri",
+    "name": "AWWA School @ Napiri",
+    "org": "AWWA",
+    "type": "SPED school",
+    "area": "Hougang",
+    "source": "https://www.awwa.org.sg/our-services/awwa-school/"
+  },
+  {
+    "id": "awwa-special-student-care-centre",
+    "name": "AWWA Special Student Care Centre",
+    "org": "AWWA",
+    "type": "Other disability service",
+    "area": "Hougang",
+    "source": "https://www.awwa.org.sg/our-services/special-student-care-centre/"
+  },
+  {
+    "id": "awwa-therapy-hub",
+    "name": "AWWA Therapy Hub",
+    "org": "AWWA",
+    "type": "Therapy / assessment",
+    "area": "Hougang",
+    "source": "https://www.awwa.org.sg/our-services/therapy-hub/"
+  },
+  {
+    "id": "kindle-garden-preschool-enabling-village",
+    "name": "Kindle Garden Preschool @ Enabling Village",
+    "org": "AWWA",
+    "type": "Other disability service",
+    "area": "Bukit Merah",
+    "source": "https://www.awwa.org.sg/our-services/kindle-garden/"
+  },
+  {
+    "id": "kindle-garden-preschool-pasir-ris",
+    "name": "Kindle Garden Preschool @ Pasir Ris",
+    "org": "AWWA",
+    "type": "Other disability service",
+    "area": "Pasir Ris",
+    "source": "https://www.awwa.org.sg/our-services/kindle-garden/"
+  },
+  {
+    "id": "bishan-home-for-the-intellectually-disabled-day-activity-centre",
+    "name": "Bishan Home for the Intellectually Disabled Day Activity Centre",
+    "org": "Bishan Home for the Intellectually Disabled",
+    "type": "Day activity centre",
+    "area": "Bishan",
+    "source": "https://www.enablingguide.sg/docs/default-source/default-document-library/dac-service-matrix.pdf"
+  },
+  {
+    "id": "bizlink-day-activity-centre",
+    "name": "Bizlink Day Activity Centre",
+    "org": "Bizlink",
+    "type": "Day activity centre",
+    "area": "MacPherson",
+    "source": "https://www.bizlink.org.sg/contact-us/"
+  },
+  {
+    "id": "bizlink-e-commerce-fulfilment-training-centre",
+    "name": "Bizlink E-commerce Fulfilment Training Centre",
+    "org": "Bizlink",
+    "type": "Employment / vocational",
+    "area": "Jurong West",
+    "source": "https://www.bizlink.org.sg/contact-us/"
+  },
+  {
+    "id": "bizlink-employment-support-team-enabling-business-hub",
+    "name": "Bizlink Employment Support Team (Enabling Business Hub)",
+    "org": "Bizlink",
+    "type": "Employment / vocational",
+    "area": "Jurong West",
+    "source": "https://www.bizlink.org.sg/contact-us/"
+  },
+  {
+    "id": "bizlink-sheltered-workshop",
+    "name": "Bizlink Sheltered Workshop",
+    "org": "Bizlink",
+    "type": "Employment / vocational",
+    "area": "Bedok",
+    "source": "https://www.enablingguide.sg/docs/default-source/default-document-library/sw-service-matrix.pdf"
+  },
+  {
+    "id": "canossian-eipic",
+    "name": "Canossian EIPIC",
+    "org": "Canossaville Children and Community Services",
+    "type": "Early intervention",
+    "area": "MacPherson",
+    "source": "https://www.enablingguide.sg/docs/default-source/default-document-library/a-guide-to-eipic.pdf"
+  },
+  {
+    "id": "cerebral-palsy-alliance-singapore-school-east",
+    "name": "Cerebral Palsy Alliance Singapore School (East)",
+    "org": "Cerebral Palsy Alliance Singapore",
+    "type": "SPED school",
+    "area": "Pasir Ris",
+    "source": "https://cpas.org.sg/cpas-school/"
+  },
+  {
+    "id": "cerebral-palsy-alliance-singapore-school-west",
+    "name": "Cerebral Palsy Alliance Singapore School (West)",
+    "org": "Cerebral Palsy Alliance Singapore",
+    "type": "SPED school",
+    "area": "Jurong West",
+    "source": "https://cpas.org.sg/cpas-school-west/"
+  },
+  {
+    "id": "cpas-day-activity-centre",
+    "name": "CPAS Day Activity Centre",
+    "org": "Cerebral Palsy Alliance Singapore",
+    "type": "Day activity centre",
+    "area": "Pasir Ris",
+    "source": "https://cpas.org.sg/adult-services/"
+  },
+  {
+    "id": "cpas-eipic",
+    "name": "CPAS EIPIC",
+    "org": "Cerebral Palsy Alliance Singapore",
+    "type": "Early intervention",
+    "area": "Pasir Ris",
+    "source": "https://cpas.org.sg/eipic/"
+  },
+  {
+    "id": "cpas-goodwill-rehabilitation-and-occupational-workshop-grow",
+    "name": "CPAS Goodwill, Rehabilitation and Occupational Workshop (GROW)",
+    "org": "Cerebral Palsy Alliance Singapore",
+    "type": "Employment / vocational",
+    "area": "Pasir Ris",
+    "source": "https://cpas.org.sg/adult-services/"
+  },
+  {
+    "id": "emmanuel-activity-centre-tampines",
+    "name": "Emmanuel Activity Centre @ Tampines",
+    "org": "Christian Outreach to the Handicapped",
+    "type": "Day activity centre",
+    "area": "Tampines",
+    "source": "https://www.enablingguide.sg/docs/default-source/default-document-library/dac-service-matrix.pdf"
+  },
+  {
+    "id": "emmanuel-activity-centre-toa-payoh",
+    "name": "Emmanuel Activity Centre @ Toa Payoh",
+    "org": "Christian Outreach to the Handicapped",
+    "type": "Day activity centre",
+    "area": "Toa Payoh",
+    "source": "https://www.enablingguide.sg/docs/default-source/default-document-library/dac-service-matrix.pdf"
+  },
+  {
+    "id": "fei-yue-eipic-centre-bukit-batok",
+    "name": "Fei Yue EIPIC Centre @ Bukit Batok",
+    "org": "Fei Yue Community Services",
+    "type": "Early intervention",
+    "area": "Bukit Batok",
+    "source": "https://fycs.org/early-intervention-programme-for-infants-and-children-centres/"
+  },
+  {
+    "id": "fei-yue-eipic-centre-jurong-east",
+    "name": "Fei Yue EIPIC Centre @ Jurong East",
+    "org": "Fei Yue Community Services",
+    "type": "Early intervention",
+    "area": "Jurong East",
+    "source": "https://fycs.org/early-intervention-programme-for-infants-and-children-centres/"
+  },
+  {
+    "id": "fei-yue-eipic-centre-upper-thomson",
+    "name": "Fei Yue EIPIC Centre @ Upper Thomson",
+    "org": "Fei Yue Community Services",
+    "type": "Early intervention",
+    "area": "Upper Thomson",
+    "source": "https://fycs.org/early-intervention-programme-for-infants-and-children-centres/"
+  },
+  {
+    "id": "fei-yue-eipic-centre-wellington-circle",
+    "name": "Fei Yue EIPIC Centre @ Wellington Circle",
+    "org": "Fei Yue Community Services",
+    "type": "Early intervention",
+    "area": "Sembawang",
+    "source": "https://fycs.org/early-intervention-programme-for-infants-and-children-centres/"
+  },
+  {
+    "id": "grace-orchard-school",
+    "name": "Grace Orchard School",
+    "org": "Grace Orchard School",
+    "type": "SPED school",
+    "area": "West Coast",
+    "source": "https://www.moe.gov.sg/special-educational-needs/sped-schools"
+  },
+  {
+    "id": "department-of-child-development",
+    "name": "Department of Child Development",
+    "org": "KK Women's and Children's Hospital",
+    "type": "Therapy / assessment",
+    "area": "Little India",
+    "source": "https://www.kkh.com.sg/patient-care/areas-of-care/childrens-services/pages/child-development.aspx"
+  },
+  {
+    "id": "lighthouse-school",
+    "name": "Lighthouse School",
+    "org": "Lighthouse School",
+    "type": "SPED school",
+    "area": "Toa Payoh",
+    "source": "https://www.moe.gov.sg/special-educational-needs/sped-schools"
+  },
+  {
+    "id": "arts-metta",
+    "name": "Arts@Metta",
+    "org": "Metta",
+    "type": "Employment / vocational",
+    "area": "Simei",
+    "source": "https://www.metta.org.sg/youth-employment-support/"
+  },
+  {
+    "id": "maitri-school",
+    "name": "Maitri School",
+    "org": "Metta",
+    "type": "SPED school",
+    "area": "Eunos",
+    "source": "https://www.moe.gov.sg/special-educational-needs/sped-schools"
+  },
+  {
+    "id": "metta-caf",
+    "name": "Metta Café",
+    "org": "Metta",
+    "type": "Employment / vocational",
+    "area": "Simei",
+    "source": "https://www.metta.org.sg/youth-employment-support/"
+  },
+  {
+    "id": "metta-day-activity-centre-for-the-intellectually-disabled",
+    "name": "Metta Day Activity Centre for the Intellectually Disabled",
+    "org": "Metta",
+    "type": "Day activity centre",
+    "area": "Hougang",
+    "source": "https://www.metta.org.sg/disability-care/"
+  },
+  {
+    "id": "metta-home-day-activity-centre",
+    "name": "Metta Home Day Activity Centre",
+    "org": "Metta",
+    "type": "Day activity centre",
+    "area": "Woodlands",
+    "source": "https://www.metta.org.sg/disability-care/"
+  },
+  {
+    "id": "metta-preschool-punggol",
+    "name": "Metta Preschool @ Punggol",
+    "org": "Metta",
+    "type": "Early intervention",
+    "area": "Punggol",
+    "source": "https://www.enablingguide.sg/docs/default-source/default-document-library/a-guide-to-eipic.pdf"
+  },
+  {
+    "id": "metta-school",
+    "name": "Metta School",
+    "org": "Metta",
+    "type": "SPED school",
+    "area": "Simei",
+    "source": "https://www.moe.gov.sg/special-educational-needs/sped-schools"
+  },
+  {
+    "id": "hi-job-job-placement-job-support-programme",
+    "name": "Hi-Job! (Job Placement / Job Support Programme)",
+    "org": "MINDS",
+    "type": "Employment / vocational",
+    "area": "Bukit Merah",
+    "source": "https://www.minds.org.sg/contact-us/"
+  },
+  {
+    "id": "minds-community-hub-clementi",
+    "name": "MINDS Community Hub (Clementi)",
+    "org": "MINDS",
+    "type": "Day activity centre",
+    "area": "Clementi",
+    "source": "https://www.minds.org.sg/contact-us/"
+  },
+  {
+    "id": "minds-community-hub-faber",
+    "name": "MINDS Community Hub (Faber)",
+    "org": "MINDS",
+    "type": "Day activity centre",
+    "area": "Clementi",
+    "source": "https://www.minds.org.sg/contact-us/"
+  },
+  {
+    "id": "minds-community-hub-geylang-serai",
+    "name": "MINDS Community Hub (Geylang Serai)",
+    "org": "MINDS",
+    "type": "Day activity centre",
+    "area": "Ubi",
+    "source": "https://www.minds.org.sg/contact-us/"
+  },
+  {
+    "id": "minds-community-hub-hougang",
+    "name": "MINDS Community Hub (Hougang)",
+    "org": "MINDS",
+    "type": "Day activity centre",
+    "area": "Hougang",
+    "source": "https://www.minds.org.sg/contact-us/"
+  },
+  {
+    "id": "minds-community-hub-jurong-east",
+    "name": "MINDS Community Hub (Jurong East)",
+    "org": "MINDS",
+    "type": "Day activity centre",
+    "area": "Jurong East",
+    "source": "https://www.minds.org.sg/contact-us/"
+  },
+  {
+    "id": "minds-community-hub-kebun-baru",
+    "name": "MINDS Community Hub (Kebun Baru)",
+    "org": "MINDS",
+    "type": "Day activity centre",
+    "area": "Ang Mo Kio",
+    "source": "https://www.minds.org.sg/contact-us/"
+  },
+  {
+    "id": "minds-community-hub-tampines-east",
+    "name": "MINDS Community Hub (Tampines East)",
+    "org": "MINDS",
+    "type": "Day activity centre",
+    "area": "Tampines",
+    "source": "https://www.minds.org.sg/contact-us/"
+  },
+  {
+    "id": "minds-community-hub-yishun",
+    "name": "MINDS Community Hub (Yishun)",
+    "org": "MINDS",
+    "type": "Day activity centre",
+    "area": "Yishun",
+    "source": "https://www.minds.org.sg/contact-us/"
+  },
+  {
+    "id": "minds-fernvale-gardens-school",
+    "name": "MINDS Fernvale Gardens School",
+    "org": "MINDS",
+    "type": "SPED school",
+    "area": "Sengkang",
+    "source": "https://www.minds.org.sg/contact-us/"
+  },
+  {
+    "id": "minds-lee-kong-chian-gardens-school",
+    "name": "MINDS Lee Kong Chian Gardens School",
+    "org": "MINDS",
+    "type": "SPED school",
+    "area": "Queenstown",
+    "source": "https://www.minds.org.sg/contact-us/"
+  },
+  {
+    "id": "minds-medical-and-developmental-disabilities-clinic",
+    "name": "MINDS Medical and Developmental Disabilities Clinic",
+    "org": "MINDS",
+    "type": "Therapy / assessment",
+    "area": "Farrer Road",
+    "source": "https://www.minds.org.sg/contact-us/"
+  },
+  {
+    "id": "minds-raintree-special-student-care-centre-fernvale-gardens-school",
+    "name": "MINDS Raintree Special Student Care Centre @ Fernvale Gardens School",
+    "org": "MINDS",
+    "type": "Other disability service",
+    "area": "Sengkang",
+    "source": "https://www.minds.org.sg/contact-us/"
+  },
+  {
+    "id": "minds-raintree-special-student-care-centre-woodlands-gardens-school",
+    "name": "MINDS Raintree Special Student Care Centre @ Woodlands Gardens School",
+    "org": "MINDS",
+    "type": "Other disability service",
+    "area": "Woodlands",
+    "source": "https://www.minds.org.sg/contact-us/"
+  },
+  {
+    "id": "minds-regional-hub-hougang",
+    "name": "MINDS Regional Hub (Hougang)",
+    "org": "MINDS",
+    "type": "Employment / vocational",
+    "area": "Hougang",
+    "source": "https://www.minds.org.sg/contact-us/"
+  },
+  {
+    "id": "minds-regional-hub-queenstown",
+    "name": "MINDS Regional Hub (Queenstown)",
+    "org": "MINDS",
+    "type": "Employment / vocational",
+    "area": "Queenstown",
+    "source": "https://www.minds.org.sg/contact-us/"
+  },
+  {
+    "id": "minds-regional-hub-woodlands",
+    "name": "MINDS Regional Hub (Woodlands)",
+    "org": "MINDS",
+    "type": "Employment / vocational",
+    "area": "Woodlands",
+    "source": "https://www.minds.org.sg/contact-us/"
+  },
+  {
+    "id": "minds-satellite-hub-bukit-batok",
+    "name": "MINDS Satellite Hub (Bukit Batok)",
+    "org": "MINDS",
+    "type": "Other disability service",
+    "area": "Bukit Batok",
+    "source": "https://www.minds.org.sg/contact-us/"
+  },
+  {
+    "id": "minds-satellite-hub-farrer-court",
+    "name": "MINDS Satellite Hub (Farrer Court)",
+    "org": "MINDS",
+    "type": "Other disability service",
+    "area": "Farrer Road",
+    "source": "https://www.minds.org.sg/contact-us/"
+  },
+  {
+    "id": "minds-satellite-hub-pasir-ris",
+    "name": "MINDS Satellite Hub (Pasir Ris)",
+    "org": "MINDS",
+    "type": "Other disability service",
+    "area": "Pasir Ris",
+    "source": "https://www.minds.org.sg/contact-us/"
+  },
+  {
+    "id": "minds-towner-gardens-school",
+    "name": "MINDS Towner Gardens School",
+    "org": "MINDS",
+    "type": "SPED school",
+    "area": "Kembangan",
+    "source": "https://www.minds.org.sg/contact-us/"
+  },
+  {
+    "id": "minds-woodlands-gardens-school",
+    "name": "MINDS Woodlands Gardens School",
+    "org": "MINDS",
+    "type": "SPED school",
+    "area": "Woodlands",
+    "source": "https://www.minds.org.sg/contact-us/"
+  },
+  {
+    "id": "nuh-child-development-unit-jurong-medical-centre",
+    "name": "NUH Child Development Unit @ Jurong Medical Centre",
+    "org": "National University Hospital",
+    "type": "Therapy / assessment",
+    "area": "Jurong West",
+    "source": "https://www.nuh.com.sg/care-at-nuh/services/paediatrics/developmental-and-behavioural-paediatrics"
+  },
+  {
+    "id": "nuh-child-development-unit-keat-hong",
+    "name": "NUH Child Development Unit @ Keat Hong",
+    "org": "National University Hospital",
+    "type": "Therapy / assessment",
+    "area": "Choa Chu Kang",
+    "source": "https://www.nuh.com.sg/care-at-nuh/services/paediatrics/developmental-and-behavioural-paediatrics"
+  },
+  {
+    "id": "presbyterian-community-services-special-student-care-centre-grace-orchard-school",
+    "name": "Presbyterian Community Services - Special Student Care Centre (Grace Orchard School)",
+    "org": "Presbyterian Community Services",
+    "type": "Other disability service",
+    "area": "West Coast",
+    "source": "https://www.enablingguide.sg/docs/default-source/default-document-library/sscc-service-matrix.pdf"
+  },
+  {
+    "id": "good-life-day-activity-centre",
+    "name": "Good Life Day Activity Centre",
+    "org": "Rainbow Centre",
+    "type": "Day activity centre",
+    "area": "Queenstown",
+    "source": "https://rainbowcentre.org.sg/young-adults/"
+  },
+  {
+    "id": "out-of-school-hours-oosh-margaret-drive",
+    "name": "Out-Of-School-Hours (OOSH) Margaret Drive",
+    "org": "Rainbow Centre",
+    "type": "Other disability service",
+    "area": "Queenstown",
+    "source": "https://www.enablingguide.sg/docs/default-source/default-document-library/sscc-service-matrix.pdf"
+  },
+  {
+    "id": "out-of-school-hours-oosh-yishun-park",
+    "name": "Out-Of-School-Hours (OOSH) Yishun Park",
+    "org": "Rainbow Centre",
+    "type": "Other disability service",
+    "area": "Yishun",
+    "source": "https://www.enablingguide.sg/docs/default-source/default-document-library/sscc-service-matrix.pdf"
+  },
+  {
+    "id": "rainbow-centre-admiral-hill-school",
+    "name": "Rainbow Centre Admiral Hill School",
+    "org": "Rainbow Centre",
+    "type": "SPED school",
+    "area": "Sembawang",
+    "source": "https://rainbowcentre.org.sg/visit-us/"
+  },
+  {
+    "id": "rainbow-centre-early-intervention-programme-margaret-drive",
+    "name": "Rainbow Centre Early Intervention Programme @ Margaret Drive",
+    "org": "Rainbow Centre",
+    "type": "Early intervention",
+    "area": "Queenstown",
+    "source": "https://www.enablingguide.sg/docs/default-source/default-document-library/a-guide-to-eipic.pdf"
+  },
+  {
+    "id": "rainbow-centre-early-intervention-programme-marsiling-lane",
+    "name": "Rainbow Centre Early Intervention Programme @ Marsiling Lane",
+    "org": "Rainbow Centre",
+    "type": "Early intervention",
+    "area": "Woodlands",
+    "source": "https://www.enablingguide.sg/docs/default-source/default-document-library/a-guide-to-eipic.pdf"
+  },
+  {
+    "id": "rainbow-centre-early-intervention-programme-yishun-park",
+    "name": "Rainbow Centre Early Intervention Programme @ Yishun Park",
+    "org": "Rainbow Centre",
+    "type": "Early intervention",
+    "area": "Yishun",
+    "source": "https://www.enablingguide.sg/docs/default-source/default-document-library/a-guide-to-eipic.pdf"
+  },
+  {
+    "id": "rainbow-centre-margaret-drive-school",
+    "name": "Rainbow Centre Margaret Drive School",
+    "org": "Rainbow Centre",
+    "type": "SPED school",
+    "area": "Queenstown",
+    "source": "https://rainbowcentre.org.sg/visit-us/"
+  },
+  {
+    "id": "rainbow-centre-yishun-park-school",
+    "name": "Rainbow Centre Yishun Park School",
+    "org": "Rainbow Centre",
+    "type": "SPED school",
+    "area": "Yishun",
+    "source": "https://rainbowcentre.org.sg/visit-us/"
+  },
+  {
+    "id": "red-cross-day-activity-centre-for-the-disabled",
+    "name": "Red Cross Day Activity Centre for the Disabled",
+    "org": "Singapore Red Cross",
+    "type": "Day activity centre",
+    "area": "Jurong West",
+    "source": "https://www.enablingguide.sg/docs/default-source/default-document-library/dac-service-matrix.pdf"
+  },
+  {
+    "id": "building-bridges-eipic-centre-ability-centre",
+    "name": "Building Bridges EIPIC Centre @ Ability Centre",
+    "org": "SPD",
+    "type": "Early intervention",
+    "area": "Tiong Bahru",
+    "source": "https://www.enablingguide.sg/docs/default-source/default-document-library/a-guide-to-eipic.pdf"
+  },
+  {
+    "id": "building-bridges-eipic-centre-bedok",
+    "name": "Building Bridges EIPIC Centre @ Bedok",
+    "org": "SPD",
+    "type": "Early intervention",
+    "area": "Bedok",
+    "source": "https://www.enablingguide.sg/docs/default-source/default-document-library/a-guide-to-eipic.pdf"
+  },
+  {
+    "id": "building-bridges-eipic-centre-jurong",
+    "name": "Building Bridges EIPIC Centre @ Jurong",
+    "org": "SPD",
+    "type": "Early intervention",
+    "area": "Jurong East",
+    "source": "https://www.enablingguide.sg/docs/default-source/default-document-library/a-guide-to-eipic.pdf"
+  },
+  {
+    "id": "building-bridges-eipic-centre-jurong-west",
+    "name": "Building Bridges EIPIC Centre @ Jurong West",
+    "org": "SPD",
+    "type": "Early intervention",
+    "area": "Jurong West",
+    "source": "https://www.enablingguide.sg/docs/default-source/default-document-library/a-guide-to-eipic.pdf"
+  },
+  {
+    "id": "building-bridges-eipic-centre-kembangan",
+    "name": "Building Bridges EIPIC Centre @ Kembangan",
+    "org": "SPD",
+    "type": "Early intervention",
+    "area": "Kembangan",
+    "source": "https://www.enablingguide.sg/docs/default-source/default-document-library/a-guide-to-eipic.pdf"
+  },
+  {
+    "id": "building-bridges-eipic-centre-tampines",
+    "name": "Building Bridges EIPIC Centre @ Tampines",
+    "org": "SPD",
+    "type": "Early intervention",
+    "area": "Tampines",
+    "source": "https://www.enablingguide.sg/docs/default-source/default-document-library/a-guide-to-eipic.pdf"
+  },
+  {
+    "id": "spd-ability-centre",
+    "name": "SPD Ability Centre",
+    "org": "SPD",
+    "type": "Therapy / assessment",
+    "area": "Tiong Bahru",
+    "source": "https://www.spd.org.sg/contact-us/"
+  },
+  {
+    "id": "spd-amk",
+    "name": "SPD@AMK",
+    "org": "SPD",
+    "type": "Employment / vocational",
+    "area": "Ang Mo Kio",
+    "source": "https://www.enablingguide.sg/docs/default-source/default-document-library/sw-service-matrix.pdf"
+  },
+  {
+    "id": "st-andrews-adult-autism-services-day-activity-centre-sengkang",
+    "name": "St. Andrew's Adult Autism Services - Day Activity Centre (Sengkang)",
+    "org": "St. Andrew's Autism Centre",
+    "type": "Day activity centre",
+    "area": "Sengkang",
+    "source": "https://www.enablingguide.sg/docs/default-source/default-document-library/dac-service-matrix.pdf"
+  },
+  {
+    "id": "st-andrews-adult-autism-services-day-activity-centre-siglap",
+    "name": "St. Andrew's Adult Autism Services - Day Activity Centre (Siglap)",
+    "org": "St. Andrew's Autism Centre",
+    "type": "Day activity centre",
+    "area": "Siglap",
+    "source": "https://www.enablingguide.sg/docs/default-source/default-document-library/dac-service-matrix.pdf"
+  },
+  {
+    "id": "st-andrews-autism-school",
+    "name": "St. Andrew's Autism School",
+    "org": "St. Andrew's Autism Centre",
+    "type": "SPED school",
+    "area": "Siglap",
+    "source": "https://www.samh.org.sg/st-andrews-autism-centre/"
+  },
+  {
+    "id": "st-andrews-mission-school-special-student-care-centre",
+    "name": "St Andrew's Mission School - Special Student Care Centre",
+    "org": "St. Andrew's Mission Hospital",
+    "type": "Other disability service",
+    "area": "Bukit Batok",
+    "source": "https://www.enablingguide.sg/docs/default-source/default-document-library/sscc-service-matrix.pdf"
+  },
+  {
+    "id": "st-andrews-mission-school",
+    "name": "St. Andrew's Mission School",
+    "org": "St. Andrew's Mission Hospital",
+    "type": "SPED school",
+    "area": "Bukit Batok",
+    "source": "https://www.moe.gov.sg/special-educational-needs/sped-schools"
+  },
+  {
+    "id": "sun-dac-bedok-south",
+    "name": "SUN-DAC (Bedok South)",
+    "org": "SUN-DAC",
+    "type": "Day activity centre",
+    "area": "Bedok",
+    "source": "https://www.enablingguide.sg/docs/default-source/default-document-library/dac-service-matrix.pdf"
+  },
+  {
+    "id": "sun-dac-choa-chu-kang",
+    "name": "SUN-DAC (Choa Chu Kang)",
+    "org": "SUN-DAC",
+    "type": "Day activity centre",
+    "area": "Choa Chu Kang",
+    "source": "https://www.enablingguide.sg/docs/default-source/default-document-library/dac-service-matrix.pdf"
+  },
+  {
+    "id": "sun-dac-upper-thomson",
+    "name": "SUN-DAC (Upper Thomson)",
+    "org": "SUN-DAC",
+    "type": "Day activity centre",
+    "area": "Upper Thomson",
+    "source": "https://www.enablingguide.sg/docs/default-source/default-document-library/dac-service-matrix.pdf"
+  },
+  {
+    "id": "thk-childrens-therapy-space-macpherson",
+    "name": "THK Children's Therapy Space @ MacPherson",
+    "org": "THK",
+    "type": "Therapy / assessment",
+    "area": "MacPherson",
+    "source": "https://www.thkmc.org.sg/centre-directory/"
+  },
+  {
+    "id": "thk-childrens-therapy-space-queenstown",
+    "name": "THK Children's Therapy Space @ Queenstown",
+    "org": "THK",
+    "type": "Therapy / assessment",
+    "area": "Queenstown",
+    "source": "https://www.thkmc.org.sg/centre-directory/"
+  },
+  {
+    "id": "thk-day-activity-centre-jurong-east",
+    "name": "THK Day Activity Centre @ Jurong East",
+    "org": "THK",
+    "type": "Day activity centre",
+    "area": "Jurong East",
+    "source": "https://www.thkmc.org.sg/centre-directory/"
+  },
+  {
+    "id": "thk-eipic-centre-ang-mo-kio",
+    "name": "THK EIPIC Centre @ Ang Mo Kio",
+    "org": "THK",
+    "type": "Early intervention",
+    "area": "Ang Mo Kio",
+    "source": "https://www.thkmc.org.sg/centre-directory/"
+  },
+  {
+    "id": "thk-eipic-centre-choa-chu-kang",
+    "name": "THK EIPIC Centre @ Choa Chu Kang",
+    "org": "THK",
+    "type": "Early intervention",
+    "area": "Choa Chu Kang",
+    "source": "https://www.thkmc.org.sg/centre-directory/"
+  },
+  {
+    "id": "thk-eipic-centre-pioneer",
+    "name": "THK EIPIC Centre @ Pioneer",
+    "org": "THK",
+    "type": "Early intervention",
+    "area": "Jurong West",
+    "source": "https://www.thkmc.org.sg/centre-directory/"
+  },
+  {
+    "id": "thk-eipic-centre-tampines",
+    "name": "THK EIPIC Centre @ Tampines",
+    "org": "THK",
+    "type": "Early intervention",
+    "area": "Tampines",
+    "source": "https://www.thkmc.org.sg/centre-directory/"
+  },
+  {
+    "id": "thk-eipic-centre-toa-payoh",
+    "name": "THK EIPIC Centre @ Toa Payoh",
+    "org": "THK",
+    "type": "Early intervention",
+    "area": "Toa Payoh",
+    "source": "https://www.thkmc.org.sg/centre-directory/"
+  },
+  {
+    "id": "thk-eipic-centre-woodlands",
+    "name": "THK EIPIC Centre @ Woodlands",
+    "org": "THK",
+    "type": "Early intervention",
+    "area": "Woodlands",
+    "source": "https://www.thkmc.org.sg/centre-directory/"
+  },
+  {
+    "id": "touch-centre-for-independent-living-enabling-village",
+    "name": "TOUCH Centre for Independent Living (Enabling Village)",
+    "org": "TOUCH Community Services",
+    "type": "Day activity centre",
+    "area": "Bukit Merah",
+    "source": "https://www.enablingguide.sg/docs/default-source/default-document-library/dac-service-matrix.pdf"
+  },
+  {
+    "id": "touch-centre-for-independent-living-ubi",
+    "name": "TOUCH Centre for Independent Living (Ubi)",
+    "org": "TOUCH Community Services",
+    "type": "Day activity centre",
+    "area": "Ubi",
+    "source": "https://www.enablingguide.sg/docs/default-source/default-document-library/dac-service-matrix.pdf"
+  }
+]
