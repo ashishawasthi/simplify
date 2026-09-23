@@ -37,7 +37,7 @@
         ]
       },
       {
-        "source": "**/*.@(svg|png)",
+        "source": "**/*.@(svg|png|mp3)",
         "headers": [
           {
             "key": "Cache-Control",
