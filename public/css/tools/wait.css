@@ -1,1 +1,331 @@
-/* Wait (js/tools/wait.js): styles go here, each inside #tool-wait. */
+/* Wait (js/tools/wait.js): the minute buttons, the disc, the "While I wait"
+   pictures and the sound switch — each styled inside #tool-wait. */
+
+#tool-wait {
+  /* the time left: a calm blue, 4.4:1 on the disc's pale face */
+  --wait-blue: #1976d2;
+  --wait-face: #f5f9ff;
+  --disc: min(100%, 300px);
+}
+
+/* ---------- the minute buttons ---------- */
+/* Three over two: the first row's three share the width, the second row's
+   two share it too, so the block is square-edged and every target big. */
+#tool-wait .wait-pick {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 14px;
+}
+#tool-wait .wait-min {
+  grid-column: span 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 96px;
+  padding: 8px 4px;
+  font-family: inherit;
+  /* #0d47a1 on #f5f9ff: 8.2:1 */
+  color: var(--color-primary-dark);
+  background: #f5f9ff;
+  border: 3px solid var(--color-primary);
+  border-radius: var(--radius);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+#tool-wait .wait-min:nth-child(n + 4) { grid-column: span 3; }
+#tool-wait .wait-min:active { background: #e3f2fd; }
+#tool-wait .wait-min-number {
+  font-size: 44px;
+  font-weight: 800;
+  line-height: 1;
+}
+#tool-wait .wait-min-unit {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+/* ---------- the disc ---------- */
+#tool-wait .wait-face {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0 0 24px;
+}
+/* the whole disc is the pause button */
+#tool-wait .wait-disc {
+  position: relative;
+  display: block;
+  width: var(--disc);
+  height: var(--disc);
+  padding: 0;
+  font-family: inherit;
+  color: var(--color-text);
+  background: none;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+#tool-wait .wait-disc[aria-disabled="true"] { cursor: default; }
+#tool-wait .wait-art {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+#tool-wait .wait-plate { fill: var(--wait-face); }
+#tool-wait .wait-wedge { fill: var(--wait-blue); }
+#tool-wait .wait-rim {
+  fill: none;
+  stroke: var(--wait-blue);
+  stroke-width: 4;
+}
+
+/* Paused: the colour stops and turns grey (#757575, 4.4:1), with ⏸ Paused
+   on a white label in the middle — colour, sign and word together. */
+#tool-wait .wait-disc.is-paused .wait-wedge { fill: var(--color-border); }
+#tool-wait .wait-disc.is-paused .wait-rim { stroke: var(--color-border); }
+
+/* Done: the whole disc pale green in a green ring, a big ✔ and the word in
+   dark green (#1b5e20 on #e8f5e9: 7:1) — the colours of every "yes". */
+#tool-wait .wait-disc.is-done .wait-plate { fill: var(--color-yes-bg); }
+#tool-wait .wait-disc.is-done .wait-wedge { display: none; }
+#tool-wait .wait-disc.is-done .wait-rim {
+  stroke: #2e7d32;
+  stroke-width: 6;
+}
+
+/* over the middle of the disc */
+#tool-wait .wait-centre {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+#tool-wait .wait-big-number,
+#tool-wait .wait-big-unit,
+#tool-wait .wait-mark { display: none; }
+#tool-wait .wait-disc.is-paused .wait-mark,
+#tool-wait .wait-disc.is-done .wait-mark { display: flex; }
+#tool-wait .wait-mark {
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+#tool-wait .wait-icon {
+  display: block;
+  flex: none;
+}
+#tool-wait .wait-icon-pause { fill: currentColor; }
+#tool-wait .wait-icon-tick {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+#tool-wait .wait-disc:not(.is-paused) .wait-icon-pause,
+#tool-wait .wait-disc:not(.is-done) .wait-icon-tick { display: none; }
+
+#tool-wait .wait-disc.is-paused .wait-mark {
+  padding: 10px 22px 10px 16px;
+  font-size: 26px;
+  color: var(--color-text);
+  background: #fff;
+  border: 3px solid var(--color-border);
+  border-radius: 999px;
+}
+#tool-wait .wait-disc.is-paused .wait-icon { width: 32px; height: 32px; }
+
+#tool-wait .wait-disc.is-done .wait-mark {
+  flex-direction: column;
+  gap: 2px;
+  font-size: 40px;
+  color: var(--color-yes-text);
+}
+#tool-wait .wait-disc.is-done .wait-icon { width: 104px; height: 104px; }
+
+/* the time left in words, under the disc */
+#tool-wait .wait-words {
+  margin: 14px 0 0;
+  font-size: 36px;
+  font-weight: 800;
+  line-height: 1.2;
+  text-align: center;
+}
+
+/* ---------- reduced motion: the number, big — nothing moves ---------- */
+/* The disc keeps its place and stays the button, but shows no shrinking
+   colour: just the time left, the number big and its unit under it. The
+   line under the disc would say the same, so it stays for screen readers
+   only. */
+@media (prefers-reduced-motion: reduce) {
+  #tool-wait .wait-wedge { display: none; }
+  #tool-wait .wait-rim { stroke-width: 6; }
+  #tool-wait .wait-disc:is(.is-running, .is-paused) .wait-big-number {
+    display: block;
+    font-size: 112px;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--color-primary-dark);
+  }
+  #tool-wait .wait-disc:is(.is-running, .is-paused) .wait-big-unit {
+    display: block;
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--color-primary-dark);
+  }
+  #tool-wait .wait-disc.is-paused :is(.wait-big-number, .wait-big-unit) { color: var(--color-muted); }
+  #tool-wait .wait-disc.is-paused .wait-mark {
+    margin-top: 10px;
+    padding: 4px 16px 4px 12px;
+    font-size: 21px;
+  }
+  #tool-wait .wait-disc.is-paused .wait-icon { width: 24px; height: 24px; }
+  #tool-wait .wait-words {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+/* ---------- While I wait ---------- */
+#tool-wait .wait-while { margin: 28px 0 0; }
+#tool-wait .wait-pick + .wait-while { margin-top: 24px; }
+#tool-wait .wait-while-label {
+  margin: 0 0 10px;
+  font-size: 20px;
+  color: var(--color-muted);
+}
+#tool-wait .wait-while-label:focus { outline: none; }
+#tool-wait .wait-while-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  gap: 12px;
+}
+#tool-wait .wait-pic {
+  display: flex;
+  align-items: center;
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  background: #fff;
+  border: 3px solid var(--color-border);
+  border-radius: var(--radius);
+}
+#tool-wait .wait-pic img {
+  display: block;
+  flex: none;
+  object-fit: contain;
+}
+
+/* During the wait: the pictures side by side, each over its words, to look
+   at — nothing to change. */
+#tool-wait .wait-while:not(.is-editing) .wait-while-label { text-align: center; }
+#tool-wait .wait-while:not(.is-editing) .wait-while-list { justify-content: center; }
+#tool-wait .wait-while:not(.is-editing) .wait-pic {
+  flex: 0 1 112px;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 124px;
+  padding: 10px 6px;
+  text-align: center;
+}
+#tool-wait .wait-while:not(.is-editing) .wait-pic img { width: 72px; height: 72px; }
+
+/* Setting it up: a row each — picture, words, ✕ — then ＋. */
+#tool-wait .wait-while.is-editing .wait-while-list { flex-direction: column; }
+#tool-wait .wait-while.is-editing .wait-pic {
+  gap: 14px;
+  min-height: 76px;
+  padding: 6px 8px 6px 12px;
+}
+#tool-wait .wait-while.is-editing .wait-pic img { width: 52px; height: 52px; }
+#tool-wait .wait-while.is-editing .wait-pic-words {
+  flex: 1;
+  min-width: 0;
+}
+/* pushed to the end even when the words step aside (pictures only) */
+#tool-wait .wait-pic-remove { margin-left: auto; }
+
+/* ---------- the sound switch ---------- */
+/* Small and to one side: it changes only the end. Its state three ways — the
+   bell struck through or not, the word, and blue when on. */
+#tool-wait .wait-sound-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+#tool-wait .wait-sound {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 56px;
+  padding: 6px 18px 6px 12px;
+  font-family: inherit;
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--color-muted);
+  background: #fff;
+  border: 3px solid var(--color-border);
+  border-radius: 999px;
+  cursor: pointer;
+}
+#tool-wait .wait-sound:active { background: #e3f2fd; }
+#tool-wait .wait-sound[aria-checked="true"] {
+  color: var(--color-primary-dark);
+  background: #e3f2fd;
+  border-color: var(--color-primary);
+}
+#tool-wait .wait-sound-icon {
+  font-size: 26px;
+  line-height: 1;
+}
+
+/* ---------- bigger screens, and a phone on its side ---------- */
+/* an iPad: a bigger disc and buttons (main is 520px wide at most) */
+@media (min-width: 600px) and (min-height: 700px) {
+  #tool-wait { --disc: min(100%, 440px); }
+  #tool-wait .wait-min { min-height: 112px; }
+  #tool-wait .wait-min-number { font-size: 52px; }
+  #tool-wait .wait-words { font-size: 40px; }
+  #tool-wait .wait-disc.is-done .wait-icon { width: 128px; height: 128px; }
+  #tool-wait .wait-disc.is-done .wait-mark { font-size: 48px; }
+}
+/* a phone on its side: a smaller disc with the time left beside it, not
+   under it, so both show below the header */
+@media (max-height: 500px) {
+  #tool-wait { --disc: min(100%, 200px); }
+  #tool-wait .wait-face {
+    flex-direction: row;
+    justify-content: center;
+    gap: 28px;
+  }
+  #tool-wait .wait-disc { flex: none; }
+  #tool-wait .wait-words { margin: 0; }
+  #tool-wait .wait-disc.is-done .wait-icon { width: 80px; height: 80px; }
+  #tool-wait .wait-disc.is-done .wait-mark { font-size: 32px; }
+}
+@media (max-height: 500px) and (prefers-reduced-motion: reduce) {
+  #tool-wait .wait-disc:is(.is-running, .is-paused) .wait-big-number { font-size: 80px; }
+}
