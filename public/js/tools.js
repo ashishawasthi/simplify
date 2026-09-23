@@ -55,7 +55,8 @@
 //   showToast(text, undo)  the undo toast: text, and "↩ Put it back", which
 //                          runs undo()
 //   setClearAll(visible)   show or hide the header ✕ (only for a tool with
-//                          clearAll)
+//                          clearAll). mount() may also return clearLabel, the
+//                          ✕'s spoken name when it doesn't clear everything
 //   result.render(answer)  the answer panel at the bottom (see result.js):
 //                          { tone: "yes"|"no"|"answer"|"neutral", icon,
 //                          headline, subline?, badge? } — icon an emoji or an
