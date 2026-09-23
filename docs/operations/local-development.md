@@ -152,6 +152,8 @@ done
 
 The scenes (viewport, path, setup, expect, and the output file) are `SCENES` in `tools/guide-scenes.mjs`; `node tools/shoot-guide.mjs` with no name lists them. Each writes `public/img/guide/screen-<scene>.png` at twice the viewport, using a throwaway Chrome profile so no service worker serves stale files; `SHOOT_DIR=<folder>` writes there instead. To add a scene, give it the viewport the guide's `<img>` declares and a setup that leaves the app in that state; the `app.mjs` smoke scenes then check it too.
 
+The coach guide's pictures (`public/coach/img/guide/`) come from `node tools/shoot-coach-guide.mjs [scene…]`, which drives the real coach app with the in-memory stand-in for `cloud.js` exported as `STUBS` from `tools/smoke/coach.mjs`, so no network or emulator is needed (`SHOOT_DIR=` works the same way). `tools/smoke/coach-guide.mjs` checks the guide's links, anchors and pictures, and that every scene still reaches its state.
+
 `public/img/guide/mic-on-keyboard.png` is not a scene. It is a real Android screenshot: the dialog plus the phone's own keyboard with the microphone key ringed in `--color-primary`. The keyboard belongs to Android, not the page, so no headless capture can include it: retake it on an Android device.
 
 A new or changed image under `public/` needs a `CACHE` bump in `public/sw.js`, and a new one also an `ASSETS` entry.
