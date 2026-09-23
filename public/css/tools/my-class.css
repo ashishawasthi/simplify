@@ -94,6 +94,12 @@ html[data-pictures-only] #tool-my-class .mc-screen { min-height: calc(100dvh - 2
   background: var(--color-bg);
   border-top: 3px solid #e0e0e0;
 }
+/* a phone on its side: a pinned bar would take a third of the screen and
+   hide the picture or video, so it scrolls with the page instead */
+@media (max-height: 500px) {
+  #tool-my-class .mc-nav { position: static; }
+  #tool-my-class .mc-screen { min-height: 0; }
+}
 #tool-my-class .mc-where {
   grid-area: where;
   display: flex;
