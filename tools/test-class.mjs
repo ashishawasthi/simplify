@@ -273,7 +273,7 @@ const DOC = {
   name: "projects/simplify-special/databases/(default)/documents/classes/K7M3RQP9T",
   fields: {
     name: { stringValue: "3 Kindness" },
-    org: { stringValue: "A school" },
+    institution: { stringValue: "awwa-school-napiri" },
     status: { stringValue: "active" },
     latest: { mapValue: { fields: {
       pageId: { stringValue: "p1" },

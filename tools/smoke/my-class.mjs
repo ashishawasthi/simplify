@@ -72,7 +72,7 @@ const doc = (markdown, { name = "3 Kindness", pageId = "p9" } = {}) => ({
   name: `projects/simplify-special/databases/(default)/documents/classes/${CODE}`,
   fields: {
     name: { stringValue: name },
-    org: { stringValue: "A school" },
+    institution: { stringValue: "awwa-school-napiri" },
     status: { stringValue: "active" },
     latest: markdown == null ? { nullValue: null } : { mapValue: { fields: {
       pageId: { stringValue: pageId },
