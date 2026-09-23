@@ -92,9 +92,11 @@ export function friendly(err, fallback = "Something went wrong. Try again in a m
   const code = String(err?.code ?? "").replace(/^(firestore|functions|storage|auth)\//, "");
   if (CANCELLED.has(code)) return new CloudError("cancelled", "");
   // a Cloud Function's own refusal: its message is already written for coaches
+  // (the SDK adds the HTTP status, " [403]", which is not)
+  const own = String(err?.message ?? "").replace(/ \[\d{3}\]$/, "");
   if (String(err?.code ?? "").startsWith("functions/") && !["internal", "unknown", "unavailable",
-    "deadline-exceeded", "not-found", "unauthenticated"].includes(code) && err.message && err.message !== code) {
-    return new CloudError(code, err.message);
+    "deadline-exceeded", "not-found", "unauthenticated"].includes(code) && own && own !== code) {
+    return new CloudError(code, own);
   }
   return new CloudError(code || "unknown", PLAIN[code] ?? fallback);
 }
