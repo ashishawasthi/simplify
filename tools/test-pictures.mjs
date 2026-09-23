@@ -28,7 +28,8 @@ const REQUIRED = {
     "pack-bag doctor haircut shop library lift cook clean-up exercise quiet-time therapy changed all-done",
   need: "help break toilet water too-loud stop hurts want more-time dont-understand all-done yes no",
   out: "seat bus-stop bell cannot-talk please thank-you family space travel-card card-reader pay-qr tray tray-return receipt phone",
-  steps: "tap-water soap rub-hands rinse dry-hands carry-tray wipe-table check-amount tap-card",
+  steps: "tap-water tap-off soap rub-hands rinse dry-hands carry-tray tray-return-halal wipe-table check-amount tap-card " +
+    "reader-tick bank-card",
 };
 
 // The menu's tools and group headings that have an icon (ids from js/tools.js).

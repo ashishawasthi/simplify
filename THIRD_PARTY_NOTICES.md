@@ -119,6 +119,7 @@ cropped; otherwise unchanged. Those parts remain under the Apache License 2.0.
 | `recess.svg` | `emoji_u1f34e.svg` (apple) |
 | `therapy.svg` | `emoji_u1f9d5.svg` (adult in a headscarf), `emoji_u1f9d2.svg` (child) |
 | `tap-water.svg` | `emoji_u1faf3.svg` (hand, mirrored) |
+| `tap-off.svg` | `emoji_u1faf3.svg` (hand, mirrored) |
 | `wash-hands.svg` | `emoji_u1f932.svg` (hands) |
 | `rub-hands.svg` | `emoji_u1faf1.svg` and `emoji_u1faf2.svg` (hands), `emoji_u1fae7.svg` (bubbles, one mirrored) |
 | `dry-hands.svg` | `emoji_u1f91a.svg` (hand, one mirrored) |

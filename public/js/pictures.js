@@ -29,9 +29,11 @@
 //   block for home, MRT train, bus, travel card, card reader, paying by QR,
 //   hawker stall, kopi, food tray, tray return, the bus's stop bell, a recess
 //   lunch box, a plate with a spoon and fork — and the tablet, a glass of
-//   water, too loud, therapy, and the steps for washing hands and returning a
-//   tray. Some are built around Noto parts (hands, faces, an apple, a spoon,
-//   bubbles); the script and THIRD_PARTY_NOTICES.md list which.
+//   water, too loud, therapy, and the steps for washing hands (the tap on
+//   and off), returning a tray (the halal side of the tray return) and
+//   paying by card (the reader's green tick, a plain bank card). Some are
+//   built around Noto parts (hands, faces, an apple, a spoon, bubbles); the
+//   script and THIRD_PARTY_NOTICES.md list which.
 // Like the money pictures, nothing copies an operator's or a brand's design:
 // no logo, livery or card artwork; the only lettering is the bus's route
 // number.
@@ -127,14 +129,18 @@ export const PICTURES = Object.freeze([
 
   // ---- Steps ----
   pic("tap-water", "Turn on tap", "steps"),
+  pic("tap-off", "Turn off tap", "steps"),
   pic("soap", "Use soap", "steps"),
   pic("rub-hands", "Rub hands", "steps"),
   pic("rinse", "Rinse hands", "steps", "wash-hands"),
   pic("dry-hands", "Dry hands", "steps"),
   pic("carry-tray", "Carry tray", "steps"),
+  pic("tray-return-halal", "Halal side", "steps"),
   pic("wipe-table", "Wipe table", "steps"),
   pic("check-amount", "Check amount", "steps"),
   pic("tap-card", "Tap card", "steps", "card-reader"),
+  pic("reader-tick", "Wait for tick", "steps"),
+  pic("bank-card", "My card", "steps"),
 ]);
 
 // Our file → its upstream file in noto-emoji v2.051 (svg/), for the pictures

@@ -5,11 +5,12 @@
 //
 // The decks are pinned word for word, so a step can't drift from what was
 // decided; then the rules every deck must keep (pictures that exist, at least
-// 3 core steps, at most 8 words a step), then Next, Back and Fewer steps.
+// 3 core steps, at most 8 words a step), then Next, Back and Fewer steps, and
+// the 30-minute start again for a shared iPad.
 
 import {
   DECKS, DONE_PICTURE, deckById, shownSteps, where, stepAfter, stepBefore, cleanAt, cleanProgress,
-  cleanFewer, leftOut,
+  cleanFewer, leftOut, FORGET_AFTER_MS, isStale, resumeAt, cleanTouched,
 } from "../public/js/tools/steps-decks.js";
 import { PICTURES, pictureSrc, menuIconSrc } from "../public/js/pictures.js";
 
@@ -45,6 +46,9 @@ const walkBack = (deck, fewer) => {
   return seen.join(" → ");
 };
 
+const MIN = 60 * 1000;
+const MIN30 = 30 * MIN;
+const NOW = Date.UTC(2026, 8, 23, 10, 0); // a fixed "now": the tests never read the clock
 const wash = deckById("wash-hands");
 const tray = deckById("return-tray");
 const card = deckById("pay-card");
@@ -60,7 +64,7 @@ const cases = [
     "soap | Put on soap",
     "rub-hands | Rub for 20 seconds",
     "rinse | Rinse off the soap",
-    "tap-water | Turn off the tap | not core",
+    "tap-off | Turn off the tap | not core",
     "dry-hands | Dry your hands",
   ].join("\n")],
   ["Wash hands: end", wash.end, "All done. Your hands are clean."],
@@ -69,7 +73,7 @@ const cases = [
     "tray | Put tissues and bones on the tray | not core",
     "carry-tray | Carry the tray with two hands",
     "tray-return | Find the tray return",
-    "tray-return | Halal tray? Use the halal side",
+    "tray-return-halal | Halal tray? Use the halal side",
     "tray-return | Put the tray in",
     "wipe-table | Throw away table litter | not core",
   ].join("\n")],
@@ -78,8 +82,8 @@ const cases = [
     "check-amount | Can I buy it? | not core",
     "check-amount | Look at the price on the screen",
     "tap-card | Tap your card on the reader",
-    "card-reader | Wait for the beep or the green tick",
-    "travel-card | Take your card back",
+    "reader-tick | Wait for the beep or the green tick",
+    "bank-card | Take your card back",
     "receipt | Take the receipt if you want it | not core",
   ].join("\n")],
   ["Pay by card: end", card.end, "All done. You paid."],
@@ -184,6 +188,31 @@ const cases = [
     const p = cleanProgress(JSON.parse('{"__proto__": {"wash-hands": 5}, "toString": 2}'));
     return `${JSON.stringify(p)} ${Object.hasOwn(p, "toString")} ${Object.getPrototypeOf(p) === Object.prototype}`;
   })(), `${JSON.stringify({ "wash-hands": 0, "return-tray": 0, "pay-card": 0 })} false true`],
+
+  // ---- a shared iPad: 30 minutes left alone, and the deck starts again ----
+  ["FORGET_AFTER_MS is 30 minutes", FORGET_AFTER_MS, 30 * 60 * 1000],
+  ["isStale: just now, 29:59 ago — no", [isStale(NOW, NOW), isStale(NOW - 1000, NOW), isStale(NOW - MIN30 + 1, NOW)]
+    .join(), "false,false,false"],
+  ["isStale: 30:00 ago, 3 hours, yesterday — yes", [isStale(NOW - MIN30, NOW), isStale(NOW - 3 * 60 * MIN, NOW),
+    isStale(NOW - 24 * 60 * MIN, NOW)].join(), "true,true,true"],
+  ["isStale: a little in the future (the clock nudged) — no", isStale(NOW + 5000, NOW), false],
+  ["isStale: far in the future (the clock was changed) — yes", isStale(NOW + MIN30, NOW), true],
+  ["isStale: nothing saved, or junk — yes", [undefined, null, "123", NaN, Infinity, {}].map((t) => isStale(t, NOW))
+    .join(), "true,true,true,true,true,true"],
+  ["resumeAt: touched 10 minutes ago keeps the step", resumeAt(wash, 4, NOW - 10 * MIN, NOW), 4],
+  ["resumeAt: touched 30 minutes ago is step 1", resumeAt(wash, 4, NOW - MIN30, NOW), 0],
+  ["resumeAt: All done, 45 minutes ago, is step 1", resumeAt(wash, 7, NOW - 45 * MIN, NOW), 0],
+  ["resumeAt: saved by a version with no time is step 1", resumeAt(wash, 4, undefined, NOW), 0],
+  ["resumeAt: recent, but junk `at`, is cleaned", [resumeAt(wash, 99, NOW, NOW), resumeAt(wash, "x", NOW, NOW)].join(),
+    "7,0"],
+  ["cleanTouched: real decks with a finite time; the rest dropped", JSON.stringify(cleanTouched({
+    "wash-hands": NOW, "pay-card": "soon", "return-tray": Infinity, gone: NOW })), JSON.stringify({ "wash-hands": NOW })],
+  ["cleanTouched: junk", [null, undefined, [NOW], "x", 5].map((t) => JSON.stringify(cleanTouched(t))).join(),
+    "{},{},{},{},{}"],
+  ["cleanTouched: a __proto__ key reaches nothing", (() => {
+    const t = cleanTouched(JSON.parse('{"__proto__": {"wash-hands": 5}, "toString": 2}'));
+    return `${JSON.stringify(t)} ${Object.getPrototypeOf(t) === Object.prototype}`;
+  })(), "{} true"],
 
   // ---- the adult's setting ----
   ["cleanFewer: real decks, once each", cleanFewer(["pay-card", "nope", "pay-card", 7, "wash-hands"]).join(),

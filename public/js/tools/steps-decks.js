@@ -1,7 +1,8 @@
 // Steps: the decks, and how to move through one. Plain data and pure
 // functions, no DOM — steps.js shows them, and tools/test-steps.mjs pins
 // both (every picture is in pictures.js, every deck has at least 3 core
-// steps, no step has more than 8 words, the moves below).
+// steps, no step has more than 8 words, the moves below, the 30-minute
+// start again).
 //
 // A deck: { id, name, picture, end, steps }
 //   id       its address (#steps?deck=<id>) and its key in the saved progress
@@ -20,6 +21,10 @@
 // counts in the whole deck, not in the steps shown, so turning "Fewer steps"
 // on or off never sends the student to another part of the routine: a step
 // that is no longer shown shows as the next one that is.
+//
+// With it is saved when the deck was last opened or moved (`touched`): a deck
+// left alone for 30 minutes opens at its first step again (resumeAt), for
+// the next student on a shared iPad.
 
 const step = (picture, words, { core = true, open = null } = {}) =>
   Object.freeze({ picture, words, core, ...(open && { open: Object.freeze(open) }) });
@@ -36,7 +41,7 @@ export const DECKS = Object.freeze([
       step("soap", "Put on soap"),
       step("rub-hands", "Rub for 20 seconds"),
       step("rinse", "Rinse off the soap"),
-      step("tap-water", "Turn off the tap", { core: false }),
+      step("tap-off", "Turn off the tap", { core: false }),
       step("dry-hands", "Dry your hands"),
     ],
   },
@@ -52,7 +57,7 @@ export const DECKS = Object.freeze([
       step("tray", "Put tissues and bones on the tray", { core: false }),
       step("carry-tray", "Carry the tray with two hands"),
       step("tray-return", "Find the tray return"),
-      step("tray-return", "Halal tray? Use the halal side"),
+      step("tray-return-halal", "Halal tray? Use the halal side"),
       step("tray-return", "Put the tray in"),
       step("wipe-table", "Throw away table litter", { core: false }),
     ],
@@ -69,8 +74,8 @@ export const DECKS = Object.freeze([
       }),
       step("check-amount", "Look at the price on the screen"),
       step("tap-card", "Tap your card on the reader"),
-      step("card-reader", "Wait for the beep or the green tick"),
-      step("travel-card", "Take your card back"),
+      step("reader-tick", "Wait for the beep or the green tick"),
+      step("bank-card", "Take your card back"),
       step("receipt", "Take the receipt if you want it", { core: false }),
     ],
   },
@@ -135,6 +140,34 @@ export function stepAfter(deck, fewer, at) {
 export function stepBefore(deck, fewer, at) {
   const { shown, place } = where(deck, fewer, at);
   return place > 0 ? shown[place - 1] : shown[0] ?? 0;
+}
+
+// A shared iPad: a deck left alone this long opens at its first step again,
+// so the next student doesn't start in the middle of someone else's routine.
+export const FORGET_AFTER_MS = 30 * 60 * 1000;
+
+// Whether a deck last touched (opened, or a step moved) at `touched` — ms
+// since 1970, as saved — has been left alone long enough to start again at
+// `now`. Nothing saved (a version before this), or junk: yes. A time more
+// than that far in the future (the clock was changed since): yes too, or the
+// deck could keep its step for days.
+export function isStale(touched, now) {
+  if (typeof touched !== "number" || !Number.isFinite(touched)) return true;
+  return Math.abs(now - touched) >= FORGET_AFTER_MS;
+}
+
+// The step a deck opens at: its saved `at`, or the first step once it has
+// been left alone for FORGET_AFTER_MS.
+export function resumeAt(deck, at, touched, now) {
+  return isStale(touched, now) ? 0 : cleanAt(deck, at);
+}
+
+// Saved times, { <deck id>: ms }, as usable ones: real decks, finite numbers;
+// everything else dropped (a deck with no time is stale).
+export function cleanTouched(saved) {
+  const from = saved && typeof saved === "object" && !Array.isArray(saved) ? saved : {};
+  return Object.fromEntries(DECKS.filter((deck) => Object.hasOwn(from, deck.id) &&
+    typeof from[deck.id] === "number" && Number.isFinite(from[deck.id])).map((deck) => [deck.id, from[deck.id]]));
 }
 
 // Saved progress, { <deck id>: at }, as a usable one: every deck, each at a

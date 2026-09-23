@@ -484,6 +484,26 @@ export const DRAWINGS = {
     g({ transform: "rotate(-18 82 30)" }, card(52, 8, 60, 38)),
   ) },
 
+  // The card reader again, no card now: its screen shows a big green tick,
+  // the sign that paying worked (Pay by card: wait for the tick).
+  "reader-tick.svg": { parts: [], draw: async () => svg(
+    rect(26, 6, 76, 118, C.grey800, 13),
+    rect(26, 6, 72, 114, C.grey700, 12),
+    rect(34, 15, 56, 52, "#e8f5e9", 6),
+    line("M44 42l12 12 24-26", C.green, 10),
+    ...[0, 1, 2].flatMap((r) => [0, 1, 2].map((c) => rect(38 + c * 17, 76 + r * 14, 13, 9, c === 2 && r === 2 ? C.green : C.grey400, 3))),
+  ) },
+
+  // A plain payment card: blue, a gold chip, contactless waves. No bank's
+  // or network's name, colours or artwork, and no bus (that is the travel
+  // card): "My card", and taking it back after paying.
+  "bank-card.svg": { parts: [], draw: async () => svg(
+    card(10, 30, 108, 68),
+    rect(22, 46, 26, 20, "#ffca28", 4),
+    line("M22 56h9M39 56h9M35 46v6M35 60v6", "#f9a825", 2.2, { "stroke-linecap": "butt" }),
+    rect(31, 52, 8, 8, "#ffe082", 2),
+  ) },
+
   // A phone's camera scanning a stall's QR code: the dark camera view, the
   // code on its white sign, and the scanner's corner brackets around it.
   // (At a stall you scan the stall's code, not show your own.) The pattern
@@ -519,6 +539,36 @@ export const DRAWINGS = {
     g({ transform: "translate(0 38) scale(.46)" }, ...trayWithFood()),
     path("M8 44h30v-9l18 15-18 15v-9H8z", C.green),
   ) },
+
+  // A tray return with two sides: the halal side on the left, marked with a
+  // green band and a tray sign and edged in green, the other side plain. A
+  // tray and an arrow go into the halal side. No words and no religious
+  // symbol: at hawker centres and food courts the halal side is the one
+  // marked green, so green, the tray sign and the arrow say it.
+  "tray-return-halal.svg": { parts: [], draw: async () => {
+    const slot = (x, y) => rect(x + 3, y, 31, 5, TRAY.rim, 2) + ellipse(x + 11, y - 2.5, 6, 2.5, C.white) +
+      path(`M${x + 20} ${y - 4.5}c0 3 2 4.5 5 4.5s5-1.5 5-4.5z`, C.grey200);
+    return svg(
+      // the plain side
+      rect(84, 6, 40, 116, C.bg100, 4),
+      ...[48, 70, 100].map((y) => slot(86, y)),
+      // the halal side: pale green inside, green posts
+      rect(46, 6, 42, 116, "#c8e6c9", 4),
+      ...[48, 100].map((y) => slot(48, y)),
+      rect(46, 6, 5, 116, C.green, 2.5), rect(83, 6, 5, 116, C.green, 2.5),
+      rect(119, 6, 5, 116, C.bg300, 2.5),
+      rect(46, 116, 78, 6, C.bg400, 3),
+      // the band along the top, green over the halal side, grey over the other
+      rect(86, 6, 38, 26, C.bg300, 4),
+      rect(46, 6, 42, 26, C.green, 4),
+      // the tray sign on the band
+      rect(54, 12, 26, 15, "#ffffff", 4),
+      rect(57, 17, 20, 7, C.green, 2), rect(59, 15.5, 16, 5, C.greenLight, 1.5),
+      // a tray going in
+      g({ transform: "translate(0 58) scale(.36)" }, ...trayWithFood()),
+      path("M4 58h26v-8l16 13-16 13v-8H4z", C.green),
+    );
+  } },
 
   // A kopi cup on its saucer: thick white china with green leaves.
   "kopi.svg": { parts: [], draw: async () => svg(
@@ -606,6 +656,17 @@ export const DRAWINGS = {
     circle(60, 104, 3, C.skyMid), circle(90, 103, 3.5, C.skyMid), circle(96, 96, 2.5, C.skyMid), circle(54, 97, 2.5, C.skyMid),
     await part("emoji_u1faf3.svg", { x: 20, y: -2, s: 0.4, flip: true }),
     line("M64 12c8 1 13 5 15 11", C.bg400, 3.5), path("M83 22l-4 6-4-6z", C.bg400),
+  ) },
+
+  // The same hand on the same lever, turning it the other way: the tap is
+  // off, no water runs, the basin is dry. (The last tap step of washing
+  // hands; beside Turn on tap, only the water and the arrow differ.)
+  "tap-off.svg": { parts: ["emoji_u1faf3.svg"], draw: async () => svg(
+    path("M36 102h88c0 12-12 20-26 20H62c-14 0-26-8-26-20z", C.grey100),
+    path("M36 102h88c0 3-1 6-2.5 8.5h-83C37 108 36 105 36 102z", C.bg100),
+    tap(6, 30),
+    await part("emoji_u1faf3.svg", { x: 20, y: -2, s: 0.4, flip: true }),
+    line("M80 34c6-5 7-14 2-21", C.bg400, 3.5), path("M76 12l9-5 0 10z", C.bg400),
   ) },
 
   // Hands under running water: washing, and rinsing (the same picture).
