@@ -194,7 +194,7 @@ or the class iPad, offline too.
 | Who | Signs in? | Can do |
 |---|---|---|
 | **Admin** (the owner) | Yes (Google) | Approve or decline each coach **for each class**, after checking they really are a trustworthy coach of that class; suspend a coach; take down a page; set monthly limits |
-| **Coach** | Yes (Google, any Google account — Gmail or a Google account made on a school address) | Ask for a new class, or ask to join a colleague's class; once approved, write and publish that class's page, upload pictures, give AI instructions, print the class QR code |
+| **Coach** | Yes (Google, any Google account — Gmail or a Google account made on a school address) | Ask for a new class, or ask to join a colleague's class; once approved, write and publish that class's page, upload pictures, add YouTube videos, make short AI videos, give AI instructions, print the class QR code |
 | **Learner** | **Never** | Subscribe once by scanning the class QR code (or typing its code on the set-up page); open **My class** to see the **latest published page only** |
 
 1. A coach signs in, fills in who they are (name, organisation, how the admin can check), and asks for a class
@@ -209,10 +209,17 @@ or the class iPad, offline too.
    (resized in the coach's browser to at most 1600 px, which also drops EXIF and GPS) and placed in the page as
    `![words](pictures/<id>.jpg)`.
 5. **AI instructions.** A box under the editor — "Tell the helper what to write or change" — sends the instruction, the
-   current markdown and the shelf's picture list to a server function, which returns a new version of the markdown. It
-   replaces the editor's text as a draft (Undo brings the old text back). The helper writes to the rules in section 5
-   (short literal sentences, plain Singapore English, one idea per screen, pictures only from the shelf, no names of
-   learners). **Nothing reaches learners until the coach presses Publish.**
+   current markdown and the shelf's picture list to a server function. **One Gemini Flash call decides** what to do and
+   answers in a fixed shape: *write* (a new version of the markdown, which replaces the editor's text as a draft — Undo
+   brings the old text back), *ask* (up to three clarifying questions, each with tappable suggested answers), or
+   *decline* (the request is not about school, learning or daily life — said kindly, in one line). Every answer starts
+   with "I understood: …", a clear restatement of the instruction, so a badly written instruction is visibly rewritten
+   and a misunderstanding is caught at once. The helper writes to the rules in section 5 (short literal sentences,
+   plain Singapore English, one idea per screen, pictures only from the shelf, no names of learners). Sensitive
+   daily-living topics — puberty, periods, toileting, body safety, grief — are in scope and written factually and
+   gently. **Nothing reaches learners until the coach presses Publish.** A separate cheaper "router" model in front
+   was considered and rejected: it would save well under a cent per request, add a second call's delay, and misjudge
+   exactly those sensitive but legitimate topics more often.
 6. **Publish** makes the page the class's latest content; learners see only that one. The coach keeps other pages as
    drafts to publish later.
 
@@ -228,7 +235,9 @@ learners and decide what to publish; there is no consent tick box.
 | Plain lines, `**bold**`, `*italic*` | Large, short paragraphs |
 | `- item`, `1. item` | Lists with big bullets or numbers |
 | `![words](pictures/<id>.jpg)` | A picture from the class's shelf, full width (the words are its description for screen readers) |
-| `[words](https://…)` | One big button naming the site; opens only on a tap; https only |
+| `![words](videos/<id>.mp4)` | A short video the coach made with AI and approved; never plays by itself |
+| A YouTube link on its own line, e.g. `[How to wash hands](https://youtu.be/<id>)` | The video, inside the page: a card saying "Watch on YouTube (needs the internet)"; nothing is loaded from YouTube until the learner taps it; then YouTube's privacy-enhanced player (`youtube-nocookie.com`). Public and unlisted videos play; private ones don't. |
+| `[words](https://…)` (any other link) | One big button naming the site; opens only on a tap; https only |
 | `---` | **Next screen**: the page is shown one screen at a time with big Next and Back buttons |
 
 Anything else is shown as plain text. The learner app renders this subset with its own small parser straight into
@@ -242,14 +251,20 @@ that isn't on the class's shelf is simply not shown.
   Storage bucket in the same region. Firebase Authentication itself runs in US data centres (coaches' and the admin's
   sign-in data only).
 - **AI instructions** go through one Cloud Function in asia-southeast1. It checks that the caller is an approved,
-  unsuspended coach of that class, counts their instructions for the month against a limit the admin sets (default 200
-  a month — each is a fraction of a cent, the limit is there to stop misuse), calls Gemini (`gemini-3.7-flash`, the
-  model whiz.coach uses, through Vertex AI with the `@google/genai` SDK), and checks the answer before returning it
-  (only the allowed markdown, only pictures on the shelf, a length limit). Like whiz.coach, it uses Gemini's `global`
-  endpoint, so the model may run outside Singapore; what it sees is the coach's instruction and page, never anything
-  about learners.
-- A second Hosting site for the coach app (`simplify-coach`, to be served at coach.simplify.whiz.coach). The coach site
-  loads the Firebase SDK; the learner app does not — it reads the class with one plain HTTPS request.
+  unsuspended coach of that class, counts the request against the coach's monthly limits, calls Gemini through Vertex
+  AI with the `@google/genai` SDK, and checks the answer before returning it (only the allowed markdown, only pictures
+  and videos on the shelf, a length limit). **Limits are separate, per coach per month, and set by the admin:
+  200 Gemini Flash requests** (writing and video planning; each a fraction of a cent) and **5 videos** (Gemini Omni;
+  about US$0.80 each). Both models run on Vertex AI's `global` endpoint (checked on this project on 2026-09-23:
+  `gemini-3.7-flash` answers there and not in `us-central1`), so they may run outside Singapore; what they see is the
+  coach's instruction, page and video request, never anything about learners. Finished videos are stored in the
+  Singapore bucket.
+- The coach app is part of the same site but kept apart from the learner app: **https://simplify.whiz.coach/coach/**,
+  with its own guide at **https://simplify.whiz.coach/coach/guide.html**. Nothing a learner sees links to either (not
+  the app, not the learner guide, not the QR code); coach pages are not in the learner app's offline cache and ask
+  search engines not to index them. Because they share an origin with the learner app, a coach's sign-in lasts only
+  for the browser tab (class iPads are shared) and there is a visible Sign out. The coach app loads the Firebase SDK
+  from its own folder; the learner app does not — it reads the class with one plain HTTPS request.
 - Built on its own, not inside the whiz.coach platform: that platform's data is in the US, its classes need signed-in
   learners, its coach role can read the user directory, and its security rules deploy as one large shared file.
   Ideas reused from it: Google sign-in, admin-switched roles, browser-side photo resizing, image URLs restricted to the
@@ -264,9 +279,12 @@ that isn't on the class's shelf is simply not shown.
 | `classCoaches/{code}` — the class's coach uids | its coaches, admins | admins |
 | `classes/{code}/pages/{id}` — drafts and older pages | its coaches, admins | its coaches |
 | `classes/{code}/pictures/{id}` — the picture shelf (words, file) | its coaches, admins | its coaches |
-| `usage/{uid}_{month}` — AI instructions used this month | that coach, admins | the Cloud Function only |
-| `config/limits` — monthly limits | admins, the Cloud Function | admins |
+| `classes/{code}/videos/{id}` — the video shelf (request, status: rendering / ready / approved / failed) | its coaches, admins | the Cloud Functions only |
+| `usage/{uid}_{month}` — Flash requests and videos used this month | that coach, admins | the Cloud Functions only |
+| `config/limits` — monthly limits (200 Flash requests, 5 videos) | admins, coaches, the Cloud Functions | admins |
 | Storage `classes/{code}/pictures/{id}.jpg` | anyone with the exact path (no listing) | that class's approved coaches; images only, size-capped |
+| Storage `classes/{code}/video-drafts/{id}.mp4` | the class's coaches | the Cloud Functions only |
+| Storage `classes/{code}/videos/{id}.mp4` (approved) | anyone with the exact path (no listing) | the Cloud Functions only |
 
 ### Learner app changes
 
@@ -274,7 +292,11 @@ that isn't on the class's shelf is simply not shown.
   8:05"; offline shows the saved copy (pictures included); nothing yet shows "Nothing from your coach yet" — never an
   error.
 - The app sends only the class code (and, like any website, the device's internet address) — nothing a learner types
-  or taps. The CSP gains `connect-src` for Firestore and Storage and `img-src blob:`; everything else stays offline.
+  or taps. When a learner taps a YouTube video, YouTube (Google) receives the device's address and what is watched;
+  nothing is loaded from YouTube before that tap. The CSP gains `connect-src` for Firestore and Storage, `img-src` and
+  `media-src blob:`, and `frame-src https://www.youtube-nocookie.com`; everything else stays offline. The YouTube frame
+  sends the site's origin as its referrer (`referrerpolicy="strict-origin-when-cross-origin"` on the frame), because
+  YouTube refuses embeds that arrive with no referrer and the rest of the site sends none.
 - The privacy page and README change from "nothing is sent anywhere" to "nothing leaves the device unless My class is
   set up, and then only the class code".
 
@@ -284,40 +306,47 @@ that isn't on the class's shelf is simply not shown.
 |---|---|
 | A coach account is taken over and publishes something harmful | Admin approval per class; a coach reaches only their own classes; admin can suspend a coach and take a page down; learners see only the latest page, so a bad page is replaced by the next one; coaches asked to turn on 2-Step Verification |
 | The AI writes something wrong or unsuitable | It only ever produces a draft in the coach's editor; the coach reads it and presses Publish; the function strips anything outside the markdown subset and any picture not on the shelf |
-| AI or storage costs on Blaze | A monthly AI limit per coach, checked on the server; learner devices check for a new page at most on opening and every 10 minutes; pictures cached on the device; a budget alert (it warns, it does not cap) |
+| AI or storage costs on Blaze | Separate monthly limits per coach, checked on the server (200 Flash requests, 5 videos); a video is only rendered from a plan that passed the Flash check and that the coach approved; learner devices check for a new page at most on opening and every 10 minutes; pictures and videos cached on the device; a budget alert at S$50 a month (it warns, it does not cap) |
+| YouTube shows ads, suggestions or unrelated videos after a clip | The privacy-enhanced player with related videos limited to the same channel; nothing loads until a tap; coaches choose the videos; the player sits inside the page, so 🏠 still leads back |
 | The QR code is photographed and shared | A new code can be issued (devices set up again); the public warning keeps private information out of pages |
 | iPad: the QR opens Safari, whose data is separate from the home-screen app | The code is printed under the QR and can be typed on the set-up page inside the app |
 | School-managed devices block Google's APIs | Ask the school to allow `firestore.googleapis.com` and `firebasestorage.googleapis.com` |
 | Google sign-in fails inside WhatsApp or Telegram's built-in browser | The coach guide says to open the coach link in Chrome or Safari |
 | PDPA | Holding a school's content makes the owner its data intermediary: a short written agreement with each organisation (purpose, Singapore storage, retention, deletion on request, breach notice). Pilot with an SSA-run SPED school (MOE schools follow public-sector rules). |
 
-### Future: short educational videos with Gemini Omni
+### Short educational videos with Gemini Omni
 
-Planned, not built. A coach asks for a short clip ("hands being washed at a sink, step by step") and places it in a
-page like a picture, `![words](videos/<id>.mp4)`.
+A coach asks for a short clip ("hands being washed at a sink, step by step") and places it in a page like a picture,
+`![words](videos/<id>.mp4)`.
 
-- **Model.** Gemini Omni Flash (`gemini-omni-flash-preview`, a preview model) through the Vertex AI Interactions API
-  in `@google/genai`, the way whiz.coach has wired it (`functions/src/services/omni-video.ts` there): 3–10-second
-  clips, about US$0.10 per second of video (so about US$1 a clip), `background` mode so no function waits on a
-  render. As a preview it is served from `us-central1` only: generation runs in the US, and the finished clip is
-  stored in the class's Singapore bucket. whiz.coach uses Omni for *edits* and keeps it switched off, so whether it
-  generates a clip from text alone on this project must be checked before building; Veo 3.1 Fast is the fallback for
-  longer clips (US$6–18 a render in whiz.coach's measurements).
-- **Credits.** Each coach gets a monthly allowance of video seconds set by the admin (for example 60 seconds — about
-  six clips, about US$6). The function reserves the seconds before it starts a render and returns them if it fails;
-  a ledger per coach per month (`credits/{uid}_{month}`); the coach sees what is left before asking.
-- **Two checks before learners see anything**, borrowed from whiz.coach and made simpler: the coach sees the exact
-  request and its cost in credits before spending them, and a finished clip stays private until the coach approves
-  it; only then can it go on a published page.
-- **For learners.** No autoplay and no sound until tapped; big play and replay buttons; clips cached for offline use
-  like pictures; the CSP gains `media-src` for the bucket. People in clips are generic, never a real learner's
-  likeness, and the same public warning applies.
+1. **Plan (free of video credits).** The coach describes the clip. One Gemini Flash call — the same write / ask /
+   decline shape as the markdown helper — turns it into an exact video request: one calm, continuous shot of
+   3–10 seconds, realistic, no text, captions, logos or brands, people generic (never a real person's likeness,
+   hands-and-objects framing preferred), no music or sudden sounds. It counts as one of the 200 Flash requests.
+2. **Approve and make (one of the 5 video credits).** The coach sees the exact request and that it will use one of
+   their 5 videos this month, then presses Make. The function reserves the credit, then asks Gemini Omni Flash
+   (`gemini-omni-flash-preview`, a preview model) through the Vertex AI Interactions API: `global` location,
+   `response_format` = video, inline delivery, 16:9, 720p, the planned duration, `video_config.task` =
+   `text_to_video`, in the background. A failed render returns the credit.
+3. **Check, then approve.** The finished clip is private to the class's coaches until one of them approves it; only
+   then can it go on a published page. Discarding a finished clip does not return the credit (it was paid for).
+
+Checked on this project on 2026-09-23: an 8-second text-to-video request took about 2 minutes to start and 45 seconds
+more to finish, and returned a 1280×720, 24 fps H.264 MP4 with an AAC audio track (3.2 MB) inline — realistic hands
+washing at a sink, no faces, text or logos. The same request sent to `us-central1`, or with the older
+`response_modalities` field instead of `response_format`, failed with a generic 500. whiz.coach wires the same model
+for video *edits* only and keeps it switched off; Simplify is the first to use it for generation. Cost is about
+US$0.10 per second of video (whiz.coach's measurement), so about US$0.80 a clip and at most about US$4 per coach a
+month at 5 videos.
+
+For learners: no autoplay; a big play button; the clip is cached for offline use like pictures; the same public warning
+applies.
 
 ### Put off
 
 Microsoft sign-in (if a school needs it), App Check, several classes per device, content for one learner, read
 receipts or analytics, learner replies, push notifications, a parent view, a class-wide tool list that sets each
-device's menu, and the videos above.
+device's menu, video edits and longer videos (Veo), portrait (9:16) videos.
 
 ## 9. Technical notes for adding tools
 
@@ -365,7 +394,12 @@ device's menu, and the videos above.
 | 2026-09-23 | **Standalone** in `simplify-special`, not inside the whiz.coach platform | Singapore data location, learners without accounts, narrow coach permissions, separate rules and deploys |
 | 2026-09-23 | Coach content is **one simple markdown page**: a markdown editor, pictures uploaded to the class and placed in the page, `---` for the next screen; learners see the latest published page | The coach interface stays very simple — the opposite of whiz.coach's generation pipeline |
 | 2026-09-23 | **AI instructions** create or update the markdown (Gemini through a Cloud Function that checks the coach and a monthly limit); the coach reviews every draft and publishes | Coaches say what they want in their own words; nothing reaches learners without the coach |
-| Future | **Short educational videos with Gemini Omni**, with a monthly video-credit allowance per coach | Section 8, "Future" |
+| 2026-09-23 | **Separate monthly AI limits per coach: 200 Gemini Flash requests** (markdown and video planning) **and 5 Gemini Omni videos** (first set at 20, lowered to 5 because video is expensive) | Video costs about 100 times more than a markdown request |
+| 2026-09-23 | **Short educational videos with Gemini Omni are built now**, planned by Flash and approved by the coach before a credit is spent, private until approved | Verified on the project: text-to-video works on the `global` endpoint |
+| 2026-09-23 | **One Flash call decides** write / ask / decline, always with "I understood: …"; no separate Flash-Lite router | Same protection with one call; a cheaper router saves under a cent, adds delay, and misjudges sensitive daily-living topics |
+| 2026-09-23 | The coach app and coach guide live at **/coach/** and **/coach/guide.html** on the same site; **learners have no links to them** | Keep coach and learner interfaces separate on one domain |
+| 2026-09-23 | Coaches can add **public and unlisted YouTube videos**, played inside the learner's page (tap to load, privacy-enhanced player) | Lots of good teaching video already exists |
+| 2026-09-23 | Project docs move to the **Open Knowledge Format** (OKF 0.2, as in the whiz.coach repository) | Future work starts from docs that describe what exists |
 
 ## Sources
 
