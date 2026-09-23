@@ -1,1 +1,488 @@
-/* Now and next (js/tools/now-next.js): styles go here, each inside #tool-now-next. */
+/* Now and next (js/tools/now-next.js): each rule inside #tool-now-next.
+   Blue is Now (the frame, the tag), green is done (✔ Done, All done),
+   orange is Changed (its own picture's colour); every one of them also has
+   a picture or a sign and words, never colour alone. Text is AAA: white on
+   #0d47a1 8.6:1, #7c2d12 on #fff3e0 8.5:1, #1b5e20 on #e8f5e9 7:1; white on
+   #2e7d32 (5.1:1) only at 32px bold, large text. */
+
+/* ---------- the two views' switches ---------- */
+#tool-now-next .nn-views {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 0 0 16px;
+}
+#tool-now-next .nn-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: 64px;
+  padding: 6px;
+  font-family: inherit;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.15;
+  color: var(--color-text);
+  background: #fff;
+  border: 3px solid var(--color-border);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+#tool-now-next .nn-view img {
+  display: block;
+  width: 32px;
+  height: 32px;
+}
+#tool-now-next .nn-view:active { background: #e3f2fd; }
+/* the view on screen: tinted, a dark blue ring — the same "picked" as the
+   picture picker's, so the pictures stay clear on it */
+#tool-now-next .nn-view[aria-pressed="true"] {
+  color: var(--color-primary-dark);
+  background: #e3f2fd;
+  border-color: var(--color-primary-dark);
+  box-shadow: 0 0 0 3px var(--color-primary-dark);
+}
+
+/* ---------- shared by the cards ---------- */
+#tool-now-next .nn-pic { flex: none; }
+#tool-now-next .nn-pic img {
+  display: block;
+  object-fit: contain;
+}
+#tool-now-next .nn-words {
+  margin: 0;
+  font-weight: 800;
+  line-height: 1.15;
+  /* a long word breaks rather than running off the card */
+  overflow-wrap: anywhere;
+}
+/* "Now" on the current card: white on dark blue */
+#tool-now-next .nn-tag {
+  flex: none;
+  padding: 4px 16px;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: #fff;
+  background: var(--color-primary-dark);
+  border-radius: 999px;
+}
+/* the plan changed: the Changed picture and word, on the card */
+#tool-now-next .nn-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 12px 3px 6px;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: #7c2d12;
+  background: #fff3e0;
+  border: 2px solid #b45309;
+  border-radius: 999px;
+}
+#tool-now-next .nn-badge img {
+  display: block;
+  width: 26px;
+  height: 26px;
+}
+/* a round button with a picture in it (⏳) */
+#tool-now-next .round-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-family: inherit;
+}
+#tool-now-next .round-btn img {
+  display: block;
+  width: 34px;
+  height: 34px;
+}
+#tool-now-next .round-btn:disabled { opacity: 0.35; }
+
+/* ---------- Now and next ---------- */
+/* No cards yet: one big ＋ Add where Now will be */
+#tool-now-next .nn-add-first {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  min-height: clamp(200px, 36vh, 360px);
+  min-height: clamp(200px, 36svh, 360px);
+  font-family: inherit;
+  font-size: 30px;
+  font-weight: 800;
+  color: var(--color-primary-dark);
+  background: #f5f9ff;
+  border: 4px dashed var(--color-primary);
+  border-radius: 24px;
+  cursor: pointer;
+}
+#tool-now-next .nn-add-first:active { background: #e3f2fd; }
+#tool-now-next .nn-plus {
+  font-size: 80px;
+  line-height: 1;
+}
+
+/* Now: big, in a blue frame; its picture as big as the screen allows while
+   Done and Next still fit under it on a phone */
+#tool-now-next .nn-now {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px 16px;
+  text-align: center;
+  background: #f5f9ff;
+  border: 6px solid var(--color-primary);
+  border-radius: 24px;
+}
+#tool-now-next .nn-now:focus,
+#tool-now-next .nn-all-done:focus { outline: none; }
+#tool-now-next .nn-top {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 56px;
+}
+#tool-now-next .nn-wait { margin-left: auto; }
+#tool-now-next .nn-now .nn-pic img {
+  width: clamp(96px, 20vh, 220px);
+  height: clamp(96px, 20vh, 220px);
+  width: clamp(96px, 20svh, 220px);
+  height: clamp(96px, 20svh, 220px);
+}
+#tool-now-next .nn-now .nn-words { font-size: 36px; }
+#tool-now-next .nn-now .nn-words.is-long { font-size: 30px; }
+
+/* ✔ Done: the one big button, under Now */
+#tool-now-next .nn-done {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 80px;
+  margin: 12px 0;
+  font-family: inherit;
+  font-size: 32px;
+  font-weight: 800;
+  color: #fff;
+  background: #2e7d32;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+#tool-now-next .nn-done:active { background: #1b5e20; }
+
+/* Next: smaller, outlined, the picture beside the words */
+#tool-now-next .nn-next {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+  background: #fff;
+  border: 3px solid var(--color-border);
+  border-radius: var(--radius);
+}
+#tool-now-next .nn-next .nn-pic img {
+  width: 84px;
+  height: 84px;
+}
+#tool-now-next .nn-next-text {
+  flex: 1;
+  min-width: 0;
+}
+#tool-now-next .nn-next-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+/* "Next": quiet grey, not the blue of Now */
+#tool-now-next .nn-next .nn-tag {
+  padding: 2px 14px;
+  color: var(--color-muted);
+  background: #fff;
+  border: 2px solid var(--color-border);
+}
+#tool-now-next .nn-next .nn-words { font-size: 28px; }
+#tool-now-next .nn-next .nn-words.is-long { font-size: 23px; }
+
+/* After the last card: one calm green card */
+#tool-now-next .nn-all-done {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 28px 12px;
+  text-align: center;
+  color: var(--color-yes-text);
+  background: var(--color-yes-bg);
+  border: 6px solid #2e7d32;
+  border-radius: 24px;
+}
+#tool-now-next .nn-all-done .nn-pic img {
+  width: clamp(96px, 20vh, 200px);
+  height: clamp(96px, 20vh, 200px);
+  width: clamp(96px, 20svh, 200px);
+  height: clamp(96px, 20svh, 200px);
+}
+#tool-now-next .nn-all-done .nn-words { font-size: 40px; }
+
+/* an iPad upright has room: Now and Next a size up */
+@media (min-height: 900px) {
+  #tool-now-next .nn-now .nn-pic img {
+    width: clamp(96px, 26vh, 280px);
+    height: clamp(96px, 26vh, 280px);
+    width: clamp(96px, 26svh, 280px);
+    height: clamp(96px, 26svh, 280px);
+  }
+  #tool-now-next .nn-now .nn-words { font-size: 40px; }
+  #tool-now-next .nn-now .nn-words.is-long { font-size: 34px; }
+  #tool-now-next .nn-next .nn-pic img {
+    width: 104px;
+    height: 104px;
+  }
+  #tool-now-next .nn-next .nn-words { font-size: 32px; }
+  #tool-now-next .nn-next .nn-words.is-long { font-size: 26px; }
+}
+
+/* ---------- My day ---------- */
+#tool-now-next .nn-strip {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* A card done: small, grey, ✔ — one button, back to it */
+#tool-now-next .nn-back {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 60px;
+  padding: 6px 12px 6px 8px;
+  font-family: inherit;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: left;
+  color: var(--color-muted);
+  background: #f5f5f5;
+  border: 2px solid #bdbdbd;
+  border-radius: 14px;
+  cursor: pointer;
+}
+#tool-now-next .nn-back:active { background: #e3f2fd; }
+#tool-now-next .nn-tick {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  font-size: 20px;
+  line-height: 36px;
+  text-align: center;
+  color: #fff;
+  background: #2e7d32;
+  border-radius: 50%;
+}
+#tool-now-next .nn-back .nn-pic img {
+  width: 40px;
+  height: 40px;
+}
+#tool-now-next .nn-back .nn-words {
+  flex: 1;
+  min-width: 0;
+  font-weight: 700;
+}
+#tool-now-next .nn-back .nn-words.is-long { font-size: 18px; }
+#tool-now-next .nn-mark {
+  flex: none;
+  margin-left: auto;
+}
+#tool-now-next .nn-mark img {
+  display: block;
+  width: 28px;
+  height: 28px;
+}
+
+/* A card still to do: the card on top (✕ at its corner), ↑ ↓ Changed under */
+#tool-now-next .nn-live {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 10px;
+  padding: 10px 12px 12px;
+  background: #fff;
+  border: 3px solid var(--color-border);
+  border-radius: var(--radius);
+}
+#tool-now-next .nn-face {
+  grid-area: 1 / 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  min-height: 64px;
+  padding: 4px;
+  font-family: inherit;
+  font-size: 24px;
+  text-align: left;
+  color: var(--color-text);
+  background: none;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+}
+#tool-now-next .nn-face:active { background: #e3f2fd; }
+#tool-now-next .nn-face .nn-pic img {
+  width: 64px;
+  height: 64px;
+}
+#tool-now-next .nn-face .nn-words {
+  flex: 1;
+  min-width: 0;
+}
+#tool-now-next .nn-face .nn-words.is-long { font-size: 21px; }
+#tool-now-next .nn-remove {
+  grid-area: 1 / 2;
+  align-self: start;
+  color: var(--color-no-text);
+  border-color: var(--color-no-text);
+}
+#tool-now-next .nn-controls {
+  grid-area: 2 / 1 / 3 / 3;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Now in the strip: big and blue, its tag above it */
+#tool-now-next .is-now .nn-live {
+  padding: 10px 12px 14px;
+  background: #f5f9ff;
+  border: 6px solid var(--color-primary);
+  border-radius: 22px;
+}
+#tool-now-next .is-now .nn-tag {
+  grid-area: 1 / 1;
+  justify-self: start;
+}
+#tool-now-next .is-now .nn-face {
+  grid-area: 2 / 1 / 3 / 3;
+  font-size: 30px;
+}
+#tool-now-next .is-now .nn-face .nn-pic img {
+  width: 104px;
+  height: 104px;
+}
+#tool-now-next .is-now .nn-face .nn-words.is-long { font-size: 25px; }
+#tool-now-next .is-now .nn-controls { grid-area: 3 / 1 / 4 / 3; }
+
+/* Changed, off: grey, its picture faded; on: orange, the picture in full,
+   and a ✔ on its corner — so it is never colour alone */
+#tool-now-next .nn-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 56px;
+  padding: 6px 16px 6px 10px;
+  font-family: inherit;
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--color-muted);
+  background: #fff;
+  border: 3px solid var(--color-border);
+  border-radius: 999px;
+  cursor: pointer;
+}
+#tool-now-next .nn-toggle img {
+  display: block;
+  width: 32px;
+  height: 32px;
+  filter: grayscale(1);
+  opacity: 0.6;
+}
+#tool-now-next .nn-toggle:active { background: #e3f2fd; }
+#tool-now-next .nn-toggle[aria-pressed="true"] {
+  color: #7c2d12;
+  background: #fff3e0;
+  border-color: #b45309;
+  box-shadow: 0 0 0 2px #b45309;
+}
+#tool-now-next .nn-toggle[aria-pressed="true"] img {
+  filter: none;
+  opacity: 1;
+}
+#tool-now-next .nn-toggle[aria-pressed="true"]::after {
+  content: "✔";
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  width: 30px;
+  height: 30px;
+  font-size: 17px;
+  line-height: 30px;
+  text-align: center;
+  color: #fff;
+  background: #b45309;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px var(--color-bg);
+}
+
+#tool-now-next .nn-add-sign {
+  font-size: 32px;
+  line-height: 1;
+}
+
+#tool-now-next .nn-full {
+  margin: 20px 0 0;
+  font-size: 20px;
+  text-align: center;
+  color: var(--color-muted);
+}
+/* for the adult: quiet, red, well away from ＋ Add */
+#tool-now-next .nn-remove-all {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--target-small);
+  margin: 40px auto 0;
+  padding: 6px 22px;
+  font-family: inherit;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--color-no-text);
+  background: #fff;
+  border: 3px solid var(--color-no-text);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+#tool-now-next .nn-remove-all:active { background: var(--color-no-bg); }
+
+/* ---------- pictures only ---------- */
+/* with the words gone, the switches and the Changed button are pictures */
+html[data-pictures-only] #tool-now-next .nn-view { min-height: 64px; }
+html[data-pictures-only] #tool-now-next .nn-view img {
+  width: 44px;
+  height: 44px;
+}
+html[data-pictures-only] #tool-now-next .nn-toggle { padding: 6px 10px; }
+/* Now in the strip without its tag: the card takes the tag's row */
+html[data-pictures-only] #tool-now-next .is-now .nn-face { grid-area: 1 / 1; }
+html[data-pictures-only] #tool-now-next .is-now .nn-controls { grid-area: 2 / 1 / 3 / 3; }
+html[data-pictures-only] #tool-now-next .nn-badge { padding: 3px 6px; }

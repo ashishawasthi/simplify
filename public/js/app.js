@@ -20,6 +20,7 @@ import { TOOLS } from "./tools.js";
 import { mountSetup } from "./setup.js";
 
 const $ = (id) => document.getElementById(id);
+const CLEAR_ALL_LABEL = "Start over: clear everything in this tool";
 
 const header = $("app-header");
 const title = $("screen-title");
@@ -310,6 +311,9 @@ function route({ fresh } = {}) {
   // no answer and no ✕ until the new screen shows its own
   setResultVisible(false);
   clearAllWrap.hidden = true;
+  // the ✕ says what it does in this tool: "start the day again" is not
+  // "clear everything" (a tool may return clearLabel from mount())
+  $("clear-all").setAttribute("aria-label", screen?.tool.clearLabel ?? CLEAR_ALL_LABEL);
   if (screen) {
     safely(`${next}: show()`, () => {
       screen.tool.show(params, Object.freeze({ fresh: !!fresh }));
