@@ -1,1 +1,276 @@
-/* Steps (js/tools/steps.js): styles go here, each inside #tool-steps. */
+/* Steps (js/tools/steps.js): the chooser, then one step at a time.
+   Everything here is inside #tool-steps, except the set-up page's one line
+   of its own (at the end). */
+
+/* The step fills the screen, and nothing on it moves from step to step:
+   the picture has a fixed height, the words a fixed room of three lines,
+   and the buttons sit under them. The picture gets whatever height the
+   screen has left once everything else has its room — the header's 80px
+   and the title's 56px (styles.css), the dots, the words, the buttons and a
+   bottom margin — no wider than the column, and no bigger than 440px (an
+   iPad). So a 360 × 640 phone still shows the whole step without scrolling.
+   The bottom margin grows to 96px where the screen is tall enough (800px
+   and up): the undo toast after ✕ then sits under the buttons, and its
+   "Put it back" never lies over Next. */
+#tool-steps {
+  --steps-font: clamp(24px, 8vw, 34px);
+  /* three lines — or one line and the "Can I buy?" button (100px), which
+     is more than three lines of the smallest words */
+  --steps-words-h: max(calc(var(--steps-font) * 1.2 * 3), 100px);
+  --steps-words-gap: 16px;
+  --steps-nav-h: 88px;
+  --steps-bottom: clamp(16px, calc(100dvh - 716px), 96px);
+  --steps-room: calc(80px + 56px + 44px + 12px + var(--steps-words-h) + var(--steps-words-gap) + var(--steps-nav-h) +
+    var(--steps-bottom));
+  --steps-pic: max(140px, min(calc(100dvh - var(--steps-room)), calc(min(100vw, 520px) - 2 * var(--gap)), 440px));
+}
+/* no words on show: the picture takes their room — except on the step with
+   a button, where the picture gives up just the button's (56px + 12px) */
+html[data-pictures-only] #tool-steps {
+  --steps-words-h: 0px;
+  --steps-words-gap: 0px;
+}
+html[data-pictures-only] #tool-steps .has-extra .steps-picture { height: calc(var(--steps-pic) - 68px); }
+html[data-pictures-only] #tool-steps .has-extra .steps-words-box { margin-bottom: 12px; }
+
+#tool-steps button {
+  font-family: inherit;
+  cursor: pointer;
+  /* a quick second tap is a tap, not a zoom; a finger resting on a button
+     selects nothing and opens no menu */
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+/* no "Save image" menu from a long press on a picture (iPad). The words
+   stay selectable: iOS's Speak Selection reads them out that way. */
+#tool-steps img { -webkit-touch-callout: none; }
+#tool-steps .steps-glyph { line-height: 1; }
+
+/* ---------- the chooser: a big button per deck ---------- */
+/* The menu's tool buttons, a size up: a picture, the name, and a ›. */
+#tool-steps .steps-chooser {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+#tool-steps .steps-choose {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  min-height: 104px;
+  padding: 12px 16px;
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.2;
+  text-align: left;
+  color: var(--color-text);
+  background: #fff;
+  border: 3px solid var(--color-border);
+  border-radius: var(--radius);
+}
+#tool-steps .steps-choose::after {
+  content: "›";
+  margin-left: auto;
+  padding-left: 8px;
+  font-size: 38px;
+  line-height: 1;
+  color: var(--color-muted);
+}
+#tool-steps .steps-choose:active { background: #e3f2fd; }
+#tool-steps .steps-choose-picture { flex: none; }
+#tool-steps .steps-choose-picture img {
+  display: block;
+  width: 72px;
+  height: 72px;
+}
+/* with no names beside them, the pictures take the room */
+html[data-pictures-only] #tool-steps .steps-choose-picture img {
+  width: 88px;
+  height: 88px;
+}
+
+/* ---------- a deck: one step at a time ---------- */
+/* the dots: done filled, this one bigger, the rest empty rings */
+#tool-steps .steps-progress {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  margin: 0 0 12px;
+}
+#tool-steps .steps-dots {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+#tool-steps .steps-dot {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  background: #fff;
+  border: 3px solid var(--color-border);
+  border-radius: 50%;
+}
+#tool-steps .steps-dot.is-done {
+  background: var(--color-primary-dark);
+  border-color: var(--color-primary-dark);
+}
+#tool-steps .steps-dot.is-now {
+  width: 28px;
+  height: 28px;
+  background: #e3f2fd;
+  border: 6px solid var(--color-primary-dark);
+}
+/* All done: every dot green, with the ✔ and the words */
+#tool-steps .is-done .steps-dot.is-done {
+  background: var(--color-yes-text);
+  border-color: var(--color-yes-text);
+}
+
+#tool-steps .steps-picture {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--steps-pic);
+  margin: 0 0 12px;
+}
+#tool-steps .steps-picture img {
+  display: block;
+  width: auto;
+  height: 100%;
+  max-width: 100%;
+  object-fit: contain;
+}
+/* Three lines' room whatever the words need, so the buttons stay put; the
+   longest step and the longest end line fit it on a 320px phone. */
+#tool-steps .steps-words-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--steps-words-h);
+  margin: 0 0 var(--steps-words-gap);
+}
+#tool-steps .steps-words {
+  margin: 0;
+  font-size: var(--steps-font);
+  font-weight: 800;
+  line-height: 1.2;
+  text-align: center;
+  text-wrap: balance; /* "Put tissues and bones / on the tray", not one word alone */
+  overflow-wrap: break-word;
+}
+/* #1b5e20 on white is 7.9:1 */
+#tool-steps .is-done .steps-words { color: var(--color-yes-text); }
+
+/* a small way to another tool, under the step's words: not a step of its own */
+#tool-steps .steps-open {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--target-small);
+  padding: 6px 20px;
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--color-text);
+  background: #fff;
+  border: 3px solid var(--color-border);
+  border-radius: 999px;
+}
+#tool-steps .steps-open .steps-glyph { font-size: 28px; }
+#tool-steps .steps-open:active { background: #e3f2fd; }
+
+/* ◀ Back small on the left, Next ▶ big on the right; on All done, Choose
+   another takes Next's place. Back's column has a fixed width, so whichever
+   button is on the right can't push it about. */
+#tool-steps .steps-nav {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+}
+#tool-steps .steps-back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 72px;
+  padding: 0 12px;
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--color-text);
+  background: #fff;
+  border: 3px solid var(--color-border);
+  border-radius: var(--radius);
+}
+#tool-steps .steps-back .steps-glyph { font-size: 22px; }
+#tool-steps .steps-back:active { background: #e3f2fd; }
+/* the first step has no step before it: Back keeps its place, out of sight */
+#tool-steps .steps-back.is-away { visibility: hidden; }
+
+/* white on #0d47a1 is 8.6:1 */
+#tool-steps .steps-next {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: var(--steps-nav-h);
+  padding: 0 12px;
+  font-size: 30px;
+  font-weight: 800;
+  color: #fff;
+  background: var(--color-primary-dark);
+  border: none;
+  border-radius: var(--radius);
+}
+#tool-steps .steps-next .steps-glyph { font-size: 28px; }
+#tool-steps .steps-next:active { background: var(--color-primary); }
+
+/* leaving the deck, not the next step: white, like the other quiet actions.
+   Two lines on a phone ("Choose / another"), a size smaller on a 320px one,
+   so it fits Next's place without widening it. */
+#tool-steps .steps-another {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--steps-nav-h);
+  padding: 6px 10px;
+  font-size: clamp(19px, 5.9vw, 22px);
+  font-weight: 800;
+  line-height: 1.15;
+  color: var(--color-primary-dark);
+  background: #fff;
+  border: 3px solid var(--color-primary-dark);
+  border-radius: var(--radius);
+}
+#tool-steps .steps-another img {
+  flex: none;
+  display: block;
+  width: 36px;
+  height: 36px;
+}
+#tool-steps .steps-another:active { background: #e3f2fd; }
+
+/* ---------- the set-up page: Fewer steps (setup() in steps.js) ---------- */
+/* setup() builds it inside #tool-setup, whose setup.css draws the switch
+   rows and notes. These rules reach only the parts of its own (steps-…),
+   spaced like the other tools' sections. */
+#tool-setup .steps-setup > .setup-note { margin-bottom: 14px; }
+/* under a deck's name: the steps its switch leaves out */
+#tool-setup .steps-leaves {
+  display: block;
+  margin-top: 4px;
+  font-size: 17px;
+  font-weight: 400;
+  line-height: 1.3;
+  color: var(--color-muted);
+}
