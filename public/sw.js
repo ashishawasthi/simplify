@@ -84,6 +84,7 @@ const ASSETS = [
   "/js/class-markdown.js",
   "/js/show-card.js",
   "/js/say-aloud.js",
+  "/js/voice-clips.js",
   "/js/picture-picker.js",
   "/js/pictures.js",
   "/js/tools/my-class.js",
@@ -132,6 +133,43 @@ const ASSETS = [
   "/img/pic/therapy.svg", "/img/pic/toilet.svg", "/img/pic/too-loud.svg", "/img/pic/travel-card.svg",
   "/img/pic/tray-return.svg", "/img/pic/tray-return-halal.svg", "/img/pic/tray.svg", "/img/pic/tv.svg", "/img/pic/walk.svg", "/img/pic/want.svg",
   "/img/pic/wash-hands.svg", "/img/pic/water.svg", "/img/pic/wipe-table.svg", "/img/pic/yes.svg",
+  // >>> the recorded voice (js/voice-clips.js), written by node tools/make-voice.mjs — don't edit by hand
+  "/audio/voice/004f3b977d68.mp3", "/audio/voice/05bb71da7137.mp3", "/audio/voice/0794673a5c1f.mp3", "/audio/voice/07cbdbc7b536.mp3",
+  "/audio/voice/08c7142d237a.mp3", "/audio/voice/097cc762d6bd.mp3", "/audio/voice/0a2962132efb.mp3", "/audio/voice/0a45f1246a08.mp3",
+  "/audio/voice/0b745abf1d65.mp3", "/audio/voice/0c3005b3db07.mp3", "/audio/voice/0e047797747c.mp3", "/audio/voice/0ea45f0ff78a.mp3",
+  "/audio/voice/0f50d8654543.mp3", "/audio/voice/108738be273c.mp3", "/audio/voice/1138c8057d5a.mp3", "/audio/voice/122dab5f9e0b.mp3",
+  "/audio/voice/12316f5b416c.mp3", "/audio/voice/1274f88ef3f8.mp3", "/audio/voice/133931ff4ed6.mp3", "/audio/voice/1534521bd2fa.mp3",
+  "/audio/voice/1dbdb8933f64.mp3", "/audio/voice/1efc493cfce2.mp3", "/audio/voice/2801047d20b2.mp3", "/audio/voice/2d9803e62db6.mp3",
+  "/audio/voice/2ff5256dd840.mp3", "/audio/voice/324368aad9e0.mp3", "/audio/voice/34f0024b86bc.mp3", "/audio/voice/36560c79f875.mp3",
+  "/audio/voice/376aee1c344a.mp3", "/audio/voice/378712141dde.mp3", "/audio/voice/383b266d2fd2.mp3", "/audio/voice/389d817acfb4.mp3",
+  "/audio/voice/38cac73e4796.mp3", "/audio/voice/3989dc5eb2f3.mp3", "/audio/voice/39a6770bec0e.mp3", "/audio/voice/3baf795f70fd.mp3",
+  "/audio/voice/3cbaa591193c.mp3", "/audio/voice/3e9ba71a87ee.mp3", "/audio/voice/417d47ec9331.mp3", "/audio/voice/4374c19d96f5.mp3",
+  "/audio/voice/47f5181eb715.mp3", "/audio/voice/56b5eddbf411.mp3", "/audio/voice/57ae3f4a0828.mp3", "/audio/voice/5971f710baa6.mp3",
+  "/audio/voice/5984aac9720d.mp3", "/audio/voice/5b1e3f004746.mp3", "/audio/voice/5bcac99c47e7.mp3", "/audio/voice/5c6cb2452dd9.mp3",
+  "/audio/voice/5f7d62dbd3ac.mp3", "/audio/voice/5fc4846b4c38.mp3", "/audio/voice/5fe226f62e30.mp3", "/audio/voice/64f89ab8ce59.mp3",
+  "/audio/voice/6525ac7640fa.mp3", "/audio/voice/670a7a3277bf.mp3", "/audio/voice/6a0ba597a32b.mp3", "/audio/voice/6b8e821e992d.mp3",
+  "/audio/voice/783800c0bf94.mp3", "/audio/voice/784b2130194a.mp3", "/audio/voice/787cd902239d.mp3", "/audio/voice/78b7a3a69cb9.mp3",
+  "/audio/voice/7c18a1d0984a.mp3", "/audio/voice/7c785fe4101d.mp3", "/audio/voice/7cd00d960fdc.mp3", "/audio/voice/7d6cc0a96472.mp3",
+  "/audio/voice/7dabe498242d.mp3", "/audio/voice/7e902805abe5.mp3", "/audio/voice/827257871ffb.mp3", "/audio/voice/8283ece8cbfa.mp3",
+  "/audio/voice/82c89f881cf8.mp3", "/audio/voice/863934e79e28.mp3", "/audio/voice/8842a9b2d789.mp3", "/audio/voice/898723383be0.mp3",
+  "/audio/voice/8a0658defd49.mp3", "/audio/voice/8c563d33bda5.mp3", "/audio/voice/8ed86ad7d214.mp3", "/audio/voice/8f0ad659ff10.mp3",
+  "/audio/voice/90918f56de38.mp3", "/audio/voice/90a2e7549141.mp3", "/audio/voice/90b3defe2a0a.mp3", "/audio/voice/95704f4c64ac.mp3",
+  "/audio/voice/98d2ad6cce0f.mp3", "/audio/voice/9aea918ee445.mp3", "/audio/voice/9b49b8b119ec.mp3", "/audio/voice/9b99e9599349.mp3",
+  "/audio/voice/9ce59ab70c50.mp3", "/audio/voice/9d9dfce34e67.mp3", "/audio/voice/9df3ddcf86e2.mp3", "/audio/voice/9e5e40948d67.mp3",
+  "/audio/voice/a0ea42e984e2.mp3", "/audio/voice/ad482229c533.mp3", "/audio/voice/ad5809e32c7c.mp3", "/audio/voice/adb1a127bbbe.mp3",
+  "/audio/voice/adf9c64283ea.mp3", "/audio/voice/b36e862010cf.mp3", "/audio/voice/b460b8f6ae02.mp3", "/audio/voice/b706a54de37e.mp3",
+  "/audio/voice/b847232d35e0.mp3", "/audio/voice/b885e83187c1.mp3", "/audio/voice/b91a5fac2a3b.mp3", "/audio/voice/b9a16159e68a.mp3",
+  "/audio/voice/b9c03eb62016.mp3", "/audio/voice/ba0628a19293.mp3", "/audio/voice/bd4a56ed300a.mp3", "/audio/voice/bf0454eb46c8.mp3",
+  "/audio/voice/c1090a52c797.mp3", "/audio/voice/c14cb007b93f.mp3", "/audio/voice/c29dd90875d3.mp3", "/audio/voice/c48889131bd5.mp3",
+  "/audio/voice/c4be29b8499b.mp3", "/audio/voice/c60bbf35290a.mp3", "/audio/voice/c7aeff943696.mp3", "/audio/voice/cab73fc083ad.mp3",
+  "/audio/voice/cd33530d58a9.mp3", "/audio/voice/ce305ad139da.mp3", "/audio/voice/d452010d83de.mp3", "/audio/voice/d6ffec37cc6f.mp3",
+  "/audio/voice/d73efe0987a7.mp3", "/audio/voice/d957a32091bd.mp3", "/audio/voice/dacf85a283ba.mp3", "/audio/voice/dbc295eff251.mp3",
+  "/audio/voice/dd74792aedfa.mp3", "/audio/voice/dfda585dc3be.mp3", "/audio/voice/e0d6223ba794.mp3", "/audio/voice/e5d60a4b7c97.mp3",
+  "/audio/voice/ec574d305922.mp3", "/audio/voice/edffd01012c5.mp3", "/audio/voice/f144cbf086ad.mp3", "/audio/voice/f227e87dd675.mp3",
+  "/audio/voice/f65d69256597.mp3", "/audio/voice/f7bbef7ba762.mp3", "/audio/voice/f85f3d5ad9f9.mp3", "/audio/voice/fbc9321a5cd8.mp3",
+  "/audio/voice/fc4cea36e8ec.mp3", "/audio/voice/fd2f3fff8e07.mp3", "/audio/voice/fd6245dad242.mp3", "/audio/voice/fe4e61ec7d87.mp3",
+  "/audio/voice/fe5887199f83.mp3",
+  // <<< the recorded voice
 ];
 
 // One asset, checked before it is kept.
@@ -190,6 +228,24 @@ self.addEventListener("fetch", (e) => {
   e.respondWith(
     caches.open(CACHE)
       .then((c) => c.match(e.request, { ignoreSearch: true }))
-      .then((hit) => hit || fetch(e.request))
+      .then((hit) => (hit ? ranged(e.request, hit) : fetch(e.request)))
   );
 });
+
+// An <audio> element asks for its clip (the recorded voice) a byte range at a
+// time, and Safari plays nothing unless the answer is that range: cut the
+// cached file to the range asked for. Any other request gets the file whole.
+async function ranged(request, hit) {
+  const m = /^bytes=(\d*)-(\d*)$/.exec((request.headers.get("range") ?? "").trim());
+  if (!m || (m[1] === "" && m[2] === "") || hit.status !== 200) return hit;
+  const body = await hit.arrayBuffer();
+  const size = body.byteLength;
+  // "bytes=100-" to the end, "bytes=-100" the last 100
+  const start = m[1] === "" ? Math.max(0, size - Number(m[2])) : Number(m[1]);
+  const end = m[1] !== "" && m[2] !== "" ? Math.min(Number(m[2]), size - 1) : size - 1;
+  if (start > end) return new Response(null, { status: 416, headers: { "Content-Range": `bytes */${size}` } });
+  const headers = new Headers(hit.headers);
+  headers.set("Content-Range", `bytes ${start}-${end}/${size}`);
+  headers.set("Content-Length", String(end - start + 1));
+  return new Response(body.slice(start, end + 1), { status: 206, statusText: "Partial Content", headers });
+}
