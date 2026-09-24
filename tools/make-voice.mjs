@@ -5,8 +5,8 @@
 //   node tools/make-voice.mjs           record what is missing, delete what
 //                                       nothing says any more, write the map
 //   node tools/make-voice.mjs --check   change nothing and use no network:
-//                                       exit 1 if a clip, the map or sw.js is
-//                                       out of date
+//                                       exit 1 if a clip or the map is out
+//                                       of date
 //
 // No npm packages: Node 22, ffmpeg with LAME (`brew install ffmpeg`), and the
 // gcloud CLI signed in to an account that may use Cloud Text-to-Speech on the
@@ -39,8 +39,8 @@
 // A clip that sounds wrong (heard back, or by a person): delete its file and
 // run this again for another take.
 //
-// After a run that changed anything: node tools/test-voice.mjs, then bump
-// CACHE in public/sw.js (this script rewrites the clip list inside ASSETS).
+// After a run that changed anything: node tools/test-voice.mjs, then
+// node tools/stamp.mjs (the service worker keeps every clip offline).
 
 import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -77,7 +77,6 @@ const ROOT = join(fileURLToPath(new URL(".", import.meta.url)), "..");
 export const CLIP_DIR = join(ROOT, "public", "audio", "voice");
 export const CLIP_URL = "/audio/voice/";
 export const MAP_FILE = join(ROOT, "public", "js", "voice-clips.js");
-const SW_FILE = join(ROOT, "public", "sw.js");
 const PROJECT = "simplify-special";
 const ENDPOINT = "https://texttospeech.googleapis.com/v1/text:synthesize";
 
@@ -155,22 +154,6 @@ ${rows.join("\n")}
 `;
 }
 
-// sw.js's ASSETS carries the clips between these two lines
-const BEGIN = "  // >>> the recorded voice (js/voice-clips.js), written by node tools/make-voice.mjs — don't edit by hand";
-const END = "  // <<< the recorded voice";
-
-export function renderSw(src, entries = plan()) {
-  const start = src.indexOf(BEGIN);
-  const end = src.indexOf(END);
-  if (start < 0 || end < start) throw new Error(`public/sw.js: no "${BEGIN.trim()}" … "${END.trim()}" block in ASSETS`);
-  const files = [...new Set(entries.map((e) => e.file))].sort();
-  const lines = [];
-  for (let i = 0; i < files.length; i += 4) {
-    lines.push(`  ${files.slice(i, i + 4).map((f) => JSON.stringify(CLIP_URL + f)).join(", ")},`);
-  }
-  return `${src.slice(0, start)}${BEGIN}\n${lines.join("\n")}\n${src.slice(end)}`;
-}
-
 // ---------- the run ----------
 
 const kb = (bytes) => `${(bytes / 1024).toFixed(1)} KB`;
@@ -227,16 +210,13 @@ async function main() {
   const missing = entries.filter((e) => !existsSync(join(CLIP_DIR, e.file)));
   const orphans = present.filter((f) => !wanted.has(f));
   const map = renderMap(entries);
-  const swSrc = readFileSync(SW_FILE, "utf8");
-  const sw = renderSw(swSrc, entries);
   const mapStale = !existsSync(MAP_FILE) || readFileSync(MAP_FILE, "utf8") !== map;
 
   if (check) {
     for (const e of missing) console.log(`missing clip: "${e.text}" (${e.file})`);
     for (const f of orphans) console.log(`clip nothing says: ${f}`);
     if (mapStale) console.log("public/js/voice-clips.js is out of date");
-    if (sw !== swSrc) console.log("public/sw.js's clip list is out of date");
-    const stale = missing.length || orphans.length || mapStale || sw !== swSrc;
+    const stale = missing.length || orphans.length || mapStale;
     console.log(stale ? "\nrun: node tools/make-voice.mjs" : `all ${entries.length} clips up to date`);
     process.exit(stale ? 1 : 0);
   }
@@ -266,13 +246,12 @@ async function main() {
     console.log(`deleted ${f} (nothing says it any more)`);
   }
   if (mapStale) writeFileSync(MAP_FILE, map);
-  if (sw !== swSrc) writeFileSync(SW_FILE, sw);
 
   const total = entries.reduce((sum, e) => sum + statSync(join(CLIP_DIR, e.file)).size, 0);
   console.log(`\n${entries.length} clips, ${kb(total)} in all; ${missing.length} recorded now ` +
     `(${characters} characters sent), ${orphans.length} deleted — voice ${VOICE.name}`);
-  if (missing.length || orphans.length || sw !== swSrc) {
-    console.log("next: node tools/test-voice.mjs && node tools/test-assets.mjs, and bump CACHE in public/sw.js");
+  if (missing.length || orphans.length) {
+    console.log("next: node tools/stamp.mjs, then node tools/test-voice.mjs && node tools/test-assets.mjs");
   }
 }
 

@@ -67,7 +67,7 @@ node tools/test-pictures.mjs            # always afterwards
 
 Noto files are downloaded once from the pinned commit and cached in the system temp folder, so a re-run needs no
 network. To update Noto: change `NOTO_TAG` / `NOTO_COMMIT` to a release whose `svg/LICENSE` is still Apache-2.0, run
-the script, look at every picture again, run the test, and bump `CACHE` in `public/sw.js`.
+the script, look at every picture again, run the test, and `node tools/stamp.mjs`.
 
 ## Checks: `tools/test-pictures.mjs`
 
@@ -97,12 +97,12 @@ look as the notes-and-coins picker, built the first time it opens, with the pict
 1. Add the drawing to `DRAWINGS` in `tools/make-pictures.mjs` (or a Noto file to `NOTO_FILES`), and its entry to
    `PICTURES` in the right group.
 2. `node tools/make-pictures.mjs <name>`, then `node tools/test-pictures.mjs`.
-3. Add the file to `ASSETS` in `public/sw.js` and bump `CACHE` (`node tools/test-assets.mjs` catches a forgotten
-   file) — see [offline and updates](/platform/offline-and-updates.md).
+3. `node tools/stamp.mjs`, which adds the file to `ASSETS` in `public/sw.js` (`node tools/test-assets.mjs` catches a
+   forgotten run) — see [offline and updates](/platform/offline-and-updates.md).
 
 ## The logo
 
 The favicon and the home-screen icons are Noto's Seedling (🌱, U+1F331), from the same pinned release as the picture
 set, so the app's icon looks the same on every device. `node tools/make-icons.mjs` rebuilds `public/favicon.svg` and
 the four PNGs in `public/img/icons/` (the maskable one keeps the seedling inside the circle Android may crop to);
-bump `CACHE` in `public/sw.js` afterwards.
+run `node tools/stamp.mjs` afterwards.

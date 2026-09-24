@@ -12,7 +12,7 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 import {
-  CLIP_DIR, CLIP_URL, VOICE, clipName, normalise, phrases, plan, renderMap, renderSw, speechText,
+  CLIP_DIR, CLIP_URL, VOICE, clipName, normalise, phrases, plan, renderMap, speechText,
 } from "./make-voice.mjs";
 import { CLIPS, VOICE as MAP_VOICE } from "../public/js/voice-clips.js";
 import { PICTURES } from "../public/js/pictures.js";
@@ -94,11 +94,6 @@ const cases = [
   ["file names come from the words sent", entries.filter((e) => e.file !== clipName(e.speech)).length, 0],
   ["public/js/voice-clips.js is what the generator writes",
     readFileSync(join(ROOT, "public", "js", "voice-clips.js"), "utf8") === renderMap(entries), true],
-  ["sw.js lists every clip, as the generator writes it",
-    (() => {
-      const sw = readFileSync(join(ROOT, "public", "sw.js"), "utf8");
-      return renderSw(sw, entries) === sw;
-    })(), true],
 ];
 
 let failed = 0;

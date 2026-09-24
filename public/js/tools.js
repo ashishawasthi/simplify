@@ -12,8 +12,9 @@
 //    and an empty <div id="tool-<id>" class="tool" hidden></div>
 // 4. public/css/tools/<id>.css, linked from index.html; style only inside
 //    #tool-<id> (the shared parts are styled in styles.css)
-// 5. every new file in ASSETS in public/sw.js, and a CACHE bump —
-//    node tools/test-assets.mjs catches a forgotten file
+// 5. node tools/stamp.mjs: the new files into sw.js's ASSETS and the new
+//    modules into index.html's modulepreload list — node tools/test-assets.mjs
+//    catches a forgotten run
 // 6. its smoke scenes in tools/smoke/<id>.mjs — node tools/smoke.mjs <id>
 //
 // ---- The contract ----

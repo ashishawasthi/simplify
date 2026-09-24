@@ -166,7 +166,7 @@ const { data } = await send("Page.captureScreenshot", { format: "png" });
 const out = process.env.SHOOT_DIR ? join(process.env.SHOOT_DIR, scene.out.split("/").pop()) : join(ROOT, scene.out);
 writeFileSync(out, Buffer.from(data, "base64"));
 console.log(`wrote ${out} (${scene.width * 2}x${scene.height * 2})`);
-console.log("remember to bump CACHE in public/sw.js before pushing");
+console.log("remember to run node tools/stamp.mjs before pushing");
 
 ws.close();
 chrome.kill();

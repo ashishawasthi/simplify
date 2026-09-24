@@ -17,6 +17,10 @@
 // sums. To upgrade: change the version here, run this, update the import
 // paths in public/coach/js/cloud.js (Firebase) or public/coach/js/qr.js
 // (uqr), and delete the old version's folder. Node 22, nothing to install.
+//
+// firebase.json serves /coach/vendor/** as immutable for a year, so a
+// version's folder must never change once deployed: anything new — even the
+// same version vendored differently — goes in a folder of its own.
 
 import { createHash } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";

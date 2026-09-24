@@ -61,7 +61,7 @@ Per-tool settings inside `tools` (`{}` means the defaults):
 
 | Cache | Owner | Contents |
 |---|---|---|
-| `simplify-v<N>` (`CACHE` in `public/sw.js`) | the service worker | every file in `ASSETS`, keyed by URL; older versions deleted on activate |
+| `simplify-<8 hex digits>` (`CACHE` in `public/sw.js`, named after the revisions in `ASSETS`; `simplify-v<N>` before 2026-09-24) | the service worker | every file in `ASSETS`, keyed by URL; older versions deleted on activate |
 | `simplify-class-media` | `class-data.js` | exactly the files the followed class's latest page uses, keyed `<origin>/class-media/<code>/<picture\|video>/<id>`; deleted when the device follows no class |
 
 The learner app uses no IndexedDB and no sessionStorage, and does not request persistent storage.
