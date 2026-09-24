@@ -55,9 +55,11 @@ import { CARDS as SHOW_CARDS, DISCLOSURES, cardFor, cardLines } from "../public/
 // The voice. Change it here and re-run: every clip is recorded again.
 // Google has no Singapore English (en-SG) Chirp 3 HD voice (checked
 // 2026-09-24 against the API's voice list and the Chirp 3 HD language table),
-// so this is the British one — the same fallback say-aloud.js takes for the
-// device's own voice. Erinome is the voice Google describes as clear.
-export const VOICE = Object.freeze({ name: "en-GB-Chirp3-HD-Erinome", languageCode: "en-GB" });
+// so this is the Indian English one — the closest Google offers to Singapore
+// English, on the owner's instruction ("if Singlish accent not available,
+// clear India accent will work too"). Erinome is the voice Google describes
+// as clear.
+export const VOICE = Object.freeze({ name: "en-IN-Chirp3-HD-Erinome", languageCode: "en-IN" });
 // a little slower than normal, for a noisy place — as say-aloud.js asks of the
 // device's voice
 export const RATE = 0.9;
