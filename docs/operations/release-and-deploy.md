@@ -1,7 +1,7 @@
 ---
 type: Operations Runbook
 title: Release and Deploy
-description: What CI runs on pull requests and on main, how Hosting reaches the live site and PR previews, what CI does not deploy (rules, indexes, functions) and the manual commands for them, the release checklist (tests, smoke, docs check, CACHE bump, ASSETS, guide only after testing), the one public URL, and the linear-history convention.
+description: What CI runs on pull requests and on main, how Hosting reaches the live site and PR previews, what CI does not deploy (rules, indexes, functions) and the manual commands for them, the release checklist (tests, smoke, docs check, stamp, guide only after testing), the one public URL, and the linear-history convention.
 tags: [release, deploy, ci, github-actions, firebase-hosting, preview-channels, cache-bump, checklist]
 status: stable
 ---
@@ -47,13 +47,12 @@ Before merging to `main`:
 1. **Tests.** Every `tools/test-*.mjs` passes (see [local development](/operations/local-development.md#unit-tests)).
 2. **Smoke.** `node tools/smoke.mjs` passes.
 3. **Docs.** `node tools/build-docs-index.mjs --check` passes, and the documents that own what changed say what the code now does.
-4. **New public file → `ASSETS`.** Every new file under `public/` (outside `public/coach/`) goes into `ASSETS` in `public/sw.js`, pages by clean URL. `tools/test-assets.mjs` fails otherwise.
-5. **Bump `CACHE`.** Change `CACHE` in `public/sw.js` (`simplify-v<N>` → `simplify-v<N+1>`) for any change to a file the service worker precaches: HTML, CSS, JS, the manifest, a picture or a guide screenshot. Without a new `CACHE`, installed apps keep serving the old files however long they stay open. Skip it only when nothing under `public/` changed, or only `public/coach/` did (the service worker never caches the coach app). How a new `CACHE` reaches devices is in [offline and updates](/platform/offline-and-updates.md).
-6. **Try it on real devices.** Run the change locally on an Android phone and an iPad (including offline, from port 5050), since those are what learners use.
+4. **Stamp.** After any change under `public/`, `node tools/stamp.mjs`, and commit what it writes: every file's revision in `ASSETS` in `public/sw.js` (so installed apps see the new version and fetch only the changed files) and the pages' modulepreload lists. There is no version number to bump. `tools/test-assets.mjs` fails if it was forgotten. Two branches that both changed `public/` may conflict in `ASSETS`: take either side and run it again. How a new version reaches devices is in [offline and updates](/platform/offline-and-updates.md).
+5. **Try it on real devices.** Run the change locally on an Android phone and an iPad (including offline, from port 5050), since those are what learners use.
 
 ### The guide comes after testing
 
-The learner guide (`public/guide.html`, `public/guide/*.html`) and its screenshots are updated only **after** the app change has been tested locally on an Android phone and an iPad, never alongside it, so the words and pictures describe what actually ships. Order: build → test (tests, smoke, devices, offline) → update the guide pages and retake the screenshots with `tools/shoot-guide.mjs` → bump `CACHE`. The guide is a topic menu with one short page per topic: add a page for a new feature rather than growing an existing one, with a button on the guide menu and an `ASSETS` entry.
+The learner guide (`public/guide.html`, `public/guide/*.html`) and its screenshots are updated only **after** the app change has been tested locally on an Android phone and an iPad, never alongside it, so the words and pictures describe what actually ships. Order: build → test (tests, smoke, devices, offline) → update the guide pages and retake the screenshots with `tools/shoot-guide.mjs` → `node tools/stamp.mjs`. The guide is a topic menu with one short page per topic: add a page for a new feature rather than growing an existing one, with a button on the guide menu (`stamp.mjs` adds it to `ASSETS`).
 
 ## Addresses
 

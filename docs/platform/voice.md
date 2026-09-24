@@ -61,20 +61,20 @@ part in another language have no clip.
   warning if none ended cleanly. A clip that sounds wrong for any other reason: delete its file and run again.
 - **The map:** `public/js/voice-clips.js`, written by the generator (its header says so — never edit it by hand):
   `VOICE` and `CLIPS`, a frozen object from the on-screen sentence to its clip's URL.
-- **Offline:** the generator writes the clip list into `ASSETS` in `public/sw.js`, between the `>>> the recorded
-  voice` and `<<< the recorded voice` comment lines, so every device keeps every clip (see
+- **Offline:** `node tools/stamp.mjs` puts every clip in `public/audio/voice/` into `ASSETS` in `public/sw.js`, with its
+  revision, so every device keeps every clip and a release re-downloads only the clips that changed (see
   [offline and updates](/platform/offline-and-updates.md)). An `<audio>` element asks for a byte range; the worker
   answers from the cache with that range (`206`), which Safari needs in order to play. Hosting serves `.mp3` with
   `max-age=3600`, like the pictures, so a release only revalidates them.
 
 ```sh
-node tools/make-voice.mjs           # record what is missing, delete orphans, write the map and sw.js's list
+node tools/make-voice.mjs           # record what is missing, delete orphans, write the map
 node tools/make-voice.mjs --check   # no network, no changes: exit 1 if anything is out of date
 ```
 
 It needs Node 22, ffmpeg with LAME, and `gcloud auth login` with an account that may use Cloud Text-to-Speech on
 `simplify-special` (the API is enabled there; requests carry `X-Goog-User-Project: simplify-special`). After a run that
-changed anything: `node tools/test-voice.mjs`, `node tools/test-assets.mjs`, and bump `CACHE` in `public/sw.js`.
+changed anything: `node tools/stamp.mjs`, then `node tools/test-voice.mjs` and `node tools/test-assets.mjs`.
 
 ## Playback: say-aloud.js
 

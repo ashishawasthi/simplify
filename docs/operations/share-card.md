@@ -27,7 +27,7 @@ poster a coach prints is a different thing, drawn in the browser by the coach ap
 ### The `?v=` cache-buster
 
 Scrapers (WhatsApp, Facebook, X) cache the card by its full URL. Whenever the card is redrawn, bump `?v=` in **both**
-`og:image` and `twitter:image`, or they keep showing the old picture. Then bump `CACHE` in `public/sw.js`, as for any
+`og:image` and `twitter:image`, or they keep showing the old picture. Then run `node tools/stamp.mjs`, as for any
 change under `public/`.
 
 ## The printable poster
@@ -48,7 +48,7 @@ python3 tools/make-qr.py
 
 The script's constants hold the URL (`URL`, `URL_LABEL`), the app name and the poster's words. It looks for macOS
 system fonts (Arial, Helvetica, SF) and falls back to Pillow's plain default font elsewhere, so run it on a Mac to
-get the published look. Re-run it after changing the URL or wording, then bump `?v=` (for the card) and `CACHE`.
+get the published look. Re-run it after changing the URL or wording, then bump `?v=` (for the card) and run `node tools/stamp.mjs`.
 
 ## Making the platforms re-read the card
 

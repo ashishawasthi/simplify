@@ -66,11 +66,11 @@ node tools/test-i-need.mjs      # I need's cards, settings, sentences and body m
 node tools/test-now-next.mjs    # Now and next's list rules
 node tools/test-show-card.mjs   # Show a card's wording (LTA's words exactly) and settings
 node tools/test-steps.mjs       # the Steps decks, Next/Back and Fewer steps
-node tools/test-voice.mjs       # the recorded voice: every sentence Speak says has its clip, in the map and sw.js
+node tools/test-voice.mjs       # the recorded voice: every sentence Speak says has its clip, in the map
 node tools/test-pictures.mjs    # the picture set: list vs files, SVG safety, size, licence notices
 node tools/test-class.mjs       # class markdown, class codes, reading a class, the service worker's exclusions
 node tools/test-coach.mjs       # the coach app's pure parts
-node tools/test-assets.mjs      # sw.js ASSETS matches exactly the files the app serves
+node tools/test-assets.mjs      # sw.js ASSETS and the modulepreload lists are stamped; the install fetches only changes
 node tools/test-rules.mjs       # Firestore and Storage rules (starts the emulators; needs Java + Firebase CLI)
 node tools/test-functions.mjs   # the Cloud Functions with fake AI models (starts the emulators too)
 node tools/test-seed.mjs        # seeding the institutions and the coach-status migration (starts the emulator too)
@@ -92,8 +92,9 @@ The Firebase project is `simplify-special`, with the custom domain `simplify.whi
 - **Rules, indexes and Cloud Functions** are not deployed by CI:
   `firebase deploy --only firestore:rules,firestore:indexes,storage` and `firebase deploy --only functions` (run
   `test-rules` / `test-functions` first). Never a bare `firebase deploy`.
-- **Before merging any change to `public/`, bump `CACHE` in `public/sw.js`**, and add any new file under `public/`
-  to `ASSETS` — otherwise installed apps keep the old version, or the new file won't work offline.
+- **After any change to `public/`, run `node tools/stamp.mjs`** and commit what it writes: each file's revision in
+  `public/sw.js` (so installed apps pick up the new version, downloading only what changed) and the pages'
+  modulepreload lists. `test-assets.mjs` fails if it was forgotten.
 - **Update the guide and its screenshots only after a change has been tested locally**, never alongside it.
 
 The full checklist, the commands and the cloud set-up are in

@@ -1,8 +1,8 @@
 ---
 type: System Reference
 title: Offline and Updates
-description: How the learner app works offline and gets new versions — the service worker's versioned precache and revalidating install, what it answers and ignores, the CACHE bump rule and what test-assets.mjs enforces, update.js's safe reload, Hosting's Cache-Control headers, and My class's separate media cache.
-tags: [service-worker, cache, offline, updates, precache, cache-control, pwa]
+description: How the learner app works offline and gets new versions — the service worker's revision-stamped precache and its install that fetches only changed files, what it answers and ignores, the stamp rule and what test-assets.mjs enforces, the modulepreload lists, update.js's safe reload, Hosting's Cache-Control headers, and My class's separate media cache.
+tags: [service-worker, cache, offline, updates, precache, cache-control, pwa, modulepreload, stamp]
 status: stable
 ---
 
@@ -12,21 +12,31 @@ This document owns how the learner app is stored on a device and how a new deplo
 
 `public/sw.js` is a versioned, cache-first precache of the whole learner app. `update.js` registers it as `/sw.js` at boot (a failed registration is ignored: offline support is a bonus, never a blocker).
 
-### `CACHE` and `ASSETS`
+### `ASSETS` and `CACHE`
 
-- `CACHE` is one string constant near the top of `public/sw.js`, named `simplify-v<N>`. Each release that changes `public/` raises `N` by one. (The very first versions were named `afford-v<N>`, when the app was only "Can I buy?"; that is why the cleanup below recognises both.)
-- `ASSETS` lists every file the learner app needs offline, by the URL Hosting serves it at: pages by their clean URLs (`"/"`, `"/guide"`, `"/guide/speak"`), never as `.html`, because Hosting's `cleanUrls` 301s the `.html` form and a cached redirect breaks offline navigation. It covers the app page, every guide page and screenshot, all CSS and JS, the manifest, favicon, icons, every bundled picture in `/img/pic/` and every clip of [the recorded voice](/platform/voice.md) in `/audio/voice/` (that part of the list, between two marked comment lines, is written by `tools/make-voice.mjs`).
+- `ASSETS` maps every file the learner app needs offline, by the URL Hosting serves it at, to its **revision**: the first 8 hex digits of the SHA-256 of its bytes (`"/js/app.js": "1a2b3c4d"`). Pages are keyed by their clean URLs (`"/"`, `"/guide"`, `"/guide/speak"`), never as `.html`, because Hosting's `cleanUrls` 301s the `.html` form and a cached redirect breaks offline navigation. It covers every file under `public/` except the coach app and the four `NOT_PRECACHED` files below: the app page, every guide page and screenshot, all CSS and JS, the manifest, favicon, icons, every bundled picture in `/img/pic/` and every clip of [the recorded voice](/platform/voice.md) in `/audio/voice/`.
+- `ASSETS` sits between two marked comment lines and is written only by `node tools/stamp.mjs`, never by hand ([the stamp rule](#the-stamp-rule)).
+- `CACHE` is worked out from `ASSETS` when the worker starts: `simplify-<8 hex digits>`, an FNV-1a hash of the whole map. Any changed, added or removed file changes a revision, so it changes `sw.js`'s bytes (the browser installs the new worker) and the cache's name. There is no version number to bump. (Before revisions the caches were named `simplify-v<N>`, and at first `afford-v<N>`, when the app was only "Can I buy?"; the cleanup below still recognises both.)
 
 ### Install
 
-For every entry in `ASSETS`, in parallel, `fetchAsset(url)` fetches with `cache: "no-cache"` and stores the response under the URL in a cache named `CACHE`; then the worker calls `self.skipWaiting()`.
+The install asks the network only for what changed. For every entry in `ASSETS`, in parallel:
 
-- `cache: "no-cache"` makes the browser revalidate each file with the server, sending the ETag of its HTTP-cached copy. Hosting answers an unchanged image with a bodiless 304, so a release does not re-download the guide screenshots, pictures and icons. HTML, JS, CSS and the manifest are served `no-cache` and come in full each time (a few tens of KB compressed). No copy is used without the server confirming it is current, which `addAll()`'s default fetch would not guarantee.
-- A response that is not `ok`, or was `redirected`, throws. One bad entry (a typo in `ASSETS`, a file not deployed) fails the whole install, and the version already installed keeps running on every device until a fixed one is deployed.
+1. A copy already in the cache named `CACHE` whose bytes hash to the entry's revision is left as it is — what an earlier, interrupted attempt at this same version got through.
+2. Otherwise, a copy in any earlier version's cache (any name `MINE` matches) whose bytes hash to the revision is copied across. On a release that changes one script, that is every other file: the phone downloads `sw.js` and that one script.
+3. Otherwise `fetchAsset(url, rev)` fetches it with `cache: "no-cache"`, and keeps it only if it is `ok`, not `redirected`, and its bytes hash to the revision.
+
+Every file is seen through (`Promise.allSettled`) before the install gives up, so whatever could be fetched is kept; then, if any file failed, the install fails as a whole and the version already installed keeps running. The next update check (the next page load, or `update.js`'s check on resume) tries again and fetches only what is still missing, so an install cut short on a slow or dropping connection resumes rather than restarting. When every file is in, the worker calls `self.skipWaiting()`.
+
+- `cache: "no-cache"` makes the browser revalidate each file with the server, sending the ETag of its HTTP-cached copy. Hosting answers an unchanged image with a bodiless 304; HTML, JS, CSS and the manifest come in full.
+- **Nothing stale is ever kept.** Whether a copy comes from the device or the network, its bytes must hash to this version's revision. A CDN edge not yet cleared, or the browser's own HTTP cache, answering with the previous release's file fails the check instead of being baked into the cache (the reason for the 2026-08-12 decision to bypass HTTP caches). A file changed without `node tools/stamp.mjs` fails it too, with the file's URL and "run node tools/stamp.mjs" in the error.
+- A response that is not `ok` or was `redirected` throws: a typo, a file not deployed, a redirect.
+
+`crypto.subtle.digest` hashes each file; hashing the whole app (about 5 MB) takes a few tens of milliseconds.
 
 ### Activate
 
-On `activate` the worker deletes every cache whose name matches `/^(afford|simplify)-v\d+$/` other than the current `CACHE`, then calls `self.clients.claim()` so it controls the pages already open. Caches with any other name — `simplify-class-media` below — are not the worker's and are left alone.
+On `activate` the worker deletes every cache `MINE` matches (`/^(afford|simplify)-v\d+$|^simplify-[0-9a-f]{8}$/`) other than the current `CACHE`, then calls `self.clients.claim()` so it controls the pages already open. Caches with any other name — `simplify-class-media` below — are not the worker's and are left alone.
 
 `skipWaiting` + `clients.claim` mean a new worker takes over a running page immediately. That is why tools are imported statically and never with `import()` ([architecture](/platform/architecture.md#routing)): a module fetched later by an old page would come from the new cache.
 
@@ -45,21 +55,25 @@ It does not answer (the browser fetches as if no worker were there):
 
 A path that merely starts with the letters `/coach` (such as `/coaching`) is still the worker's. `tools/test-class.mjs` runs `sw.js` in a sandbox and pins this routing: own files answered, `/coach…` and `/__/…` not, other origins not, `POST` not.
 
-## The CACHE bump rule
+## The modulepreload lists
 
-- **Bump `CACHE` for any change under `public/`** — HTML, CSS, JS, an image, a guide page. The worker is cache-first: without a new `CACHE` string the browser sees no change in `sw.js`, installs nothing, and installed apps keep serving the old files indefinitely even though Hosting has the new ones. Changes outside `public/` (docs, `tools/`, `functions/`, rules) need no bump. Files under `public/coach/` are never precached, so a coach-only change does not strictly need one; a bump there costs each device only a revalidation.
-- **A new file under `public/` must be added to `ASSETS`**, or it will not work offline.
+`public/index.html` and `public/coach/index.html` each carry, between two marked comment lines in `<head>`, a `<link rel="modulepreload">` for every module their entry script (`/js/app.js`, `/coach/js/main.js`) reaches by static `import` or `export … from`, nearest first. Without them the browser finds the modules one import level at a time — eight levels deep in the learner app, five in the coach app — and on a slow network each level costs a round trip before the next can start. With them it asks for all of them as the page arrives. Measured on a first visit over HTTP/2 with Chrome's "Fast 3G" throttling (562 ms latency, 1.4 Mbit/s), the learner menu was ready in about 2.2 s instead of 3.7 s, the coach app in about 3.2 s instead of 4.2 s. Once the service worker is in, the learner app's modules come from the device either way.
 
-`node tools/test-assets.mjs` enforces `ASSETS` exactly (it does not and cannot check that `CACHE` was bumped). It reads the `ASSETS` array out of `public/sw.js`, lists every file Hosting would serve from `public/` (skipping dotfiles and the whole `public/coach/` folder), maps `index.html` to `/` and `x.html` to `/x`, and fails on:
+`import()` is not followed (the coach preview's lazy `class-markdown.js` stays lazy). The lists are written by `node tools/stamp.mjs`.
 
-- an entry listed twice;
-- an entry under `/coach`;
-- an entry written with `.html`;
-- an entry with no file behind it (it would fail every install);
-- a served file that is neither in `ASSETS` nor in its `NOT_PRECACHED` list;
-- a `NOT_PRECACHED` file that does not exist, or that is also in `ASSETS`.
+## The stamp rule
 
-`NOT_PRECACHED` is the served-but-not-needed-offline list: `/sw.js` itself, `/img/og-card.png` (the link-preview card), `/img/qr-poster.png` (a poster to print) and `/img/pic/LICENSE.txt` (the pictures' licence).
+**After any change under `public/`, run `node tools/stamp.mjs`**, and commit what it writes: `ASSETS` in `public/sw.js` (every file, with its revision) and the two modulepreload lists. That is the whole rule — a new file is picked up, a deleted one dropped, a changed one re-stamped, and the new `CACHE` follows. Without it, `node tools/test-assets.mjs` fails, and a device would refuse the file whose bytes no longer match (keeping the version it has) until a stamped release is deployed.
+
+The generators that write under `public/` (`make-voice.mjs`, `make-pictures.mjs`, `make-icons.mjs`, `shoot-guide.mjs`) end by saying so. Changes only under `public/coach/` touch nothing the service worker keeps, but a change to the coach app's modules can change its modulepreload list, so run it then too.
+
+`node tools/test-assets.mjs` checks:
+
+- `sw.js`'s `ASSETS` and both modulepreload lists are exactly what `stamp.mjs` would write now;
+- every `NOT_PRECACHED` file exists, and nothing under `/coach` or written with `.html` is kept;
+- in a sandbox (`node:vm`, in-memory Cache Storage, `crypto.subtle`), the install itself: a first install keeps every file byte for byte under one `simplify-<hash>` cache and reuses a matching copy from a `simplify-v<N>` cache; activate deletes the old version's cache and leaves `simplify-class-media`; the next release fetches only its one changed file; a stale copy from the network and a 404 are refused; an install cut short resumes by fetching only what it missed.
+
+`NOT_PRECACHED` (in `tools/stamp.mjs`) is the served-but-not-needed-offline list: `/sw.js` itself, `/img/og-card.png` (the link-preview card), `/img/qr-poster.png` (a poster to print) and `/img/pic/LICENSE.txt` (the pictures' licence).
 
 ## Reloading into a new version
 
@@ -80,10 +94,11 @@ Independently, `app.js` calls `flush()` on every `visibilitychange` to hidden an
 |---|---|
 | `**/*.@(svg\|png)` | `public, max-age=3600` |
 | `**/*.@(js\|css)` | `no-cache` |
-| `/sw.js` | `no-cache` (the browser must always see a new `CACHE`) |
+| `/sw.js` | `no-cache` (the browser must always see new revisions) |
 | `/manifest.webmanifest` | `no-cache`, with `Content-Type: application/manifest+json` |
 | `/`, `/guide`, `/guide/**` | `no-cache` |
-| `^/coach(/.*)?$` (regex) | `no-cache`, for every coach file including images |
+| `^/coach(/.*)?$` (regex) | `no-cache`, for every coach file including images … |
+| `/coach/vendor/**` | … except the vendored libraries: `public, max-age=31536000, immutable`. Their folders are named by version (`firebase/12.19.0/`), so a coach's browser keeps them without asking again; a new version goes in a new folder, never over an old one (`tools/vendor-firebase.mjs`) |
 
 `no-cache` with ETags makes every recheck a cheap 304, and means a browser without the worker never mixes old and new modules. Other files (such as `/img/pic/LICENSE.txt`) get Hosting's defaults. Hosting clears its CDN cache on every release.
 
