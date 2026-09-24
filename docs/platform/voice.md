@@ -1,7 +1,7 @@
 ---
 type: System Reference
 title: The Recorded Voice
-description: How Speak sounds — every fixed sentence a card can say is a pre-recorded MP3 clip in one Google Cloud Chirp 3 HD voice (en-GB-Chirp3-HD-Erinome; there is no en-SG Chirp 3 HD voice), kept on the device by the service worker, with the device's own speechSynthesis voice only for typed words; which sentences get clips, tools/make-voice.mjs (hash-named clips, retakes of cut-off takes, the map and sw.js list it writes), say-aloud.js's playback rules, the tests, sizes and costs.
+description: How Speak sounds — every fixed sentence a card can say is a pre-recorded MP3 clip in one Google Cloud Chirp 3 HD voice (en-IN-Chirp3-HD-Erinome, Indian English — the closest Google offers, as there is no en-SG Chirp 3 HD voice), kept on the device by the service worker, with the device's own speechSynthesis voice only for typed words; which sentences get clips, tools/make-voice.mjs (hash-named clips, retakes of cut-off takes, the map and sw.js list it writes), say-aloud.js's playback rules, the tests, sizes and costs.
 tags: [speech, voice, speak, tts, chirp, clips, audio, offline, say-aloud]
 status: stable
 ---
@@ -14,15 +14,17 @@ read by the device's own voice. This document owns the clips, the generator that
 
 ## The voice
 
-`VOICE` in `tools/make-voice.mjs` is the one place the voice is named: **`en-GB-Chirp3-HD-Erinome`**, a female Chirp 3
-HD voice Google describes as clear, at pace `RATE` 0.9 (a little slower, for a noisy bus or canteen — the same pace
+`VOICE` in `tools/make-voice.mjs` is the one place the voice is named: **`en-IN-Chirp3-HD-Erinome`**, a female Chirp 3
+HD voice Google describes as clear, in Indian English, at pace `RATE` 0.9 (a little slower, for a noisy bus or canteen — the same pace
 the device's voice is asked for).
 
 Singapore English was the aim, but **Google has no `en-SG` Chirp 3 HD voice**: checked on 2026-09-24 against the
 Text-to-Speech API's voice list (English voices exist for en-AU, en-GB, en-IN and en-US only; asking for
 `en-SG-Chirp3-HD-Erinome` is refused as "does not exist", and the locale-free `Erinome` refuses `en-SG`) and against
-the Chirp 3 HD language table. British English is the nearest — it is also where say-aloud.js falls back for the
-device's own voice when a phone has no Singapore voice. To change the voice, edit `VOICE` and run the generator: every
+the Chirp 3 HD language table. Of the four, **Indian English is the closest to Singapore English** (syllable-timed,
+non-rhotic, and it says Singapore words such as "kopi" and "halal" as Singapore does), and the owner chose it: "if
+Singlish accent not available, clear India accent will work too". The first recording, in the British voice
+(`en-GB-Chirp3-HD-Erinome`), said "halal" so that it was heard as "hillside" in every take. To change the voice, edit `VOICE` and run the generator: every
 clip is recorded again.
 
 ## Which sentences have a clip
@@ -52,7 +54,7 @@ part in another language have no clip.
   back. "I want: Stop" keeps its colon: without it, or with a comma, it came out as "I won't stop".
 - **Audio:** asked for as LINEAR16 at 24 kHz, then encoded by ffmpeg (LAME) to MP3, 32 kbit/s mono, with the silence
   at the start cut to 50 ms (Chirp starts some takes with up to 0.8 s, which would feel like Speak not working). MP3
-  plays on iOS Safari and Android Chrome. Clips run 0.9–4.7 s, about 9 KB each, **1.2 MB in all**.
+  plays on iOS Safari and Android Chrome. Clips run 1.2–6.5 s, about 11 KB each, **1.5 MB in all**.
 - **Cut-off takes:** Chirp 3 HD now and then stops mid-word (about one take in four at this pace) and says a sentence a
   little differently each time. The generator measures the last 100 ms of each take and asks again, up to 6 times,
   while speech is still going at the very end (louder than -35 dB), keeping the take that ends quietest — with a
@@ -107,17 +109,19 @@ changed anything: `node tools/test-voice.mjs`, `node tools/test-assets.mjs`, and
 
 ## The listen check (2026-09-24)
 
-No one could listen, so every clip was checked two ways. **Durations** (ffprobe): 0.86–4.7 s, none out of line for
+No one could listen, so every clip was checked two ways. **Durations** (ffprobe): 1.2–6.5 s, none out of line for
 its words once leading silence was cut. **Heard back**: each clip transcribed by `gemini-3.7-flash` on Vertex AI
-(`global`) with no context; a take heard wrong ("I won't stop", "It hurts here, here") was retaken until heard right,
-and doubtful ones transcribed three times (the transcriber itself varies). What remains differs only as a listener
-without context would guess — "Kopi" heard as "copy", "We are OK" as "okay", "I want: Shop" and "I want: Use soap"
-with a "to" added — except **"I want: Halal side"**, heard as "hillside" in every take: the British voice's "halal"
-is not Singapore's. That clip should be listened to by a person.
+(`global`) with no context. The transcriber itself varies, so a doubtful clip was transcribed three times and counts
+as right when heard right at least twice; a take heard wrong ("I won't stop", "It hurts here, um", "I am artistic")
+was retaken until it was. All 137 pass. "I want: Halal side" (3 of 3) and "I want: Kopi" (heard as "kopi", once as
+"coffee") are said as in Singapore; "We are OK" is heard as "okay" and "I am all done" as "I'm all done", the same
+words. "I want: Wait for tick" and "I want: Give us space" took many takes to stop sounding like "I won't" to the
+transcriber — worth a person's ear.
 
 ## Costs
 
 Cloud Text-to-Speech bills Chirp 3 HD per character sent (list price 30 USD per million, after any monthly free
 allowance). The 137 sentences are about 2,800 characters; with retakes a full recording sends about 4,000–5,000
-(≈ 0.15 USD). A run that changes nothing sends nothing. Making and checking this first set, with experiments, sent
-about 22,000 characters (≈ 0.70 USD at list price).
+(≈ 0.15 USD). A run that changes nothing sends nothing. Making and checking the clips — a first British set,
+experiments, then this Indian English set with its retakes — sent about 27,000 characters (≈ 0.80 USD at list
+price).
