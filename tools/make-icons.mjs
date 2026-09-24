@@ -10,8 +10,8 @@
 //   img/icons/apple-touch-icon.png (180)  — the same; iOS rounds the corners
 //   img/icons/icon-maskable-512.png       — white, the seedling 56% wide, inside
 //                                          the circle Android may crop to
-// Node 22 and Chrome, nothing to install (like tools/shoot-guide.mjs). Bump
-// CACHE in public/sw.js after running it.
+// Node 22 and Chrome, nothing to install (like tools/shoot-guide.mjs). Run
+// node tools/stamp.mjs after running it.
 
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync, mkdirSync } from "node:fs";

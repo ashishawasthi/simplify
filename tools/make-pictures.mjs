@@ -35,7 +35,7 @@
 // To update Noto: change NOTO_TAG/NOTO_COMMIT (a release whose svg/LICENSE
 // is still Apache-2.0 — on main the folder is now 2D/svg), run this, then
 // look at every picture again. Afterwards: node tools/test-pictures.mjs, and
-// bump CACHE in public/sw.js.
+// node tools/stamp.mjs.
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
