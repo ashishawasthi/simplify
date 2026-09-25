@@ -111,9 +111,9 @@
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   },
-  "storage": {
-    "rules": "storage.rules"
-  },
+  "storage": [
+    { "target": "main", "rules": "storage.rules" }
+  ],
   "functions": [
     {
       "source": "functions",

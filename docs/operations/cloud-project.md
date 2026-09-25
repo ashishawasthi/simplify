@@ -59,6 +59,8 @@ firebase deploy --only storage
 
 Deleted objects are kept for 7 days (the bucket's default soft-delete policy).
 
+`firebase.json` names the bucket through a deploy target (`"storage": [{ "target": "main", "rules": "storage.rules" }]`, with `main` → `simplify-special.firebasestorage.app` under `targets` in `.firebaserc`). Without it the CLI asks the Firebase Storage API for the default bucket, which the CI deploy account cannot see (it answers 404, reported as "Firebase Storage has not been set up"). The emulators resolve the same target, since `.firebaserc`'s default project is `simplify-special`.
+
 ## The functions' service account
 
 The Cloud Functions run as `simplify-functions@simplify-special.iam.gserviceaccount.com` (`serviceAccount` in `setGlobalOptions` in `functions/index.js`), not as the default compute account, so they get only what they use: calling Gemini, reading and writing Firestore through the Admin SDK, and reading and writing objects in the one bucket.
@@ -73,7 +75,7 @@ gcloud storage buckets add-iam-policy-binding gs://simplify-special.firebasestor
   --member=$SA --role=roles/storage.objectAdmin
 ```
 
-Whoever deploys the functions must be allowed to act as this account (`roles/iam.serviceAccountUser` on it; project owners already are).
+Whoever deploys the functions must be allowed to act as this account (`roles/iam.serviceAccountUser` on it; project owners already are). The Firebase CLI also checks, before any functions deploy, that the deployer may act as the App Engine default account `simplify-special@appspot.gserviceaccount.com`, although nothing runs as it (there is no App Engine app, scheduled job or extension). That account held the project-wide Editor role by Google's default; the owner removed it (2026-09-25), so it holds no roles, and the CI deploy account may act as it without gaining anything. If a Google service ever needs it again, it will fail with a permission error naming that account.
 
 ## Storage rules can read Firestore
 
