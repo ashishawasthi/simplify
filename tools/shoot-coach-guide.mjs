@@ -319,22 +319,65 @@ export const SCENES = {
         "coach-3": { name: "Ms Wong", institutions: ["awwa-school-napiri"], note: "Co-teacher of 3 Kindness.", email: "wong@example.com",
           status: "approved", createdAt: ${at(9, 9, 0)}, decidedAt: ${at(8, 9, 0)} } },
       requests: [{ id: "r2", uid: "coach-3", kind: "join-class", classCode: "K7M3RQP9T", note: "Ms Tan's class", status: "pending", createdAt: ${at(0, 7, 58)} }] }`,
-    setup: `await waitFor(() => $$(".admin-card").length >= 4);`,
-    expect: `byText("h2", "Coaches waiting for approval (1)") && byText("h2", "Requests to join a class (1)")`,
-    clip: { selectors: [".coach-header .brand", ".header-nav", "main h1", "#adm-wait-h", "#adm-wait-h ~ .admin-list .admin-card",
+    setup: `
+      await waitFor(() => $$(".admin-card").length >= 2);
+      const lim = () => byText("#adm-wait-h ~ .admin-list .admin-card", "Mr Lim"); // a new card at every redraw
+      [...lim().querySelectorAll("button")].find((b) => b.textContent === "Approve").click();
+      await waitFor(() => lim().querySelector("textarea"));
+      type(lim().querySelector("textarea"), "Seen taking classes at AWWA School @ Napiri on Monday");
+      lim().querySelector("textarea").blur();`,
+    expect: `byText("h2", "Coaches waiting for approval (1)") && byText("h2", "Requests to join a class (1)") && !byText(".decision-form button", "Approve").disabled`,
+    clip: { selectors: [".coach-header .brand", ".header-nav", "main h1", ".admin-tabs", "#adm-wait-h", "#adm-wait-h ~ .admin-list .admin-card",
       "#adm-req-h", "#adm-req-h ~ .admin-list .admin-card"], pad: 16, maxWidth: 880 },
   },
-  "admin-classes": {
-    ...DESKTOP, path: "/coach/#admin",
+  "admin-coaches": {
+    ...DESKTOP, path: "/coach/#admin/coaches",
     seed: `{ admins: ["coach-1"], classes: ${klass(LIVE)}, coachesOf: { K7M3RQP9T: ["coach-1", "coach-2"] }, profiles: { "coach-1": ${TAN},
         "coach-2": { name: "Mr Lim", institutions: ["awwa-school-napiri", "awwa-school-bedok"], note: ${js(LIM_NOTE)}, email: "lim@example.com",
-          status: "approved", createdAt: ${at(30, 9, 0)}, decidedAt: ${at(29, 9, 0)}, institutionsChangedAt: ${at(1, 16, 20)} } } }`,
-    setup: `await waitFor(() => $("#adm-limits-h"));`,
-    expect: `byText(".admin-card", "Take the page down") && byText(".admin-card .chip", "after approval")`,
-    clip: { selectors: ["#adm-coach-h", "#adm-coach-h + .admin-list", "#adm-class-h + .admin-list", "#adm-limits-h + form"], pad: 16, maxWidth: 880 },
+          status: "approved", createdAt: ${at(30, 9, 0)}, decidedAt: ${at(29, 9, 0)}, decidedBy: "coach-1", decisionLog: "log-lim",
+          institutionsChangedAt: ${at(1, 16, 20)} },
+        "coach-4": { name: "Ms Kaur", institutions: [], otherPlace: "Rainbow Centre Yishun Park School", note: "Teacher of 2 Grace. School office: 6123 7654.",
+          email: "kaur@example.com", status: "declined", createdAt: ${at(3, 9, 0)}, decidedAt: ${at(2, 11, 0)}, decidedBy: "coach-1",
+          decisionLog: "log-kaur", decisionMessage: "Please add a work email I can check." } },
+      log: [
+        { id: "log-kaur", action: "coach-declined", adminUid: "coach-1", adminEmail: "coach@example.com", at: ${at(2, 11, 0)},
+          note: "Please add a work email I can check.", coach: "coach-4", coachName: "Ms Kaur" },
+        { id: "log-lim", action: "coach-approved", adminUid: "coach-1", adminEmail: "coach@example.com", at: ${at(29, 9, 0)},
+          note: "Seen taking classes at AWWA School @ Napiri", coach: "coach-2", coachName: "Mr Lim" }] }`,
+    setup: `await waitFor(() => byText(".admin-card", "Checked: Seen taking classes"));`,
+    expect: `byText(".admin-card .chip", "after approval") && byText(".admin-card", "Told them: Please add")`,
+    // Mr Lim (approved: by whom, and how they checked) and Ms Kaur (declined: what she was told)
+    clip: { selectors: ["#adm-coach-h + .admin-list .admin-card:nth-child(n+2)"], pad: 6, maxWidth: 880 },
+  },
+  "admin-classes": {
+    ...DESKTOP, path: "/coach/#admin/classes",
+    seed: `{ admins: ["coach-1"], classes: ${klass(LIVE)}, coachesOf: { K7M3RQP9T: ["coach-1", "coach-2"] }, profiles: { "coach-1": ${TAN},
+        "coach-2": { name: "Mr Lim", institutions: ["awwa-school-napiri"], note: ${js(LIM_NOTE)}, email: "lim@example.com",
+          status: "approved", createdAt: ${at(30, 9, 0)}, decidedAt: ${at(29, 9, 0)} } } }`,
+    setup: `await waitFor(() => $("#adm-class-h"));`,
+    expect: `byText(".admin-card", "Take the page down") && byText(".class-coach", "Mr Lim")`,
+    clip: { selectors: ["main h1", ".admin-tabs", "#adm-class-h", "#adm-class-h + .admin-list"], pad: 16, maxWidth: 880 },
+  },
+  "admin-history": {
+    ...DESKTOP, path: "/coach/#admin/history",
+    seed: `{ admins: ["coach-1"], classes: ${klass(LIVE)}, profiles: { "coach-1": ${TAN} },
+      log: [
+        { id: "l5", action: "coach-approved", adminUid: "coach-1", adminEmail: "coach@example.com", at: ${at(0, 9, 10)},
+          note: "Seen taking classes at Rainbow Centre Yishun Park", coach: "coach-4", coachName: "Ms Kaur" },
+        { id: "l4", action: "institution-added", adminUid: "coach-1", adminEmail: "coach@example.com", at: ${at(0, 9, 5)},
+          note: "", institution: "rainbow", institutionName: "Rainbow Centre Yishun Park School", coach: "coach-4", coachName: "Ms Kaur" },
+        { id: "l3", action: "coach-declined", adminUid: "coach-1", adminEmail: "coach@example.com", at: ${at(2, 11, 0)},
+          note: "Please add a work email I can check.", coach: "coach-4", coachName: "Ms Kaur" },
+        { id: "l2", action: "join-approved", adminUid: "coach-1", adminEmail: "coach@example.com", at: ${at(8, 9, 0)},
+          note: "Seen teaching 3 Kindness with Ms Tan", coach: "coach-3", coachName: "Ms Wong", classCode: "K7M3RQP9T", className: "3 Kindness" },
+        { id: "l1", action: "coach-approved", adminUid: "coach-1", adminEmail: "coach@example.com", at: ${at(29, 9, 0)},
+          note: "Seen taking classes at AWWA School @ Napiri", coach: "coach-2", coachName: "Mr Lim" }] }`,
+    setup: `await waitFor(() => $$(".log-row").length === 5);`,
+    expect: `byText(".log-row", "approved Ms Kaur as a coach")`,
+    clip: { selectors: ["main h1", ".admin-tabs", "#adm-hist-h", "#adm-hist-h ~ *"], pad: 16, maxWidth: 880 },
   },
   "admin-institutions": {
-    ...DESKTOP, path: "/coach/#admin",
+    ...DESKTOP, path: "/coach/#admin/places",
     seed: `{ admins: ["coach-1"], profiles: { "coach-1": ${TAN} } }`,
     setup: `
       await waitFor(() => $("#adm-inst-h"));
@@ -345,10 +388,9 @@ export const SCENES = {
       type(org, "AWWA");
       type(type_, "Day activity centre");
       type(area, "Pasir Ris");
-      area.blur();
-      scrollToEl($("#adm-inst-h"), 20);`,
+      area.blur();`,
     expect: `byText("h2", "Institutions (4 in the list)") && $$(".inst-row").length === 4`,
-    clip: { selectors: ["#adm-inst-h", "#adm-inst-h ~ *"], pad: 16, maxWidth: 880 },
+    clip: { selectors: ["main h1", ".admin-tabs", "#adm-inst-h", "#adm-inst-h ~ *"], pad: 16, maxWidth: 880 },
   },
   "phone-class": {
     ...PHONE, path: "/coach/#class/K7M3RQP9T",
