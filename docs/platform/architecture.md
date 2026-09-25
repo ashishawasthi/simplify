@@ -32,6 +32,7 @@ This document owns the shape of the learner app in `public/`: which module does 
 | `update.js` | Registers `/sw.js` and reloads into a new version at a safe moment |
 | `setup.js` | The set-up page (`#setup`): the press-and-hold gate, menu switches, words and sound, each tool's `setup()` section |
 | `guide-links.js` | Guide pages only: sends an old `/guide#<section>` link to the section's own page |
+| `guide-live.js` | Guide pages only: listens to the class's push signal (`class-live.js`), and a page the coach shows now opens `/#my-class` |
 
 **Shared parts** (imported by any tool that needs them)
 

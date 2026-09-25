@@ -97,9 +97,11 @@ decision in the [decision log](/product/decisions.md) first. The research behind
 
 ## Private and offline
 
-- **No account, no analytics, no tracking.** Nothing leaves the device unless My class is set up, and then only the
-  class code (plus the device's internet address, as with any website). YouTube receives anything only after the
-  learner taps a video. See [security](/platform/security.md).
+- **No account, no analytics, no tracking.** Students never log in, by design: there is no student account, ID or
+  profile to lose. Nothing leaves the device unless My class is set up, and then only the class code (plus the
+  device's internet address, as with any website) — to read the page, and to listen for a new one while the app is
+  on screen. A learner's device never writes to a server, so nobody can see who has the app open. YouTube receives
+  anything only after the learner taps a video. See [security](/platform/security.md).
 - **Works offline once opened**, and state is saved on the device so it survives closing the app — count your notes
   at home, check at the shop with no signal. See [offline and updates](/platform/offline-and-updates.md).
 - **Voice without a microphone permission**: dictation comes from the keyboard's own microphone, never the page. See
