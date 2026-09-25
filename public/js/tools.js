@@ -147,6 +147,8 @@ import * as wait from "./tools/wait.js";
 import * as steps from "./tools/steps.js";
 import * as iNeed from "./tools/i-need.js";
 import * as showCard from "./tools/show-card.js";
+import * as timeSums from "./tools/time-sums.js";
+import * as stopCheck from "./tools/stop-check.js";
 
 // Menu order. Money comes first, so the buttons people already know stay
 // where they were.
@@ -154,6 +156,7 @@ export const GROUPS = Object.freeze([
   { id: "money", icon: "💰", label: "Money" },
   { id: "my-day", icon: "📅", label: "My day" },
   { id: "talk", icon: "💬", label: "Talk" },
+  { id: "safe", icon: "🛡", label: "Stay safe" },
 ].map(Object.freeze));
 
 // Menu order. guide: the tool's page in the user guide, once it has one —
@@ -174,7 +177,10 @@ export const TOOLS = Object.freeze([
   { id: "now-next", title: "Now and next", group: "my-day", mount: nowNext.mount, setup: nowNext.setup, guide: "/guide/now-next" },
   { id: "wait", title: "Wait", group: "my-day", mount: wait.mount, setup: wait.setup, guide: "/guide/wait" },
   { id: "steps", title: "Steps", group: "my-day", mount: steps.mount, setup: steps.setup, guide: "/guide/steps" },
+  { id: "time-sums", title: "Time sums", group: "my-day", mount: timeSums.mount, guide: "/guide/time-sums" },
 
   { id: "i-need", title: "I need", group: "talk", mount: iNeed.mount, setup: iNeed.setup, guide: "/guide/i-need" },
   { id: "show-card", title: "Show a card", group: "talk", mount: showCard.mount, setup: showCard.setup, guide: "/guide/show-card" },
+
+  { id: "stop-check", title: "Stop and check", group: "safe", mount: stopCheck.mount, guide: "/guide/stop-check" },
 ].map(Object.freeze));

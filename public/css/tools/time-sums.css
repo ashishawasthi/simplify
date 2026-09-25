@@ -1,0 +1,116 @@
+/* Time sums (js/tools/time-sums.js): the two questions, the time boxes and
+   the amount to add. The answer is the shared answer panel. */
+
+/* ---------- the two questions: side by side, never moving ---------- */
+#tool-time-sums .ts-modes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+#tool-time-sums .ts-mode {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 112px;
+  padding: 10px 6px;
+  font-family: inherit;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.15;
+  text-align: center;
+  text-wrap: balance;
+  color: var(--color-text);
+  background: #fff;
+  border: 3px solid var(--color-border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+#tool-time-sums .ts-mode img { display: block; width: 52px; height: 52px; }
+/* the question on show: blue, with a thick edge — not colour alone */
+#tool-time-sums .ts-mode[aria-pressed="true"] {
+  color: var(--color-primary-dark);
+  background: #e3f2fd;
+  border: 5px solid var(--color-primary);
+  padding: 8px 4px;
+}
+html[data-pictures-only] #tool-time-sums .ts-mode img { width: 76px; height: 76px; }
+
+/* ---------- a time box ---------- */
+#tool-time-sums .ts-time {
+  display: block;
+  width: 100%;
+  min-height: 76px;
+  padding: 8px 16px;
+  font-family: inherit;
+  font-size: 34px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+  background: #fff;
+  border: 3px solid var(--color-border);
+  border-radius: var(--radius);
+}
+#tool-time-sums .ts-time:focus,
+#tool-time-sums .ts-number input:focus {
+  border-color: var(--color-primary);
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
+#tool-time-sums .ts-note {
+  margin: 6px 0 0;
+  font-size: 18px;
+  color: var(--color-muted);
+}
+#tool-time-sums .ts-now-words { font-size: 17px; font-weight: 800; }
+
+/* ---------- the amount to add ---------- */
+#tool-time-sums .ts-amount {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+#tool-time-sums .ts-number {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#tool-time-sums .ts-number input {
+  width: 100%;
+  min-width: 0;
+  min-height: 76px;
+  padding: 8px 12px;
+  font-family: inherit;
+  font-size: 34px;
+  font-weight: 800;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+  background: #fff;
+  border: 3px solid var(--color-border);
+  border-radius: var(--radius);
+}
+#tool-time-sums .ts-unit { flex: none; font-size: 20px; font-weight: 700; color: var(--color-muted); }
+#tool-time-sums .ts-quick {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+#tool-time-sums .ts-quick-btn {
+  min-height: var(--target-small);
+  padding: 6px 4px;
+  font-family: inherit;
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--color-primary-dark);
+  background: #f5f9ff;
+  border: 3px solid var(--color-primary);
+  border-radius: var(--radius);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+#tool-time-sums .ts-quick-btn:active { background: #e3f2fd; }

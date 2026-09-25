@@ -6,7 +6,7 @@
 // response breaks offline navigations. Every file under public/ belongs here
 // (bar the few tools/test-assets.mjs names, which no device needs), and
 // `node tools/test-assets.mjs` checks both ways.
-const CACHE = "simplify-v40";
+const CACHE = "simplify-v41";
 const ASSETS = [
   "/",
   "/guide",
@@ -22,6 +22,8 @@ const ASSETS = [
   "/guide/steps",
   "/guide/i-need",
   "/guide/show-card",
+  "/guide/time-sums",
+  "/guide/stop-check",
   "/guide/my-class",
   "/guide/set-up",
   "/guide/notes-and-coins",
@@ -57,6 +59,11 @@ const ASSETS = [
   "/img/guide/screen-i-need-hurts.png",
   "/img/guide/screen-show-card.png",
   "/img/guide/screen-show-card-stop.png",
+  "/img/guide/screen-time-sums.png",
+  "/img/guide/screen-time-sums-after.png",
+  "/img/guide/screen-stop-check.png",
+  "/img/guide/screen-stop-check-card.png",
+  "/img/guide/screen-menu-tucked.png",
   "/img/guide/screen-my-class.png",
   "/img/guide/screen-class-join.png",
   "/img/guide/screen-setup-hold.png",
@@ -100,12 +107,18 @@ const ASSETS = [
   "/js/tools/i-need-hurts.js",
   "/js/tools/show-card.js",
   "/js/tools/show-card-cards.js",
+  "/js/tools/time-sums.js",
+  "/js/tools/time-sums-calc.js",
+  "/js/tools/stop-check.js",
+  "/js/tools/stop-check-cards.js",
   "/css/tools/my-class.css",
   "/css/tools/now-next.css",
   "/css/tools/wait.css",
   "/css/tools/steps.css",
   "/css/tools/i-need.css",
   "/css/tools/show-card.css",
+  "/css/tools/time-sums.css",
+  "/css/tools/stop-check.css",
   "/css/tools/setup.css",
   "/manifest.webmanifest",
   "/favicon.svg",
@@ -133,6 +146,10 @@ const ASSETS = [
   "/img/pic/therapy.svg", "/img/pic/toilet.svg", "/img/pic/too-loud.svg", "/img/pic/travel-card.svg",
   "/img/pic/tray-return.svg", "/img/pic/tray-return-halal.svg", "/img/pic/tray.svg", "/img/pic/tv.svg", "/img/pic/walk.svg", "/img/pic/want.svg",
   "/img/pic/wash-hands.svg", "/img/pic/water.svg", "/img/pic/wipe-table.svg", "/img/pic/yes.svg",
+  // Stop and check's and Time sums' own pictures, and the Stay safe heading's (TOOL_PICTURES, MENU_ICONS)
+  "/img/pic/clock.svg", "/img/pic/code.svg", "/img/pic/id-card.svg", "/img/pic/link.svg", "/img/pic/meet-up.svg",
+  "/img/pic/menu-safe.svg", "/img/pic/password.svg", "/img/pic/photo.svg", "/img/pic/prize.svg", "/img/pic/secret.svg",
+  "/img/pic/send-money.svg",
   // >>> the recorded voice (js/voice-clips.js), written by node tools/make-voice.mjs — don't edit by hand
   "/audio/voice/03898eee657d.mp3", "/audio/voice/04a2ceb1705c.mp3", "/audio/voice/06e2661e416f.mp3", "/audio/voice/0dd78877e506.mp3",
   "/audio/voice/0e24f14ff130.mp3", "/audio/voice/12ab9950764d.mp3", "/audio/voice/17c85edfa02b.mp3", "/audio/voice/183b3ed813df.mp3",
