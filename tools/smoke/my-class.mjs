@@ -8,7 +8,8 @@
 // nobody unless told to — or turns on the emulator flag and stands in for
 // the emulators with a fetch() of its own (NET below), which answers the
 // class's document and makes its pictures (a JPEG drawn on a canvas) and
-// videos (a 1.7 KB H.264 clip).
+// videos (a 1.7 KB H.264 clip) — and with an EventSource of its own for the
+// Realtime Database's push signal (streams, push() and signalNow below).
 
 const inPage = (fn) => `(${fn})()`;
 const run = (fn) => `await (${fn})();`;
@@ -68,6 +69,7 @@ const saved = (markdown, { ago = 60 * 1000, name = "3 Kindness", pageId = "p1" }
   }));`;
 
 // the class's document, as Firestore's REST API sends it
+const DOC_AT = "2026-09-22T00:05:00Z";
 const doc = (markdown, { name = "3 Kindness", pageId = "p9" } = {}) => ({
   name: `projects/simplify-special/databases/(default)/documents/classes/${CODE}`,
   fields: {
@@ -78,7 +80,7 @@ const doc = (markdown, { name = "3 Kindness", pageId = "p9" } = {}) => ({
       pageId: { stringValue: pageId },
       title: { stringValue: "A page" },
       markdown: { stringValue: markdown },
-      publishedAt: { timestampValue: "2026-09-22T00:05:00Z" },
+      publishedAt: { timestampValue: DOC_AT },
       publishedBy: { stringValue: "coach1" },
     } } },
   },
@@ -86,10 +88,38 @@ const doc = (markdown, { name = "3 Kindness", pageId = "p9" } = {}) => ({
 
 // The emulators, stood in for: class documents by code (none → 403, as the
 // rules answer), files made up on the spot. asked: every URL requested.
-const NET = ({ docs = {}, delay = 0 } = {}) => `
+// The push signal: signalNow is what the database holds for the class — by
+// default the one for the class's document (none for no document) — sent
+// as each stream opens; push(signal) changes it and sends it on every open
+// stream. streams: every EventSource the page opened.
+const PUBLISHED_SIGNAL = `{ at: Date.parse(${JSON.stringify(PUBLISHED)}), force: false }`;
+const NET = ({ docs = {}, delay = 0, signal } = {}) => `
   localStorage.setItem("simplify-class-emulator", "on");
   window.asked = [];
   window.classDocs = ${JSON.stringify(docs)};
+  window.signalNow = ${signal ?? (docs[CODE] ? `{ at: Date.parse(${JSON.stringify(DOC_AT)}), force: false }` : "null")};
+  window.streams = [];
+  window.EventSource = class {
+    static CLOSED = 2;
+    constructor(url) {
+      this.url = url;
+      this.readyState = 0;
+      this.listeners = {};
+      streams.push(this);
+      setTimeout(() => {
+        if (this.readyState === 2) return;
+        this.readyState = 1;
+        this.send({ path: "/", data: window.signalNow });
+      }, 50);
+    }
+    addEventListener(type, fn) { (this.listeners[type] ??= []).push(fn); }
+    send(event) { for (const fn of this.listeners.put ?? []) fn({ data: JSON.stringify(event) }); }
+    close() { this.readyState = 2; }
+  };
+  window.push = (signal) => {
+    window.signalNow = signal;
+    for (const s of streams) if (s.readyState === 1) s.send({ path: "/", data: signal });
+  };
   const realFetch = window.fetch.bind(window);
   window.fetch = async (input, options) => {
     const url = String(input?.url ?? input);
@@ -328,21 +358,17 @@ const scenes = [
     }),
   },
   {
-    name: "reader: a new page waits while the old one is being read, and shows at the next visit",
+    name: "reader: a new page shows at once, from its first screen, even while reading",
     path: "/#my-class",
     init: HELPERS + `window.TINY_MP4 = ${JSON.stringify(TINY_MP4)};` + FOLLOWS + saved(PAGE, { ago: 20 * 60 * 1000 }) +
-      NET({ docs: { [CODE]: doc("# A new page\nNew words.") }, delay: 400 }),
+      NET({ docs: { [CODE]: doc("# A new page\nNew words.") }, delay: 1500, signal: PUBLISHED_SIGNAL }),
     setup: run(async () => {
-      // reading at once — a finger on the page — while the new page is on its way
-      document.querySelector("#tool-my-class .mc-screen").dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
-      await pause(1200);
-      if (asked.length !== 1) throw new Error("no refresh on opening");
-      if (text("#tool-my-class .mc-screen h2") !== "Going to the dentist") throw new Error("swapped while reading");
-      document.getElementById("to-menu").click();
-      await pause(300);
-      await tap('#menu a[href="#my-class"]');
+      // reading — on the second screen — while the new page is on its way
+      await tap("#tool-my-class .mc-next");
+      if (text("#tool-my-class .mc-screen h3") !== "The waiting room") throw new Error("the new page came too soon to test");
     }),
-    expect: inPage(() => text("#tool-my-class .mc-screen h2") === "A new page"),
+    expect: inPage(() => text("#tool-my-class .mc-screen h2") === "A new page" &&
+      document.querySelector("#tool-my-class .mc-back").disabled && asked.length === 1),
   },
   {
     name: "reader: untouched, it takes the page that arrives as it opens",
@@ -351,20 +377,112 @@ const scenes = [
     expect: inPage(() => text("#tool-my-class .mc-screen h2") === "A new page" && asked.length === 1),
   },
   {
-    name: "reader: a class taken away keeps showing until the next visit, then nothing",
+    name: "reader: a class taken away shows nothing at once",
     path: "/#my-class",
-    // the news that the class is gone must arrive AFTER the learner has
-    // started reading (a slow CI runner can take longer than 300 ms to tap)
-    init: HELPERS + FOLLOWS + saved(PAGE, { ago: 20 * 60 * 1000 }) + NET({ docs: {}, delay: 1500 }),
+    init: HELPERS + FOLLOWS + saved(PAGE, { ago: 20 * 60 * 1000 }) + NET({ docs: {}, delay: 1500, signal: PUBLISHED_SIGNAL }),
     setup: run(async () => {
       await tap("#tool-my-class .mc-next");
-      await pause(600);
-      if (text("#tool-my-class .mc-screen h3") !== "The waiting room") throw new Error("taken away while reading");
-      document.getElementById("to-menu").click();
-      await pause(300);
-      await tap('#menu a[href="#my-class"]');
+      if (text("#tool-my-class .mc-screen h3") !== "The waiting room") throw new Error("taken away too soon to test");
     }),
     expect: inPage(() => text("#tool-my-class .mc-note-words") === "Nothing from your coach yet"),
+  },
+
+  // ---------- the push signal (class-live.js) ----------
+  {
+    name: "push: one stream to the class's signal, and nothing asked while it matches the saved page",
+    path: "/",
+    init: HELPERS + FOLLOWS + saved(PAGE) + NET({ docs: { [CODE]: doc("# Pushed page") }, signal: PUBLISHED_SIGNAL }),
+    setup: run(() => pause(400)),
+    expect: inPage(() => streams.length === 1 &&
+      streams[0].url === "http://127.0.0.1:9000/signals/K7M3RQP9T.json?ns=simplify-special-default-rtdb" &&
+      asked.length === 0),
+  },
+  {
+    name: "push: on the menu, a new page is fetched at once, and My class stays shut",
+    path: "/",
+    init: HELPERS + FOLLOWS + saved(PAGE) + NET({ docs: { [CODE]: doc("# Pushed page") }, signal: PUBLISHED_SIGNAL }),
+    setup: run(async () => {
+      await pause(300);
+      push({ at: Date.parse("2026-09-22T00:05:00Z"), force: false });
+      await pause(600);
+    }),
+    expect: inPage(() => asked.length === 1 && shown("#menu") && location.hash === "" &&
+      JSON.parse(localStorage.getItem("simplify-class-v1")).latest.pageId === "p9"),
+  },
+  {
+    name: "push: a page shown now opens My class at once, from another tool",
+    path: "/#time-sums",
+    init: HELPERS + FOLLOWS + saved(PAGE) + NET({ docs: { [CODE]: doc("# Pushed page") }, signal: PUBLISHED_SIGNAL }),
+    setup: run(async () => {
+      await pause(300);
+      if (!shown("#tool-time-sums")) throw new Error("not on Time sums");
+      push({ at: Date.parse("2026-09-22T00:05:00Z"), force: true });
+    }),
+    expect: inPage(() => location.hash === "#my-class" && text("#tool-my-class .mc-screen h2") === "Pushed page"),
+  },
+  {
+    name: "push: a page shown now before the app opened doesn't open My class (it waits there)",
+    path: "/",
+    init: HELPERS + FOLLOWS + saved(PAGE) +
+      NET({ docs: { [CODE]: doc("# Pushed page") }, signal: `{ at: Date.parse(${JSON.stringify(DOC_AT)}), force: true }` }),
+    setup: run(() => pause(1200)),
+    expect: inPage(() => shown("#menu") && location.hash === "" && asked.length === 1 &&
+      JSON.parse(localStorage.getItem("simplify-class-v1")).latest.pageId === "p9"),
+  },
+  {
+    name: "push: the stream closes in the background; back within 5 minutes, a page shown now opens",
+    path: "/",
+    init: HELPERS + FOLLOWS + saved(PAGE) + NET({ docs: { [CODE]: doc("# Pushed page") }, signal: PUBLISHED_SIGNAL }),
+    setup: run(async () => {
+      await pause(300);
+      let hidden = true;
+      Object.defineProperty(document, "hidden", { configurable: true, get: () => hidden });
+      document.dispatchEvent(new Event("visibilitychange"));
+      if (streams[0].readyState !== 2) throw new Error("the stream stayed open in the background");
+      // pushed while the app was away, a minute ago
+      const at = Date.now() - 60 * 1000;
+      classDocs.K7M3RQP9T.fields.latest.mapValue.fields.publishedAt.timestampValue = new Date(at).toISOString();
+      signalNow = { at, force: true };
+      hidden = false;
+      document.dispatchEvent(new Event("visibilitychange"));
+    }),
+    expect: inPage(() => streams.length === 2 && location.hash === "#my-class" &&
+      text("#tool-my-class .mc-screen h2") === "Pushed page"),
+  },
+  {
+    name: "push: back after more than 5 minutes, a page shown then just waits in My class",
+    path: "/",
+    init: HELPERS + FOLLOWS + saved(PAGE) + NET({ docs: { [CODE]: doc("# Pushed page") }, signal: PUBLISHED_SIGNAL }),
+    setup: run(async () => {
+      await pause(300);
+      let hidden = true;
+      Object.defineProperty(document, "hidden", { configurable: true, get: () => hidden });
+      document.dispatchEvent(new Event("visibilitychange"));
+      signalNow = { at: Date.parse("2026-09-22T00:05:00Z"), force: true }; // days ago
+      hidden = false;
+      document.dispatchEvent(new Event("visibilitychange"));
+      await pause(800);
+    }),
+    expect: inPage(() => streams.length === 2 && shown("#menu") && location.hash === "" &&
+      JSON.parse(localStorage.getItem("simplify-class-v1")).latest.pageId === "p9"),
+  },
+  {
+    name: "push: a device with no class opens no stream",
+    path: "/",
+    init: HELPERS + NET({ docs: { [CODE]: doc("# Pushed page") } }),
+    setup: run(() => pause(400)),
+    expect: inPage(() => streams.length === 0 && asked.length === 0),
+  },
+  {
+    name: "push: on a guide page, a page shown now opens My class in the app",
+    path: "/guide/menu",
+    init: HELPERS + FOLLOWS + saved(PAGE) + NET({ docs: { [CODE]: doc("# Pushed page") }, signal: PUBLISHED_SIGNAL }),
+    setup: run(async () => {
+      await until(() => streams.length === 1 && streams[0].readyState === 1);
+      push({ at: Date.parse("2026-09-22T00:05:00Z"), force: true });
+    }),
+    expect: inPage(() => location.pathname === "/" && location.hash === "#my-class" &&
+      text("#tool-my-class .mc-screen h2") === "Pushed page"),
   },
 
   // ---------- YouTube ----------
@@ -556,7 +674,7 @@ const scenes = [
   {
     name: "set-up: #join for the class it already follows: no question, just Open My class",
     path: `/#join=${CODE}`,
-    init: HELPERS + FOLLOWS + saved(PAGE) + NET({ docs: { [CODE]: doc(PAGE) } }),
+    init: HELPERS + FOLLOWS + saved(PAGE) + NET({ docs: { [CODE]: doc(PAGE) }, signal: PUBLISHED_SIGNAL }),
     expect: inPage(() => shown("#class-setup-slot .cs-current") && shown("#class-setup-slot .cs-open") &&
       !shown("#class-setup-slot .cs-ask") && asked.length === 0),
   },

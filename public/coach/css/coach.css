@@ -353,6 +353,9 @@ a.class-card-body:active { background: var(--c-accent-soft); }
 .publish-state.is-live { color: var(--c-yes); font-weight: 700; }
 .publish-state.is-live::before { content: "● "; }
 .btn-publish { flex: 1 1 auto; }
+.publish-force { display: flex; gap: 10px; align-items: flex-start; margin: 12px 0 0; font-size: 16px; font-weight: 700; cursor: pointer; }
+.publish-force input { flex: none; width: 22px; height: 22px; margin: 1px 0 0; }
+.publish-force.is-off { opacity: 0.5; cursor: default; }
 
 /* Write with AI (the "helper" in the code) and the video planner */
 details.fold.helper { max-width: none; background: var(--c-soft); }

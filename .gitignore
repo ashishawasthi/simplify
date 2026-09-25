@@ -1,6 +1,6 @@
 .firebase/
-firebase-debug.log
-firebase-debug.*.log
+*-debug.log
+*-debug.*.log
 node_modules/
 .DS_Store
 .agents/

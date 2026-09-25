@@ -9,22 +9,20 @@
 // it only once the set-up page has given this device a class
 // (class-setup.js).
 //
-// A new page never replaces the one being read: the reader keeps what it
-// opened with until the next time it opens — unless the learner has not yet
-// touched it and it opened moments ago (the page it had just asked for), or
-// it had nothing to show. Nothing is an error: no class yet, nothing
-// published yet, or no internet each have a calm line.
+// A new page shows as soon as it arrives — pushed by the coach
+// (class-live.js) or read as My class opens — from its first screen. Nothing
+// is an error: no class yet, nothing published yet, or no internet each have
+// a calm line.
 //
 // Saved (shell.save, "simplify-my-class-v1"): { page, screen } — the screen
 // being read, so Back to here or a reload shows the same one.
 
 import { parseClassMarkdown, renderScreen } from "../class-markdown.js";
 import {
-  savedClass, refreshClass, loadClassMedia, publishedWords, forgetClassIfNone,
+  savedClass, refreshClass, loadClassMedia, publishedWords, forgetClassIfNone, onNewPage,
 } from "../class-data.js";
 import { menuIconSrc } from "../pictures.js";
 
-const JUST_OPENED_MS = 10 * 1000; // a new page may replace one opened this recently, if untouched
 const DOUBLE_TAP_MS = 450; // Next again this soon after the screen changed is the same tap twice
 const MAX_DOTS = 12; // more screens than this: "3 / 20" instead of dots
 
@@ -105,8 +103,6 @@ export function mount(block, shell) {
   let index = 0; // the screen on show
   let onScreen = false;
   let reopen = true; // left since it was shown: the next show() opens it afresh
-  let openedAt = 0;
-  let touched = false;
   let changedAt = -Infinity; // when the screen last changed
 
   const pageKey = (cls) => (cls?.latest ? `${cls.code}|${cls.latest.pageId}|${cls.latest.publishedAt}` : "");
@@ -245,39 +241,17 @@ export function mount(block, shell) {
   for (const type of ["play", "pause", "ended"]) content.addEventListener(type, updateBusy, true);
   content.addEventListener("click", () => setTimeout(updateBusy), true);
 
-  // Touching the reader means someone is reading it
-  for (const type of ["pointerdown", "keydown", "wheel"]) {
-    block.addEventListener(type, () => { touched = true; }, { capture: true, passive: true });
-  }
-
-  // A page that arrived while the reader is open: shown now only if nobody
-  // is reading yet — otherwise the next time My class opens.
-  function arrived({ changed } = {}) {
-    if (!changed || !onScreen) return;
-    const reading = shown?.screens.length && (touched || performance.now() - openedAt > JUST_OPENED_MS);
-    if (reading) return;
+  // A new page (or none: taken down) while the reader is open: shown now,
+  // from its first screen. Otherwise the next show() takes it.
+  onNewPage(() => {
+    if (!onScreen) return;
     takePage();
     index = 0;
     render();
-  }
+  });
 
   // The internet is back: fetch what the page is still missing
   addEventListener("online", () => media?.retry());
-
-  // Refresh when the menu shows, and when the app comes back to the front
-  // (class-data.js keeps it to every 10 minutes)
-  const refresh = () => refreshClass().then(arrived, () => {});
-  shell.onScreenChange((id) => {
-    if (id === null) refresh();
-  });
-  document.addEventListener("visibilitychange", () => {
-    if (document.hidden) return;
-    // back in front — a class iPad picked up in the morning: nobody is
-    // reading the page on screen yet
-    openedAt = performance.now();
-    touched = false;
-    refresh();
-  });
 
   shell.onDeviceChange((device) => {
     renderTile(device);
@@ -305,11 +279,11 @@ export function mount(block, shell) {
         index = !fresh && saved?.page === shown.key && Number.isInteger(saved.screen) ? saved.screen : 0;
       }
       reopen = false;
-      openedAt = performance.now();
-      touched = false;
       changedAt = -Infinity; // the first tap counts, however soon after the app opened
       render();
-      if (shell.device.classCode) refreshClass({ force: true }).then(arrived, () => {});
+      // the push signal keeps the saved page up to date; this is for a
+      // device the stream can't reach (a school network that blocks it)
+      if (shell.device.classCode) refreshClass().catch(() => {});
     },
     hide() {
       onScreen = false;

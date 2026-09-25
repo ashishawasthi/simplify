@@ -1,6 +1,7 @@
 # A merge to main goes live, all of it, once the tests pass:
 #   1. tests     the same as every pull request (tests.yml)
-#   2. backend   Cloud Functions, Firestore rules and indexes, Storage rules
+#   2. backend   Cloud Functions, Firestore rules and indexes, Storage rules,
+#                Realtime Database rules
 #   3. hosting   the website — only after the backend, so pages never go live
 #                ahead of the rules or functions they need
 # Run it again by hand (Actions → Run workflow) after fixing a failed deploy.
@@ -42,7 +43,7 @@ jobs:
       # so the live backend is exactly what main says
       - run: >-
           npx --yes firebase-tools@15 deploy
-          --only functions,firestore:rules,firestore:indexes,storage
+          --only functions,firestore:rules,firestore:indexes,storage,database
           --project simplify-special --non-interactive --force
   build_and_deploy:
     needs: deploy_backend

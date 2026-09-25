@@ -70,8 +70,8 @@
 //   onDeviceChange(fn)     fn(device) after the device's settings (or this
 //                          tool's) change; returns a function that stops listening
 //   onScreenChange(fn)     fn(id) each time a screen is put on show: its id, or
-//                          null for the menu (My class refreshes while the
-//                          menu shows); returns a function that stops listening
+//                          null for the menu; returns a function that stops
+//                          listening
 //   setBusy(on)            true while a reload would disrupt (a Wait timer
 //                          running): a new version then waits until the app
 //                          next goes to the background. false once it stops.

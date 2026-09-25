@@ -2,6 +2,11 @@
 // (classes/{code}.latest), or Unpublish leaves them nothing. Either is undone
 // from the toast — what learners saw before is put back. The public warning
 // is always here, beside the button.
+//
+// Learners with My class open see a new page at once; others see it when
+// they next open My class. "Show it now on open screens" (off unless ticked,
+// and off again after each publish) also opens My class on every learner's
+// screen that has Simplify open at that moment.
 
 import { h } from "./dom.js";
 import { whenText } from "./format.js";
@@ -15,6 +20,10 @@ export function mountPublish(ws) {
   const state = h("p", { class: "publish-state", role: "status", "aria-live": "polite" });
   const publish = h("button", { class: "btn btn-primary btn-publish", type: "button" }, "Publish this page");
   const unpublish = h("button", { class: "btn btn-secondary", type: "button" }, "Unpublish");
+  const force = h("input", { type: "checkbox" });
+  const forceLine = h("label", { class: "publish-force" }, force,
+    h("span", null, "Show it now on open screens",
+      h("span", { class: "label-note" }, " — opens My class on every learner's screen that has Simplify open")));
   const problem = h("div");
   const element = h("section", { class: "publish", "aria-labelledby": "publish-h" },
     h("h2", { id: "publish-h", class: "visually-hidden" }, "Publish"),
@@ -23,6 +32,7 @@ export function mountPublish(ws) {
       h("p", null, PUBLIC_WARNING)),
     state,
     h("div", { class: "actions" }, publish, unpublish),
+    forceLine,
     problem);
 
   function render() {
@@ -49,6 +59,8 @@ export function mountPublish(ws) {
     if (busy) state.textContent = busy;
     publish.textContent = same ? "Published" : here ? "Publish the changes" : "Publish this page";
     publish.disabled = Boolean(busy || same || empty || paused);
+    force.disabled = publish.disabled;
+    forceLine.classList.toggle("is-off", force.disabled);
     unpublish.hidden = !latest;
     unpublish.disabled = Boolean(busy || paused);
   }
@@ -75,8 +87,10 @@ export function mountPublish(ws) {
     if (!(await ws.editor.flush())) return; // the save's own line says what went wrong
     const id = ws.editor.pageId;
     if (!id) return;
-    await cloud.publishPage(code, id, uid, ws.editor.getText());
-    toast.show("Published. Learners see this page now.", {
+    const now = force.checked;
+    await cloud.publishPage(code, id, uid, ws.editor.getText(), { force: now });
+    force.checked = false; // each push asks again
+    toast.show(now ? "Published, and opened now on learners' screens that have Simplify open." : "Published. Learners see this page now.", {
       undo: () => cloud.setLatest(code, uid, before).catch((err) => ws.problem(err)),
     });
   }));

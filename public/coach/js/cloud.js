@@ -292,14 +292,16 @@ export async function deletePage(code, id) {
 }
 
 // The page, saved, becomes what learners see: both writes or neither.
-export async function publishPage(code, id, uid, { title, markdown }) {
+// force: also open it at once on learners' screens that have Simplify open
+// (a Cloud Function passes that on — functions/signal.js)
+export async function publishPage(code, id, uid, { title, markdown }, { force = false } = {}) {
   await attempt(async () => {
     const batch = writeBatch(db);
     batch.update(doc(db, "classes", code, "pages", id), {
       title, markdown, updatedAt: serverTimestamp(), updatedBy: uid, publishedAt: serverTimestamp(),
     });
     batch.update(doc(db, "classes", code), {
-      latest: { pageId: id, title, markdown, publishedAt: serverTimestamp(), publishedBy: uid },
+      latest: { pageId: id, title, markdown, publishedAt: serverTimestamp(), publishedBy: uid, ...(force ? { force: true } : {}) },
       updatedAt: serverTimestamp(),
     });
     await batch.commit();
@@ -307,7 +309,7 @@ export async function publishPage(code, id, uid, { title, markdown }) {
 }
 
 // Unpublish (latest null), or put back what learners saw before (an undo):
-// published again now, by this coach.
+// published again now, by this coach — never forced onto open screens.
 export async function setLatest(code, uid, latest) {
   await attempt(() => updateDoc(doc(db, "classes", code), {
     latest: latest

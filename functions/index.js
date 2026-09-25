@@ -1,5 +1,5 @@
 // Cloud Functions for the Simplify coach platform (docs/coach/,
-// docs/platform/ai-models.md). Six callables, all in asia-southeast1:
+// docs/platform/ai-models.md). Six callables and one trigger, all in asia-southeast1:
 //
 //   writePage    the page helper: one Gemini Flash call → write / ask / decline
 //   planVideo    the video planner: one Flash call → an exact video request (a plan)
@@ -7,6 +7,8 @@
 //   checkVideo   finished? → the draft clip in Storage; failed or too slow → refund
 //   approveVideo a finished draft becomes placeable in pages (public path)
 //   discardVideo removes the clip (the credit is not given back: it was paid for)
+//   classSignal  on every change to classes/{code}: the push signal learners'
+//                devices listen to (signal.js)
 //
 // Every callable first checks that the caller is signed in, has a coach profile
 // the admin has not suspended, is listed for the class, and that the class is
@@ -16,6 +18,7 @@
 // (SIMPLIFY_AI_FAKE=1), so the models are replaced by deterministic fakes (ai.js).
 
 import { setGlobalOptions } from "firebase-functions/v2";
+import { onDocumentWritten } from "firebase-functions/v2/firestore";
 import { onCall } from "firebase-functions/v2/https";
 import { askFlash, fakePlanVideo, fakeWritePage, readOmni, startOmni } from "./ai.js";
 import { cleanPage, cleanTitle, linksIn } from "./check.js";
@@ -24,6 +27,7 @@ import {
   limitsFrom, meaningfulLength, monthKey, peekUsage, refund, requireClassCoach, reserve, usageRef,
 } from "./lib.js";
 import { THINKING } from "./models.js";
+import { classSignalHandler } from "./signal.js";
 import {
   EMPTY_PLAN_ANSWER, EMPTY_WRITE_ANSWER, PLAN_VIDEO_SCHEMA, PLAN_VIDEO_SYSTEM, planVideoInput,
   WRITE_PAGE_SCHEMA, WRITE_PAGE_SYSTEM, writePageInput,
@@ -460,3 +464,7 @@ export const startVideo = callable(540, startVideoHandler);
 export const checkVideo = callable(180, checkVideoHandler);
 export const approveVideo = callable(120, approveVideoHandler);
 export const discardVideo = callable(60, discardVideoHandler);
+
+// ---------- the trigger ----------
+
+export const classSignal = onDocumentWritten({ document: "classes/{code}", timeoutSeconds: 60 }, classSignalHandler);

@@ -1,9 +1,9 @@
-// Cloud Functions tests: the six callables in functions/index.js, with the fake
+// Cloud Functions tests: the six callables and the classSignal trigger in functions/index.js, with the fake
 // models (SIMPLIFY_AI_FAKE=1 — nothing is sent to Gemini and nothing costs money):
 //
 //   node tools/test-functions.mjs
 //
-// It starts the Auth, Firestore, Storage and Functions emulators itself, from a
+// It starts the Auth, Firestore, Storage, Realtime Database and Functions emulators itself, from a
 // temporary firebase.json with ports of its own, then
 //   - calls the handlers directly (so it can also move time: a render that is
 //     30 minutes old), against the Firestore and Storage emulators, and
@@ -27,7 +27,7 @@ const PROJECT = "simplify-special";
 // emulators, so those are pinned too), so it can run beside other emulators
 const PORTS = {
   auth: 9321, firestore: 8321, storage: 9421, functions: 5321, hub: 4421, logging: 4521, websocket: 9521,
-  eventarc: 9621, tasks: 9721,
+  eventarc: 9621, tasks: 9721, database: 9821,
 };
 
 // ---------- outside: the copy check, then the emulators, then this file inside them ----------
@@ -40,12 +40,14 @@ if (process.env.SIMPLIFY_FUNCTIONS_INSIDE !== "1") {
   writeFileSync(join(dir, "firebase.json"), JSON.stringify({
     firestore: { rules: join(ROOT, "firestore.rules") },
     storage: { rules: join(ROOT, "storage.rules") },
+    database: { rules: join(ROOT, "database.rules.json") },
     // relative: the CLI reads a functions source as relative to the config's folder
     functions: [{ source: relative(dir, join(ROOT, "functions")), codebase: "default", runtime: "nodejs22" }],
     emulators: {
       auth: { port: PORTS.auth },
       firestore: { port: PORTS.firestore, websocketPort: PORTS.websocket },
       storage: { port: PORTS.storage },
+      database: { port: PORTS.database },
       functions: { port: PORTS.functions },
       eventarc: { port: PORTS.eventarc },
       tasks: { port: PORTS.tasks },
@@ -58,7 +60,7 @@ if (process.env.SIMPLIFY_FUNCTIONS_INSIDE !== "1") {
   // folder, shared by every emulator suite of the project — a run of its own
   // must not see (or clean up) another's
   const child = spawn("firebase", [
-    "emulators:exec", "--only", "auth,firestore,storage,functions",
+    "emulators:exec", "--only", "auth,firestore,storage,database,functions",
     "--config", join(dir, "firebase.json"), "--project", PROJECT,
     `node "${fileURLToPath(import.meta.url)}"`,
   ], {
@@ -90,6 +92,9 @@ async function runInside() {
   // firebase-admin as the functions resolve it (tools/ has no node_modules of its own)
   const fromFunctions = createRequire(join(ROOT, "functions", "package.json"));
   const { Timestamp } = await import(pathToFileURL(fromFunctions.resolve("firebase-admin/firestore")).href);
+  const { getDatabaseWithUrl } = await import(pathToFileURL(fromFunctions.resolve("firebase-admin/database")).href);
+  const { DATABASE_URL, signalFor, classSignalHandler } = await import(pathToFileURL(join(ROOT, "functions", "signal.js")).href);
+  const signalNow = async (code) => (await getDatabaseWithUrl(DATABASE_URL).ref(`signals/${code}`).get()).val();
 
   let failed = 0;
   let count = 0;
@@ -385,6 +390,43 @@ async function runInside() {
   await db.doc("config/limits").delete();
 
   // ---------- over HTTP, as the coach app calls ----------
+
+  section("classSignal: the push signal learners' devices listen to");
+  const S = "SGNKHS234";
+  const at = Timestamp.fromDate(new Date("2026-09-26T01:02:03.456Z"));
+  const page = (extra = {}) => ({ pageId: "p1", title: "Bus", markdown: "# Bus", publishedAt: at, publishedBy: "coachA", ...extra });
+  const cls = (extra = {}) => ({ name: "7 Joy", institution: "awwa-school-napiri", status: "active", latest: page(), createdAt: past, updatedAt: past, ...extra });
+  check("a published page → its time, not forced", signalFor(cls()), { at: at.toMillis(), force: false });
+  check("a forced page → force: true", signalFor(cls({ latest: page({ force: true }) })), { at: at.toMillis(), force: true });
+  check("nothing published → none", signalFor(cls({ latest: null })), null);
+  check("a paused class → none", signalFor(cls({ status: "suspended" })), null);
+  check("no class → none", signalFor(undefined), null);
+  check("force must be exactly true", signalFor(cls({ latest: page({ force: "yes" }) })).force, false);
+  // the handler, called directly, as the trigger calls it
+  const event = (before, after, code = S) => ({ params: { code }, data: { before: { data: () => before }, after: { data: () => after } } });
+  await db.doc(`classes/${S}`).set(cls({ latest: page({ force: true }) }));
+  check("publishing sets signals/<code>", await classSignalHandler(event(cls({ latest: null }), cls({ latest: page({ force: true }) }))), { at: at.toMillis(), force: true });
+  check("... which is exactly { at, force }", await signalNow(S), { at: at.toMillis(), force: true });
+  check("a new name alone writes nothing", await classSignalHandler(event(cls({ latest: page({ force: true }) }), cls({ name: "8 Joy", latest: page({ force: true }) }))), null);
+  await db.doc(`classes/${S}`).set(cls({ latest: null }));
+  check("unpublishing removes the signal", await classSignalHandler(event(cls(), cls({ latest: null }))), null);
+  check("... it is gone", await signalNow(S), null);
+  await db.doc(`classes/${S}`).set(cls());
+  await classSignalHandler(event(cls({ latest: null }), cls({ latest: page({ force: true }) })));
+  check("out of order: the signal follows the class as it is now", await signalNow(S), { at: at.toMillis(), force: false });
+  check("a code that is not a class code writes nothing", await classSignalHandler(event(null, cls(), "bad")), null);
+
+  section("classSignal through the emulators: a publish reaches the signal by itself");
+  const T = "TRGKHS234";
+  await db.doc(`classes/${T}`).set(cls({ latest: null }));
+  const published = Timestamp.now();
+  await db.doc(`classes/${T}`).update({ latest: page({ publishedAt: published, force: true }), updatedAt: published });
+  let seen = null;
+  for (const end = Date.now() + 20000; Date.now() < end && !seen; await new Promise((r) => setTimeout(r, 250))) seen = await signalNow(T);
+  check("the trigger set signals/<code> after the publish", seen, { at: published.toMillis(), force: true });
+  await db.doc(`classes/${T}`).update({ status: "suspended" });
+  for (const end = Date.now() + 20000; Date.now() < end && seen; await new Promise((r) => setTimeout(r, 250))) seen = await signalNow(T);
+  check("the admin pausing the class removes it", seen, null);
 
   section("over HTTP through the Functions emulator (the coach app's way)");
   const base = `http://127.0.0.1:${PORTS.functions}/${PROJECT}/asia-southeast1`;

@@ -245,16 +245,21 @@ check("codeFromText: typed", data.codeFromText("k7m 3rq-p9t"), "K7M3RQP9T");
 }
 
 check("endpoints: the live site asks Google", data.endpoints(new URL("https://simplify.whiz.coach/"), localStorage),
-  { firestore: "https://firestore.googleapis.com", storage: "https://firebasestorage.googleapis.com" });
+  { firestore: "https://firestore.googleapis.com", storage: "https://firebasestorage.googleapis.com", database: "https://simplify-special-default-rtdb.asia-southeast1.firebasedatabase.app" });
 check("endpoints: a preview channel too", data.endpoints(new URL("https://simplify-special--pr7-x.web.app/"), localStorage).firestore,
   "https://firestore.googleapis.com");
 const flag = (value) => ({ getItem: () => value });
 check("endpoints: localhost asks nobody", data.endpoints(new URL("http://127.0.0.1:5050/"), flag(null)), null);
 check("endpoints: localhost, emulators on", data.endpoints(new URL("http://localhost:5050/"), flag("on")),
-  { firestore: "http://127.0.0.1:8085", storage: "http://127.0.0.1:9199" });
+  { firestore: "http://127.0.0.1:8085", storage: "http://127.0.0.1:9199", database: "http://127.0.0.1:9000" });
 check("endpoints: localhost, other ports", data.endpoints(new URL("http://127.0.0.1:5050/"),
   flag('{"firestore":"http://127.0.0.1:8185","storage":"http://127.0.0.1:9299"}')),
-{ firestore: "http://127.0.0.1:8185", storage: "http://127.0.0.1:9299" });
+{ firestore: "http://127.0.0.1:8185", storage: "http://127.0.0.1:9299", database: "http://127.0.0.1:9000" });
+check("endpoints: localhost, another database port", data.endpoints(new URL("http://127.0.0.1:5050/"),
+  flag('{"firestore":"http://127.0.0.1:8185","storage":"http://127.0.0.1:9299","database":"http://127.0.0.1:9100"}')).database,
+"http://127.0.0.1:9100");
+check("endpoints: only a local database", data.endpoints(new URL("http://127.0.0.1:5050/"),
+  flag('{"firestore":"http://127.0.0.1:8185","storage":"http://127.0.0.1:9299","database":"https://evil.example"}')), null);
 check("endpoints: only local servers", data.endpoints(new URL("http://127.0.0.1:5050/"),
   flag('{"firestore":"https://evil.example","storage":"http://127.0.0.1:9299"}')), null);
 check("endpoints: the flag means nothing on the live site", data.endpoints(new URL("https://simplify.whiz.coach/"),
@@ -265,6 +270,10 @@ check("the class's address", data.classDocUrl("K7M3RQP9T", GOOGLE),
   "https://firestore.googleapis.com/v1/projects/simplify-special/databases/(default)/documents/classes/K7M3RQP9T");
 check("a picture's address", data.mediaFileUrl("K7M3RQP9T", "picture", "abc", GOOGLE),
   "https://firebasestorage.googleapis.com/v0/b/simplify-special.firebasestorage.app/o/classes%2FK7M3RQP9T%2Fpictures%2Fabc.jpg?alt=media");
+check("the push signal's address", data.signalUrl("K7M3RQP9T", GOOGLE),
+  "https://simplify-special-default-rtdb.asia-southeast1.firebasedatabase.app/signals/K7M3RQP9T.json");
+check("the push signal's address, emulated", data.signalUrl("K7M3RQP9T", data.endpoints(new URL("http://localhost:5050/"), flag("on"))),
+  "http://127.0.0.1:9000/signals/K7M3RQP9T.json?ns=simplify-special-default-rtdb");
 check("a video's address", data.mediaFileUrl("K7M3RQP9T", "video", "v1", GOOGLE),
   "https://firebasestorage.googleapis.com/v0/b/simplify-special.firebasestorage.app/o/classes%2FK7M3RQP9T%2Fvideos%2Fv1.mp4?alt=media");
 
@@ -347,7 +356,9 @@ globalThis.location = new URL("https://simplify.whiz.coach/");
 const SAVED = "simplify-class-v1";
 let docNow = DOC;
 answer = () => new Response(JSON.stringify(docNow), { status: 200 });
-check("refresh: no class, nothing asked", [await data.refreshClass({ force: true }), (asked = [], asked.length)], [{ changed: false }, 0]);
+check("refresh: no class, nothing asked", [await data.refreshClass(), (asked = [], asked.length)], [{ changed: false }, 0]);
+const heard = [];
+const stopHearing = data.onNewPage(({ cls }) => heard.push(cls.latest?.pageId ?? null));
 setDevice({ classCode: "K7M3RQP9T", className: "Old name" });
 {
   const r = await data.refreshClass();
@@ -355,16 +366,15 @@ setDevice({ classCode: "K7M3RQP9T", className: "Old name" });
   check("refresh: the tile's name follows the class", getDevice().className, "3 Kindness");
 }
 asked = [];
-check("refresh: again at once is too soon", [(await data.refreshClass()).changed, asked.length], [false, 0]);
-check("refresh: My class opening, too, just after", [(await data.refreshClass({ force: true })).changed, asked.length], [false, 0]);
+check("refresh: My class opening again at once is too soon", [(await data.refreshClass()).changed, asked.length], [false, 0]);
+check("refresh: pushed, it asks at once", [(await data.refreshClass({ pushed: true })).changed, asked.length], [false, 1]);
 {
   const saved = JSON.parse(store.get(SAVED));
   saved.checkedAt -= 60 * 1000; // a minute ago
   store.set(SAVED, JSON.stringify(saved));
 }
 asked = [];
-check("refresh: My class opening a minute later asks", [(await data.refreshClass({ force: true })).changed, asked.length], [false, 1]);
-check("refresh: the menu a minute later doesn't", [(await data.refreshClass()).changed, asked.length], [false, 1]);
+check("refresh: My class opening a minute later asks", [(await data.refreshClass()).changed, asked.length], [false, 1]);
 const age = (ms) => {
   const saved = JSON.parse(store.get(SAVED));
   saved.checkedAt = Date.now() - ms;
@@ -375,6 +385,7 @@ docNow = { fields: { ...DOC.fields, latest: { mapValue: { fields: { ...DOC.field
   pageId: { stringValue: "p2" }, markdown: { stringValue: "New page" } } } } } };
 check("refresh: 11 minutes on, a new page", (await data.refreshClass()).changed, true);
 check("refresh: saved", data.savedClass().latest.markdown, "New page");
+check("refresh: onNewPage heard each new page, and only those", heard, ["p1", "p2"]);
 age(11 * 60 * 1000);
 answer = () => { throw new TypeError("offline"); };
 check("refresh: offline keeps the copy", [(await data.refreshClass()).changed, data.savedClass().latest.markdown], [false, "New page"]);
@@ -382,16 +393,58 @@ answer = () => new Response("{}", { status: 403 });
 age(11 * 60 * 1000);
 check("refresh: taken away — nothing to show", [(await data.refreshClass()).changed, data.savedClass().latest, data.savedClass().name],
   [true, null, "3 Kindness"]);
+check("refresh: onNewPage heard that there is none", heard.at(-1), null);
+stopHearing();
 {
   // two refreshes at once share one request
   answer = () => new Response(JSON.stringify(DOC), { status: 200 });
   age(11 * 60 * 1000);
   asked = [];
-  const [a, b] = await Promise.all([data.refreshClass(), data.refreshClass({ force: true })]);
+  const [a, b] = await Promise.all([data.refreshClass(), data.refreshClass({ pushed: true })]);
   check("refresh: one request for two askers", [asked.length, a.changed, b.changed], [1, true, true]);
 }
 setDevice({ classCode: "ABCDEFGHJ", className: "Other" });
 check("savedClass: only the device's class", data.savedClass(), null);
+
+// ---------- the push signal (class-live.js) ----------
+
+const live = await import("../public/js/class-live.js");
+check("isoMs: Firestore's microseconds", data.isoMs("2026-09-26T01:02:03.456789Z"), Date.UTC(2026, 8, 26, 1, 2, 3, 456));
+check("isoMs: whole seconds", data.isoMs("2026-09-26T01:02:03Z"), Date.UTC(2026, 8, 26, 1, 2, 3));
+check("isoMs: not a time", [data.isoMs("soon"), data.isoMs(null)], [null, null]);
+{
+  const at = Date.UTC(2026, 8, 26, 1, 2, 3, 456);
+  const page = { latest: { publishedAt: "2026-09-26T01:02:03.456789Z" } };
+  check("matchesSignal: the page the signal speaks of", data.matchesSignal(page, { at, force: false }), true);
+  check("matchesSignal: another page", data.matchesSignal(page, { at: at + 1000, force: false }), false);
+  check("matchesSignal: none, and a page saved", data.matchesSignal(page, null), false);
+  check("matchesSignal: none, and none saved", [data.matchesSignal({ latest: null }, null), data.matchesSignal(null, null)], [true, true]);
+  check("matchesSignal: a signal, nothing saved", data.matchesSignal(null, { at, force: true }), false);
+}
+check("cleanSignal", [
+  live.cleanSignal({ at: 5, force: true }), live.cleanSignal({ at: 5 }), live.cleanSignal({ at: 5, force: "yes" }),
+  live.cleanSignal(null), live.cleanSignal({ at: "5" }), live.cleanSignal("x"),
+], [{ at: 5, force: true }, { at: 5, force: false }, { at: 5, force: false }, null, null, null]);
+check("applyEvent: put at / replaces", live.applyEvent({ at: 1, force: true }, "put", { path: "/", data: { at: 2 } }), { at: 2 });
+check("applyEvent: put null at / is none", live.applyEvent({ at: 1 }, "put", { path: "/", data: null }), null);
+check("applyEvent: put at /force changes that", live.applyEvent({ at: 1, force: false }, "put", { path: "/force", data: true }), { at: 1, force: true });
+check("applyEvent: patch at / merges", live.applyEvent({ at: 1, force: false }, "patch", { path: "/", data: { force: true } }), { at: 1, force: true });
+check("applyEvent: the first put, from nothing", live.applyEvent(undefined, "put", { path: "/", data: { at: 3, force: false } }), { at: 3, force: false });
+{
+  const now = Date.UTC(2026, 8, 26, 3, 0, 0);
+  const pushed = { at: now - 1000, force: true };
+  const force = (o) => live.shouldForce({ signal: pushed, heard: { at: now - 3600e3, force: false }, live: true, now, forced: null, ...o });
+  check("force: a forced page arriving on an open stream", force(), true);
+  check("force: not when the coach didn't ask", force({ signal: { ...pushed, force: false } }), false);
+  check("force: never the first signal after the page loads", force({ heard: undefined }), false);
+  check("force: ... even if nothing was published before", force({ heard: null }), true);
+  check("force: not the same push twice", force({ heard: pushed }), false);
+  check("force: not again after it was shown", force({ forced: pushed.at }), false);
+  check("force: back on screen within 5 minutes", force({ live: false, now: pushed.at + 4 * 60e3 }), true);
+  check("force: back on screen after 5 minutes: no", force({ live: false, now: pushed.at + 6 * 60e3 }), false);
+  check("force: on an open stream, whatever the device's clock says", force({ now: pushed.at + 3600e3 }), true);
+  check("force: a device clock a little behind", force({ live: false, now: pushed.at - 60e3 }), true);
+}
 {
   const snap = data.savedSnapshot();
   data.restoreSnapshot(null);

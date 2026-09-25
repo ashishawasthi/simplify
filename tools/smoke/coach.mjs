@@ -155,9 +155,9 @@ function fakeCloud() {
       notify();
       return later();
     },
-    async publishPage(code, pid, uid, { title, markdown }) {
-      S.calls.push({ name: "publishPage", pid, title, markdown });
-      cls(code).latest = { pageId: pid, title, markdown, publishedAt: new Date(), publishedBy: uid };
+    async publishPage(code, pid, uid, { title, markdown }, { force = false } = {}) {
+      S.calls.push({ name: "publishPage", pid, title, markdown, force });
+      cls(code).latest = { pageId: pid, title, markdown, publishedAt: new Date(), publishedBy: uid, ...(force ? { force: true } : {}) };
       notify();
       return later();
     },
@@ -642,8 +642,27 @@ export default [
       byText(".toast-btn", "Undo").click();
       await waitFor(() => __fake.classes.K7M3RQP9T.latest === null);
     }),
-    expect: inPage(() => __fake.calls.some((c) => c.name === "publishPage" && c.pid === "page1") &&
+    expect: inPage(() => __fake.calls.some((c) => c.name === "publishPage" && c.pid === "page1" && c.force === false) &&
       byText(".publish-state", "Learners see nothing yet")),
+  }),
+  scene({
+    name: "publish: Show it now on open screens is off, ticked it goes with the publish, then off again",
+    path: "/coach/#class/K7M3RQP9T",
+    init: seed(`{ pages: ${PAGE}, pictures: ${SHELF} }`),
+    setup: run(async () => {
+      await waitFor(() => $(".md-input").value);
+      const box = $(".publish-force input");
+      if (!box || box.checked || box.disabled) throw new Error("Show it now should start off, and be there to tick");
+      box.click();
+      byText("button", "Publish this page").click();
+      await waitFor(() => __fake.classes.K7M3RQP9T.latest && byText(".toast", "opened now on learners' screens"));
+      if (box.checked) throw new Error("still ticked after publishing");
+      if (!box.disabled) throw new Error("offered with nothing to publish");
+      byText(".toast-btn", "Undo").click();
+      await waitFor(() => __fake.calls.some((c) => c.name === "setLatest"));
+    }),
+    expect: inPage(() => __fake.calls.some((c) => c.name === "publishPage" && c.force === true) &&
+      !("force" in (__fake.calls.find((c) => c.name === "setLatest").latest ?? {}))),
   }),
   scene({
     name: "unpublish: learners see nothing; Undo publishes it again",

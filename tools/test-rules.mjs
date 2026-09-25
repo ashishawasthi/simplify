@@ -1,10 +1,10 @@
-// Security rules tests: firestore.rules and storage.rules, run in the Firebase
+// Security rules tests: firestore.rules, storage.rules and database.rules.json, run in the Firebase
 // emulators and driven over their REST APIs with unsigned test tokens (the
 // emulators accept them). No dependencies beyond the Firebase CLI and Java:
 //
 //   node tools/test-rules.mjs
 //
-// It starts the Auth, Firestore and Storage emulators itself, from a temporary
+// It starts the Auth, Firestore, Storage and Realtime Database emulators itself, from a temporary
 // firebase.json with ports of its own (so it runs beside `firebase emulators:start`
 // or another test), runs every case, and stops them. Each case says who asks,
 // what they try, and whether the rules must let them.
@@ -26,10 +26,12 @@ if (process.env.SIMPLIFY_RULES_INSIDE !== "1") {
   writeFileSync(join(dir, "firebase.json"), JSON.stringify({
     firestore: { rules: join(ROOT, "firestore.rules") },
     storage: { rules: join(ROOT, "storage.rules") },
+    database: { rules: join(ROOT, "database.rules.json") },
     emulators: {
       auth: { port: 9311 },
       firestore: { port: 8311, websocketPort: 9511 },
       storage: { port: 9411 },
+      database: { port: 9611 },
       hub: { port: 4411 },
       logging: { port: 4511 },
       ui: { enabled: false },
@@ -39,7 +41,7 @@ if (process.env.SIMPLIFY_RULES_INSIDE !== "1") {
   // folder, shared by every emulator suite of the project — a run of its own
   // must not see (or clean up) another's
   const child = spawn("firebase", [
-    "emulators:exec", "--only", "auth,firestore,storage",
+    "emulators:exec", "--only", "auth,firestore,storage,database",
     "--config", join(dir, "firebase.json"), "--project", PROJECT,
     `node "${fileURLToPath(import.meta.url)}"`,
   ], { cwd: dir, env: { ...process.env, SIMPLIFY_RULES_INSIDE: "1", TMPDIR: dir }, stdio: ["ignore", "pipe", "pipe"] });
@@ -187,6 +189,39 @@ async function runInside() {
   const listFiles = lazy(async (who, prefix) => (await fetch(`${ST}?prefix=${enc(prefix)}`, { headers: storageAuth(who) })).status);
   const deleteFile = lazy(async (who, path) => (await fetch(`${ST}/${enc(path)}`, { method: "DELETE", headers: storageAuth(who) })).status);
 
+  // ---- Realtime Database REST (the push signal learners' devices stream) ----
+
+  const RT = `http://${process.env.FIREBASE_DATABASE_EMULATOR_HOST}`;
+  // a Bearer header is an OAuth token (the owner: past the rules); a
+  // signed-in user's ID token goes in ?auth=, as the REST API wants it
+  const rtUrl = (who, path) => `${RT}/${path}.json?ns=${PROJECT}-default-rtdb`
+    + (WHO[who] && who !== "owner" ? `&auth=${WHO[who]}` : "");
+  const rtHeaders = (who) => (who === "owner" ? { authorization: "Bearer owner" } : {});
+  const rtdb = lazy(async (who, method, path, body) => {
+    const res = await fetch(rtUrl(who, path), {
+      method,
+      headers: rtHeaders(who),
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    return res.status;
+  });
+  // a device listening, as EventSource does: the first event is enough
+  const stream = lazy(async (who, path) => {
+    const stop = new AbortController();
+    const res = await fetch(rtUrl(who, path), {
+      headers: { accept: "text/event-stream", ...rtHeaders(who) },
+      signal: stop.signal,
+    });
+    let first = "";
+    if (res.ok) {
+      const reader = res.body.getReader();
+      first = new TextDecoder().decode((await reader.read()).value);
+    }
+    stop.abort();
+    // a stream the rules refuse opens, then says "cancel"
+    return res.ok && /^event: cancel/m.test(first) ? 403 : res.status;
+  });
+
   // ---------- seed (as owner, past the rules) ----------
 
   const A = "K7M3RQP9T"; // active class: coachA and coachS (suspended) listed
@@ -231,6 +266,10 @@ async function runInside() {
   for (const [path, data] of Object.entries(seeds)) {
     const status = await set("owner", path, data)();
     if (status !== 200) throw new Error(`seeding ${path}: HTTP ${status}`);
+  }
+  {
+    const status = await rtdb("owner", "PUT", `signals/${A}`, { at: past.getTime(), force: false })();
+    if (status !== 200) throw new Error(`seeding signals/${A}: HTTP ${status}`);
   }
   for (const path of [`classes/${A}/pictures/pic1.jpg`, `classes/${A}/video-drafts/vid2.mp4`, `classes/${A}/videos/vid1.mp4`]) {
     const status = await upload("owner", path, { type: path.endsWith(".mp4") ? "video/mp4" : "image/jpeg" })();
@@ -316,6 +355,9 @@ async function runInside() {
     ["cannot publish in someone else's name", publish("coachA", A, { publishedBy: "coachB" }), NO],
     ["cannot publish over 20000 characters", publish("coachA", A, { markdown: long(20001) }), NO],
     ["cannot publish with an extra field", publish("coachA", A, { script: "x" }), NO],
+    ["publishes and shows it at once (force)", publish("coachA", A, { force: true }), OK],
+    ["cannot publish with a force that is not true or false", publish("coachA", A, { force: "yes" }), NO],
+    ["publishes without showing it at once (force: false)", publish("coachA", A, { force: false }), OK],
     ["cannot publish without stamping updatedAt",
       update("coachA", `classes/${A}`, { latest: { pageId: "page1", title: "B", markdown: "B", publishedAt: NOW, publishedBy: "coachA" } }), NO],
     ["unpublishes (latest: null)", update("coachA", `classes/${A}`, { latest: null, updatedAt: NOW }), OK],
@@ -569,6 +611,19 @@ async function runInside() {
     ["cannot set a limit that is not a number", update("admin", "config/limits", { flashPerMonth: "lots" }), NO],
     ["reads its own admin doc", get("admin", "admins/admin1"), OK],
     ["cannot create another admin", create("admin", "admins/coachA", {}), NO],
+
+    "— realtime database: the push signal",
+    ["learner reads its class's signal", rtdb("learner", "GET", `signals/${A}`), OK],
+    ["learner streams its class's signal", stream("learner", `signals/${A}`), OK],
+    ["learner reads a code with no signal (null, like any other)", rtdb("learner", "GET", "signals/ZZZZZZZZZ"), OK],
+    ["learner cannot list the signals", rtdb("learner", "GET", "signals"), NO],
+    ["learner cannot stream every signal", stream("learner", "signals"), NO],
+    ["learner cannot read the whole database", rtdb("learner", "GET", ""), NO],
+    ["learner cannot read a key that is not a class code", rtdb("learner", "GET", "signals/k7m3rqp9t"), NO],
+    ["learner cannot write a signal", rtdb("learner", "PUT", `signals/${A}`, { at: 1, force: true }), NO],
+    ["learner cannot write anywhere", rtdb("learner", "PUT", "here", { online: true }), NO],
+    ["a class's coach cannot write a signal", rtdb("coachA", "PUT", `signals/${A}`, { at: 1, force: true }), NO],
+    ["an admin cannot write a signal (the trigger does)", rtdb("admin", "PATCH", `signals/${A}`, { force: true }), NO],
 
     "— storage: pictures",
     ["learner downloads a shelf picture", download("learner", `classes/${A}/pictures/pic1.jpg`), OK],

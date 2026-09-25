@@ -18,6 +18,7 @@ import { closePicturePicker } from "./picture-picker.js";
 import { menuIconSrc } from "./pictures.js";
 import { TOOLS } from "./tools.js";
 import { mountSetup } from "./setup.js";
+import { listenToClass } from "./class-live.js";
 
 const $ = (id) => document.getElementById(id);
 const CLEAR_ALL_LABEL = "Start over: clear everything in this tool";
@@ -480,6 +481,10 @@ $("clear-all").addEventListener("click", () => {
 // ---------- boot ----------
 
 route();
+
+// A page the coach pushed with "show it now" opens My class, on whatever
+// screen is showing (class-live.js)
+listenToClass({ onForce: () => go("my-class") });
 
 // a phone may kill a backgrounded app without warning, and leaving for the
 // guide unloads it, so save first

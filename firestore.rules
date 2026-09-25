@@ -275,13 +275,15 @@ service cloud.firestore {
       function validLatest(l) {
         return l == null
           || (l is map
-            && l.keys().hasOnly(['pageId', 'title', 'markdown', 'publishedAt', 'publishedBy'])
+            && l.keys().hasOnly(['pageId', 'title', 'markdown', 'publishedAt', 'publishedBy', 'force'])
             && l.keys().hasAll(['pageId', 'title', 'markdown', 'publishedAt', 'publishedBy'])
             && isId(l.pageId)
             && text(l.title, 80)
             && text(l.markdown, 20000)
             && l.publishedAt is timestamp
-            && l.publishedBy is string);
+            && l.publishedBy is string
+            // the coach asked for it to be shown at once on learners' open screens
+            && l.get('force', false) is bool);
       }
 
       // `institution` is the institution the class belongs to; `org` is only

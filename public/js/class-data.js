@@ -14,15 +14,20 @@
 // listing): a suspended class or a wrong code are both 403/404, "missing".
 // Pictures and videos: GET <Storage>/v0/b/<bucket>/o/classes%2F<code>%2Fpictures%2F<id>.jpg?alt=media
 // (videos%2F<id>.mp4), CORS allowed. Only the class code leaves the device.
+// Hearing that the page changed: class-live.js streams the class's push
+// signal, <database>/signals/<code>.json, { at, force } or null.
 //
-// Where: https://firestore.googleapis.com and https://firebasestorage.googleapis.com.
+// Where: https://firestore.googleapis.com, https://firebasestorage.googleapis.com
+// and the Realtime Database, https://simplify-special-default-rtdb.asia-southeast1.firebasedatabase.app.
 // On localhost or 127.0.0.1 — development and the smoke tests — the app
 // makes no requests at all, unless localStorage "simplify-class-emulator"
-// asks for the emulators: "on" for Firestore at http://127.0.0.1:8085 and
-// Storage at http://127.0.0.1:9199, or JSON naming others,
-// {"firestore":"http://127.0.0.1:8185","storage":"http://127.0.0.1:9299"}.
-// (A page served with the site's CSP may only connect to Google's two, so a
-// run against the emulators needs a server that sends another policy.)
+// asks for the emulators: "on" for Firestore at http://127.0.0.1:8085,
+// Storage at http://127.0.0.1:9199 and the Realtime Database at
+// http://127.0.0.1:9000, or JSON naming others,
+// {"firestore":"http://127.0.0.1:8185","storage":"http://127.0.0.1:9299","database":"http://127.0.0.1:9100"}
+// ("database" may be left out). (A page served with the site's CSP may only
+// connect to Google's, so a run against the emulators needs a server that
+// sends another policy.)
 //
 // ---- What the device keeps ----
 // localStorage "simplify-class-v1": { code, name, latest, checkedAt } — the
@@ -31,11 +36,10 @@
 // "simplify-class-media": the files the latest page uses, and nothing else,
 // under keys <origin>/class-media/<code>/<picture|video>/<id>; the reader
 // shows them as blob: URLs (the CSP allows blob: images and media).
-// A refresh (refreshClass) happens when the menu shows or the app comes to
-// the front, at most every 10 minutes, and whenever My class opens; it
-// downloads the files a new page needs and drops the rest. What is on
-// screen is never replaced here: the reader decides when to take the new
-// page (js/tools/my-class.js).
+// A refresh (refreshClass) happens when the push signal says the page is not
+// the one saved (class-live.js), and whenever My class opens; it downloads
+// the files a new page needs and drops the rest, and tells onNewPage()'s
+// listeners — the reader shows the new page at once (js/tools/my-class.js).
 
 import { getDevice, setDevice } from "./device.js";
 import { pageMedia, parseClassMarkdown } from "./class-markdown.js";
@@ -45,17 +49,20 @@ export const CODE_LENGTH = 9;
 
 const PROJECT = "simplify-special";
 const BUCKET = "simplify-special.firebasestorage.app";
+const DATABASE = "simplify-special-default-rtdb"; // the Realtime Database instance, in asia-southeast1
 const GOOGLE = Object.freeze({
   firestore: "https://firestore.googleapis.com",
   storage: "https://firebasestorage.googleapis.com",
+  database: `https://${DATABASE}.asia-southeast1.firebasedatabase.app`,
 });
-const EMULATORS = Object.freeze({ firestore: "http://127.0.0.1:8085", storage: "http://127.0.0.1:9199" });
+const EMULATORS = Object.freeze({
+  firestore: "http://127.0.0.1:8085", storage: "http://127.0.0.1:9199", database: "http://127.0.0.1:9000",
+});
 const EMULATOR_KEY = "simplify-class-emulator";
 
 const SAVED_KEY = "simplify-class-v1";
 export const MEDIA_CACHE = "simplify-class-media";
 
-const REFRESH_EVERY = 10 * 60 * 1000; // menu shown, app to the front
 const REFRESH_AGAIN = 15 * 1000; // My class opened: always, but not twice in a moment
 const PAGE_MS = 20 * 1000; // a request that takes longer has failed
 const FILE_MS = 120 * 1000; // a video on a slow connection
@@ -104,7 +111,7 @@ export function newClassCode(getRandomValues = (bytes) => globalThis.crypto.getR
 const LOCAL = new Set(["localhost", "127.0.0.1", "[::1]"]);
 const LOCAL_ORIGIN = /^http:\/\/(?:127\.0\.0\.1|localhost):\d{2,5}$/;
 
-// { firestore, storage } origins, or null: ask nobody (see the header)
+// { firestore, storage, database } origins, or null: ask nobody (see the header)
 export function endpoints(where = globalThis.location, storage = globalThis.localStorage) {
   if (!LOCAL.has(where?.hostname)) return GOOGLE;
   let asked = null;
@@ -116,8 +123,10 @@ export function endpoints(where = globalThis.location, storage = globalThis.loca
   if (!asked) return null;
   if (asked.trim() === "on") return EMULATORS;
   try {
-    const { firestore, storage: files } = JSON.parse(asked);
-    if (LOCAL_ORIGIN.test(firestore) && LOCAL_ORIGIN.test(files)) return { firestore, storage: files };
+    const { firestore, storage: files, database = EMULATORS.database } = JSON.parse(asked);
+    if (LOCAL_ORIGIN.test(firestore) && LOCAL_ORIGIN.test(files) && LOCAL_ORIGIN.test(database)) {
+      return { firestore, storage: files, database };
+    }
   } catch {
     // not JSON: as good as not asked
   }
@@ -126,6 +135,12 @@ export function endpoints(where = globalThis.location, storage = globalThis.loca
 
 export function classDocUrl(code, ep) {
   return `${ep.firestore}/v1/projects/${PROJECT}/databases/(default)/documents/classes/${code}`;
+}
+
+// the class's push signal, as a stream (an emulator is told which database)
+export function signalUrl(code, ep) {
+  const url = `${ep.database}/signals/${code}.json`;
+  return ep.database === GOOGLE.database ? url : `${url}?ns=${DATABASE}`;
 }
 
 export function mediaFileUrl(code, kind, id, ep) {
@@ -293,6 +308,21 @@ export async function forgetClassIfNone() {
   }
 }
 
+// An ISO time in ms. Firestore sends microseconds ("…:03.456789Z"), which
+// not every browser parses: the first three digits are enough.
+export function isoMs(iso) {
+  const ms = typeof iso === "string" ? Date.parse(iso.replace(/(\.\d{3})\d+/, "$1")) : NaN;
+  return Number.isNaN(ms) ? null : ms;
+}
+
+// Is cls's page the one a push signal ({ at, force } or null) speaks of?
+// The signal's at is the page's publishedAt in ms (functions/signal.js).
+export function matchesSignal(cls, signal) {
+  const at = isoMs(cls?.latest?.publishedAt);
+  if (!signal) return !cls?.latest;
+  return at !== null && Math.abs(at - signal.at) < 1;
+}
+
 // is b a different page from a (or none where there was one)?
 export function samePage(a, b) {
   const x = a?.latest ?? null;
@@ -302,19 +332,28 @@ export function samePage(a, b) {
 }
 
 let inFlight = null; // { code, promise }
+const pageListeners = new Set();
 
-// Read the class again, if it is time: force for My class opening (then
-// only "not twice in a moment"), otherwise at most every 10 minutes. Saves
-// what it finds and fetches the files it needs. Resolves to
+// fn({ cls }) each time a refresh saves a page that is not the one saved
+// before (a new one, or none); returns a function that stops listening
+export function onNewPage(fn) {
+  pageListeners.add(fn);
+  return () => pageListeners.delete(fn);
+}
+
+// Read the class again: when My class opens (but not twice in a moment),
+// or at once when pushed — the push signal says the saved page is not the
+// latest. Saves what it finds, tells onNewPage()'s listeners, and fetches
+// the files it needs. Resolves to
 //   { changed, cls }      changed: the page is not the one saved before
 //   { changed: false }    not asked (too soon, no class, offline)
-export function refreshClass({ force = false } = {}) {
+export function refreshClass({ pushed = false } = {}) {
   const code = getDevice().classCode;
   if (!code) return Promise.resolve({ changed: false });
   if (inFlight?.code === code) return inFlight.promise;
   const before = savedClass();
   const age = Date.now() - (before?.checkedAt ?? 0);
-  if (age >= 0 && age < (force ? REFRESH_AGAIN : REFRESH_EVERY)) {
+  if (!pushed && age >= 0 && age < REFRESH_AGAIN) {
     if (before) keepClassMedia(before).catch(() => {}); // a file an earlier try missed
     return Promise.resolve({ changed: false, cls: before });
   }
@@ -328,6 +367,15 @@ export function refreshClass({ force = false } = {}) {
     const changed = !samePage(before, cls);
     writeSaved(cls);
     if (cls.name && cls.name !== getDevice().className) setDevice({ className: cls.name });
+    if (changed) {
+      for (const fn of pageListeners) {
+        try {
+          fn({ cls });
+        } catch (err) {
+          console.error(err);
+        }
+      }
+    }
     await keepClassMedia(cls).catch(() => {});
     return { changed, cls };
   })().finally(() => {

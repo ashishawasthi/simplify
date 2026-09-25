@@ -30,6 +30,9 @@ export function normaliseCode(input) {
   return [...String(input ?? "").toUpperCase()].filter((c) => ALPHABET.includes(c)).join("");
 }
 
+// exactly 9 characters from ALPHABET, as stored
+export const isClassCode = (code) => typeof code === "string" && new RegExp(`^[${ALPHABET}]{9}$`).test(code);
+
 // ids the functions accept for pages, pictures, videos and plans (also safe in paths)
 export function cleanId(input, what) {
   const id = String(input ?? "");
