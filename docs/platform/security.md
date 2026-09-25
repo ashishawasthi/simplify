@@ -1,8 +1,8 @@
 ---
 type: Product Contract
 title: Security
-description: What the site promises about security and privacy and how the code keeps it — the headers per path (learner CSP, coach CSP, referrer, permissions, noindex), the no-innerHTML rule, Firestore and Storage rule boundaries (only a coach the admin approved may do anything but fill in their profile), what each Cloud Function checks before acting, coach sign-in, and exactly what the learner app sends and to whom.
-tags: [security, csp, headers, firestore-rules, storage-rules, privacy, authorisation, xss]
+description: What the site promises about security and privacy and how the code keeps it — learners have no login by design, the headers per path (learner CSP, coach CSP, referrer, permissions, noindex), the no-innerHTML rule, Firestore, Storage and Realtime Database rule boundaries (only a coach the admin approved may do anything but fill in their profile; the push signal is read-only by exact code), what each Cloud Function checks before acting, coach sign-in, the privacy analysis of the push to open screens, and exactly what the learner app sends and to whom.
+tags: [security, csp, headers, firestore-rules, storage-rules, database-rules, privacy, minors, authorisation, xss]
 status: stable
 ---
 
@@ -10,11 +10,12 @@ This document is the contract for what may run, load, be read, be written and le
 
 ## What the learner app sends, and to whom
 
-Learners never sign in, and nothing a learner types or taps is sent anywhere. The learner app's only requests beyond its own site are:
+Learners never sign in — there is no learner account, login, ID or profile anywhere, by design: most learners are minors, and what is never collected can never leak. Nothing a learner types or taps is sent anywhere, and a learner's device never writes to any server. The learner app's only requests beyond its own site are:
 
 | When | To | What is sent |
 |---|---|---|
 | Joining a class, and each refresh of My class | `firestore.googleapis.com` | One `GET` of `classes/<code>` (the class code is in the URL), with `credentials: "omit"` and `cache: "no-store"` |
+| While the app or a guide page is on screen on a device that follows a class | `simplify-special-default-rtdb.asia-southeast1.firebasedatabase.app` | One `EventSource` stream of `signals/<code>.json` (the class code is in the URL; no cookies, no token, no ID), closed while the app is in the background |
 | My class needs a picture or video of the latest page | `firebasestorage.googleapis.com` | One `GET` per file, `classes/<code>/pictures/<id>.jpg` or `classes/<code>/videos/<id>.mp4`, with `credentials: "omit"` |
 | A learner taps a YouTube card | `www.youtube-nocookie.com` | The privacy-enhanced player loads in a frame (`?rel=0&playsinline=1`), with the site's origin as referrer; nothing loads from YouTube before the tap |
 | A learner taps a link button | the linked `https://` site | Opens in a new tab with `rel="noopener noreferrer"` |
@@ -43,7 +44,7 @@ All headers come from `hosting.headers` in `firebase.json`. For the same header 
 | `style-src` | `'self'` | No inline `<style>` or `style=""`; JS sets styles through the DOM, which the CSP allows |
 | `img-src` | `'self' blob:` | `blob:` for My class's pictures, shown from the device's media cache |
 | `media-src` | `'self' blob:` | `blob:` for My class's videos, likewise |
-| `connect-src` | `'self' https://firestore.googleapis.com https://firebasestorage.googleapis.com` | The one class read, and the class's pictures and videos |
+| `connect-src` | `'self' https://firestore.googleapis.com https://firebasestorage.googleapis.com https://simplify-special-default-rtdb.asia-southeast1.firebasedatabase.app` | The one class read, the class's pictures and videos, and the push signal's stream (the stream answers directly, with no redirect to another host) |
 | `frame-src` | `https://www.youtube-nocookie.com` | YouTube's privacy-enhanced player, only after a tap |
 | `object-src` | `'none'` | No plugins |
 | `base-uri` | `'self'` | No `<base>` to another site |
@@ -119,6 +120,28 @@ No lint rule forbids `innerHTML`; the rule is held by review and by tests that f
 - **Stamps**: the times a coach writes (a profile's or request's `createdAt`, `institutionsChangedAt`, a new class's `createdAt` / `updatedAt`, a page's `createdAt` / `updatedAt` / `publishedAt`, a published `latest.publishedAt`, a picture's `createdAt`) and an admin's `decidedAt` and an institution's `updatedAt` must equal `request.time`, and the matching `createdBy`, `updatedBy`, `publishedBy` and `decidedBy` must be the caller.
 - Sizes: class name ≤ 30, page and `latest` markdown ≤ 20,000 characters, titles ≤ 80, picture words ≤ 80, pictures at most 1600 × 1600.
 
+## Realtime Database rules
+
+`database.rules.json` denies everything at the root. Its one grant: anyone may read `signals/{code}` when the key is exactly 9 characters of the class-code alphabet. So a device can stream its own class's signal, but nobody can read `signals` itself (no list of classes), read the root, or write anything; only the `classSignal` function writes, with the Admin SDK. A wrong code reads `null`, like a code with nothing published, so the signal says nothing about which codes exist. `node tools/test-rules.mjs` covers each case against the Realtime Database emulator, as a plain read and as a stream.
+
+## Pushing a page to open screens: the privacy analysis
+
+A coach can publish with **Show it now on open screens**, which opens My class on every learner device that has Simplify on screen ([my class](/learner/my-class.md#hearing-about-a-new-page)). The owner chose how on 2026-09-26, after weighing three Firebase ways to push against the learners, most of them minors:
+
+| Way | What a learner's device would reveal or store | Chosen? |
+|---|---|---|
+| Firebase Cloud Messaging (web push) | A lasting device ID (Firebase Installations) and a push token held by Apple, Google or Mozilla, which we would have to store against each class — a list of learners' devices. It also needs a notification-permission prompt, and works on iPad only once the app is on the home screen | No |
+| A Firestore listener (Firebase SDK) | Only the class code on an open connection, but the SDK (~790 KB, more than the learner app's own code) also sends SDK version headers and keeps a small IndexedDB "heartbeat" store | No |
+| **A Realtime Database stream** (the browser's `EventSource`, no SDK) | Only the class code, in the URL, on an open connection. No ID, no token, no cookie, nothing stored on the device beyond the class copy it already keeps | **Yes** |
+
+What holds it to that:
+
+- **Learners' devices never write.** No presence, no "seen", no delivery count: a coach sees only that they published, never who had the app open or how many ("no counts at all", the owner's choice). The signal node holds `{ at, force }` and nothing else — no page, no name.
+- **Only while on screen.** The stream is closed when the app goes to the background, so Google sees "an internet address has class X open" only while it truly is, much as it already saw each class read.
+- **Only the app itself moves.** A forced page can only open My class inside Simplify; it cannot open a link, another site or a notification. The page's content goes through the same rules and renderer as before.
+- **Only a class's coaches can force**, through the same `firestore.rules` that let them publish (`latest.force` must be a boolean); the admin's take-down and pause remove the signal at once.
+- Firestore and Realtime Database data-access audit logs stay off, as they are by default, so no per-read log of internet addresses is kept in the project.
+
 ## Storage rules
 
 `storage.rules` denies by default, and nothing may be listed. Storage rules may read at most two Firestore documents per request, so its `isClassCoach(code)` reads exactly two: `classCoaches/{code}` (the caller must be in `uids`) and `coaches/{uid}` (read once and handed to `approved()`: `status == 'approved'` and not suspended). Whether the class is active is left to `firestore.rules`, whose shelf document (`classes/{code}/pictures/{id}`) needs an approved listed coach **and** an active class — and only shelf pictures are ever used: a file whose shelf write is refused is deleted again by the coach app, and nothing a learner sees links to it. `isAdmin()` is the same `admins/{uid}` check; a `delete` by an admin who is not listed stops after the first read, so it still stays within two.
@@ -132,6 +155,8 @@ No lint rule forbids `innerHTML`; the rule is held by review and by tests that f
 The Storage rules' Firestore lookups need `roles/firebaserules.firestoreServiceAgent` on the Cloud Storage for Firebase service agent ([cloud project](/operations/cloud-project.md)); without it every coach upload fails.
 
 ## Callable authorisation
+
+(The one trigger, `classSignal`, is not callable: it runs on changes to `classes/{code}` that the rules above already allowed, reads the class again and writes only `signals/{code}` — `functions/signal.js`.)
 
 The six callables in `functions/index.js` run in `asia-southeast1` as `simplify-functions@simplify-special.iam.gserviceaccount.com`, at most 10 instances, with App Check not enforced. Because they use the Admin SDK, their own checks are the whole boundary. Every one starts with `requireClassCoach(request, classCode)` in `functions/lib.js`, which fails with a plain message unless, in order:
 

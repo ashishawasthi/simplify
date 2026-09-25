@@ -27,7 +27,7 @@ There is no build step. What is in `public/` is what Hosting serves.
 |---|---|---|---|---|
 | Plain static | `python3 -m http.server -d public 8080` → http://localhost:8080 | no | no | editing screens; running either app against the emulators |
 | Hosting | `firebase serve --only hosting --port 5050 --project simplify-special` → http://localhost:5050 | yes | yes (and the `/guide/` → `/guide` redirect) | checking headers and the CSP; the service worker and offline; the guide pages |
-| Full emulator suite | `firebase emulators:start` (ports below) | yes, on the Hosting emulator | yes | Auth, Firestore, Storage and Functions for the coach platform |
+| Full emulator suite | `firebase emulators:start` (ports below) | yes, on the Hosting emulator | yes | Auth, Firestore, Realtime Database, Storage and Functions for the coach platform |
 
 Two facts decide the choice:
 
@@ -46,6 +46,7 @@ Ports come from `emulators` in `firebase.json` (`singleProjectMode: true`, proje
 | Functions | 5001 |
 | Firestore | 8085 |
 | Storage | 9199 |
+| Realtime Database | 9000 |
 | Hosting | 5050 |
 | Emulator UI | 4000 |
 
@@ -53,23 +54,25 @@ To try the coach platform end to end, offline and free:
 
 ```sh
 npm ci --prefix functions                                    # once
-firebase emulators:start --only auth,firestore,storage,functions
+firebase emulators:start --only auth,firestore,storage,database,functions
 python3 -m http.server -d public 8080                        # in another terminal
 ```
 
-The emulators load `firestore.rules`, `storage.rules` and `firestore.indexes.json`, so they enforce the same rules as production. Their data is gone when they stop; add `--import=<folder> --export-on-exit` with a folder outside the repo to keep it.
+The emulators load `firestore.rules`, `storage.rules`, `database.rules.json` and `firestore.indexes.json`, so they enforce the same rules as production. With the Functions and Realtime Database emulators running, the `classSignal` trigger writes each class's push signal into the emulated database, just as in production. Their data is gone when they stop; add `--import=<folder> --export-on-exit` with a folder outside the repo to keep it.
 
 **Coach app.** `public/coach/js/firebase-config.js` `emulators()` returns the emulator ports whenever the page's hostname is `localhost` or `127.0.0.1`, and `public/coach/js/cloud.js` then connects Auth, Firestore, Storage and Functions to `127.0.0.1`. No switch is involved: on localhost the coach app always uses the emulators and can never reach production. A test that runs its emulators on other ports stores them first in localStorage `simplify-coach-emulators`, e.g. `{"auth":9699,"firestore":8685,…}`. Open http://localhost:8080/coach/ and sign in with the Auth emulator's stand-in Google account. To make that account the admin, create `admins/{uid}` in the Emulator UI's Firestore tab (http://127.0.0.1:4000), as the owner does in the real console (see [admin and approvals](/coach/admin-and-approvals.md)). To sign in as several made-up Google users from a script instead of the popup, run this in the page's console (the Auth emulator accepts an unsigned Google ID token): `const { getApp } = await import('/coach/vendor/firebase/12.19.0/firebase-app.js'); const a = await import('/coach/vendor/firebase/12.19.0/firebase-auth.js'); await a.signInWithCredential(a.getAuth(getApp()), a.GoogleAuthProvider.credential(JSON.stringify({ sub: "lim", email: "lim@example.com", email_verified: true, name: "Mr Lim" })))`. The rules see a Google sign-in, as they need for a profile or an admin.
 
 **Learner app.** `public/js/class-data.js` `endpoints()` sends no requests at all on `localhost`, `127.0.0.1` or `[::1]` unless localStorage `simplify-class-emulator` asks for the emulators:
 
 ```js
-localStorage.setItem("simplify-class-emulator", "on");   // Firestore :8085, Storage :9199
-// or other local ports:
-localStorage.setItem("simplify-class-emulator", '{"firestore":"http://127.0.0.1:8185","storage":"http://127.0.0.1:9299"}');
+localStorage.setItem("simplify-class-emulator", "on");   // Firestore :8085, Storage :9199, Realtime Database :9000
+// or other local ports ("database" may be left out: :9000):
+localStorage.setItem("simplify-class-emulator", '{"firestore":"http://127.0.0.1:8185","storage":"http://127.0.0.1:9299","database":"http://127.0.0.1:9100"}');
 ```
 
-Run it in the DevTools console at http://localhost:8080/, reload, and join a class that the emulated coach app published. Anything that is not `on` or JSON naming two local origins counts as not asked.
+Run it in the DevTools console at http://localhost:8080/, reload (a change of `#…` alone does not reload the page), and join a class that the emulated coach app published. Anything that is not `on` or JSON naming local origins counts as not asked.
+
+The push stream opens only while the page is on screen (`document.hidden` is false). A preview pane or tab that is not showing keeps it closed, as it should; to try "Show it now on open screens" end to end, keep the learner page in front — or drive two pages of a headless Chrome, which counts both as on screen.
 
 ### Fake AI models
 
@@ -82,14 +85,14 @@ Each is one Node file with no runner and no dependencies unless the table says s
 | Test | Covers | Needs |
 |---|---|---|
 | `test-assets.mjs` | every file under `public/` (bar the coach app and the few it names, such as `og-card.png`) is in `ASSETS` in `public/sw.js`, every `ASSETS` entry exists, pages by clean URL | Node |
-| `test-class.mjs` | the class markdown parser (`public/js/class-markdown.js`), class codes and the Firestore reading in `public/js/class-data.js` (stand-in `fetch` and localStorage), and `sw.js` leaving class files, `/coach/` and `/__/` alone | Node |
+| `test-class.mjs` | the class markdown parser (`public/js/class-markdown.js`), class codes and the Firestore reading in `public/js/class-data.js` (stand-in `fetch` and localStorage), the push signal's pure parts in `public/js/class-live.js` (when a page is forced), and `sw.js` leaving class files, `/coach/` and `/__/` alone | Node |
 | `test-coach.mjs` | the coach app's pure parts: class codes, the editor toolbar, dates and the Singapore month, picture sizes, spotting an in-app browser, institutions (search, grouping, which screen a coach gets) | Node |
-| `test-functions.mjs` | the six callables in `functions/index.js` with fake models: who may call, write / ask / decline, the free answer for an empty instruction, monthly limits (also under parallel calls), refunds, the Singapore month, the page check, plan → start → check → approve / discard; first runs `copy-class-markdown.mjs --check` | Firebase CLI, Java, `npm ci --prefix functions`; starts Auth, Firestore, Storage and Functions emulators itself |
+| `test-functions.mjs` | the six callables in `functions/index.js` with fake models: who may call, write / ask / decline, the free answer for an empty instruction, monthly limits (also under parallel calls), refunds, the Singapore month, the page check, plan → start → check → approve / discard; the `classSignal` trigger, directly and as a real Firestore trigger writing the Realtime Database; first runs `copy-class-markdown.mjs --check` | Firebase CLI, Java, `npm ci --prefix functions`; starts Auth, Firestore, Storage, Realtime Database and Functions emulators itself |
 | `test-i-need.mjs` | I need's cards, settings, sentences and body map, pinned word for word | Node |
 | `test-money.mjs` | the money maths (`money.js`) and every money tool's wording (`answers.js`), including the original change requests' own examples | Node |
 | `test-now-next.mjs` | Now and next's list rules (`now-next-list.js`) | Node |
 | `test-pictures.mjs` | `public/js/pictures.js` against `public/img/pic/`: each file's safety and shape, the size budget, the Noto licence notices | Node |
-| `test-rules.mjs` | `firestore.rules` and `storage.rules`, case by case, over the emulators' REST APIs with unsigned test tokens | Firebase CLI, Java; starts Auth, Firestore and Storage emulators itself |
+| `test-rules.mjs` | `firestore.rules`, `storage.rules` and `database.rules.json`, case by case, over the emulators' REST APIs with unsigned test tokens (the Realtime Database also as a stream) | Firebase CLI, Java; starts Auth, Firestore, Storage and Realtime Database emulators itself |
 | `test-seed.mjs` | `tools/seed-institutions.mjs` with the real `tools/seed/institutions.json` (a dry run writes nothing, a second run changes nothing, a retired entry stays retired, a bad file writes nothing) and `tools/migrate-coaches.mjs` (dry run, then approved / pending, then nothing on a second run) | Firebase CLI, Java; starts the Firestore emulator itself (8331, hub 4431) |
 | `test-show-card.mjs` | Show a card's wording, pictures and settings (`show-card-cards.js`) | Node |
 | `test-speak.mjs` | the dictation parser `speechToCents()` | Node |
@@ -97,7 +100,7 @@ Each is one Node file with no runner and no dependencies unless the table says s
 | `test-voice.mjs` | the recorded voice: every sentence a card can say has its clip, every clip is in the map, keys are the on-screen words, the generator's plan, map and sw.js list are current ([the recorded voice](/platform/voice.md)) | Node |
 | `test-wait.mjs` | Wait's time maths (`wait-time.js`) | Node |
 
-`test-rules.mjs` and `test-functions.mjs` write a temporary `firebase.json` with ports of their own (rules: 9311, 8311, 9411, hub 4411; functions: 9321, 8321, 9421, 5321, hub 4421, plus Eventarc 9621 and Cloud Tasks 9721) and a temporary `TMPDIR`, then run themselves again inside `firebase emulators:exec`. They can run beside `firebase emulators:start` or each other.
+`test-rules.mjs` and `test-functions.mjs` write a temporary `firebase.json` with ports of their own (rules: 9311, 8311, 9411, Realtime Database 9611, hub 4411; functions: 9321, 8321, 9421, 5321, Realtime Database 9821, hub 4421, plus Eventarc 9621 and Cloud Tasks 9721) and a temporary `TMPDIR`, then run themselves again inside `firebase emulators:exec`. They can run beside `firebase emulators:start` or each other.
 
 Run them all as CI does:
 
@@ -129,7 +132,7 @@ It needs Node 22 and Chrome and nothing else. It serves `public/` itself (or `SM
 | `steps.mjs` | Steps |
 | `wait.mjs` | Wait, with stand-ins for wake lock, vibration, sound and a movable clock |
 
-No smoke scene reaches the internet or an emulator, which is how they live with the CSP: `my-class.mjs` sets `simplify-class-emulator` to `on` and replaces `fetch()` in the page with a stand-in that answers the class document and makes its pictures and videos, and `coach.mjs` serves a fake `cloud.js` through DevTools request interception. The real `cloud.js` against the emulators is only tried by hand, as above — or by a throwaway script that starts the emulators on ports of its own, serves `public/` with the plain static server, sets `simplify-coach-emulators`, and drives two headless Chrome contexts through the Auth emulator's Google popup (its "Add new account" form).
+No smoke scene reaches the internet or an emulator, which is how they live with the CSP: `my-class.mjs` sets `simplify-class-emulator` to `on` and replaces `fetch()` in the page with a stand-in that answers the class document and makes its pictures and videos, and `EventSource` with one that sends the push signal the scene sets (`push()`), and `coach.mjs` serves a fake `cloud.js` through DevTools request interception. The real `cloud.js` against the emulators is only tried by hand, as above — or by a throwaway script that starts the emulators on ports of its own, serves `public/` with the plain static server, sets `simplify-coach-emulators`, and drives two headless Chrome contexts through the Auth emulator's Google popup (its "Add new account" form).
 
 ## Docs check
 

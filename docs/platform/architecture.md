@@ -73,7 +73,8 @@ This document owns the shape of the learner app in `public/`: which module does 
 
 | Module | What it does |
 |---|---|
-| `class-data.js` | The class code, the one HTTPS read of `classes/<code>`, the saved copy and the media cache |
+| `class-data.js` | The class code, the one HTTPS read of `classes/<code>`, the saved copy, `onNewPage` and the media cache |
+| `class-live.js` | The push: one `EventSource` to the class's signal in the Realtime Database while the page is on screen, a refresh when it says the page changed, and `onForce` for a page the coach shows now — started by `app.js` (opens `#my-class`) and by `guide-live.js` on every guide page (goes to `/#my-class`) |
 | `class-markdown.js` | The markdown subset parser and renderer, shared with the coach preview and the functions — [markdown pages](/coach/markdown-pages.md) |
 | `class-setup.js` | The class section of the set-up page, and the `#join=` flow |
 | `tools/my-class.js` | The reader, one screen at a time, and the menu tile |
@@ -122,7 +123,7 @@ Before `show()` the shell has already closed any open card (`closeCard`) and pic
 | `device` | This device's settings, read-only (`getDevice()`) |
 | `settings` | This tool's own settings, read-only: `{}` until its set-up section saves some |
 | `onDeviceChange(fn)` | `fn(device)` after any device-settings change (including one made in another tab); returns an unsubscribe |
-| `onScreenChange(fn)` | `fn(id)` each time a screen is put on show (`null` for the menu); returns an unsubscribe. My class uses it to refresh while the menu shows |
+| `onScreenChange(fn)` | `fn(id)` each time a screen is put on show (`null` for the menu); returns an unsubscribe |
 | `setBusy(on)` | Tell `update.js` a reload would disrupt now (a running Wait, a playing class video) |
 | `go(id, params, { replace })` | Open another screen as a new history step: `go("wait", { m: 2 })`. The new screen's `show()` gets `fresh: true`. With `replace: true` it takes the place of this step instead, so Back never returns here (set-up's "Open My class"). An unknown id is a console error and nothing happens |
 | `back()` | What Back does — except on the first screen of a visit, where it shows the menu instead of leaving the app |

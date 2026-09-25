@@ -1,7 +1,7 @@
 ---
 type: Product Contract
 title: The Coach App
-description: What the /coach/ app does and promises — how it is kept apart from the learner app, Google sign-in for the tab only, About you with its institution picker, waiting for the admin's approval, My classes (making a class, asking to join one), the class screen (pages, editor, toolbar, live preview, Publish and Unpublish with Undo), the picture shelf, the QR poster, routing and errors.
+description: What the /coach/ app does and promises — how it is kept apart from the learner app, Google sign-in for the tab only, About you with its institution picker, waiting for the admin's approval, My classes (making a class, asking to join one), the class screen (pages, editor, toolbar, live preview, Publish — optionally shown now on learners' open screens — and Unpublish with Undo), the picture shelf, the QR poster, routing and errors.
 tags: [coach-app, sign-in, institutions, coach-approval, editor, preview, publish, picture-shelf, qr-poster, routing]
 status: stable
 ---
@@ -123,8 +123,9 @@ Pictures, videos, YouTube lines and `---` go in as a paragraph of their own at t
 `public/coach/js/publish.js` sits beside the preview with the **public warning** always visible: "What you publish is public — anyone with the class code can see it. Never put pictures of students or any private or sensitive information in it." (`PUBLIC_WARNING`). There is no consent tick box.
 
 - **Publish** first flushes the save. Then one batch writes the page (`publishedAt`) and `classes/{code}.latest = { pageId, title, markdown, publishedAt, publishedBy }`: both writes happen or neither does. The button reads "Publish this page", "Publish the changes" (this page is live but edited since) or "Published" (disabled, nothing to publish). It is also disabled for an empty page or a paused class.
-- **Unpublish** sets `latest` to `null`: learners see "Nothing from your coach yet".
-- Both show a toast with **Undo**, which restores what learners saw before. It re-publishes that content **now, by this coach** (the rules require `publishedAt == request.time` and `publishedBy == request.auth.uid` for a coach). The status line always says which page learners see and since when.
+- **Show it now on open screens**, a tick box under the buttons, is off by default and off again after each publish. Ticked, the publish also writes `latest.force: true`, and every learner device that has Simplify on screen opens My class at once ([my class](/learner/my-class.md#hearing-about-a-new-page)); the toast says "Published, and opened now on learners' screens that have Simplify open." Unticked, learners with My class open still see the new page at once, and everyone else the next time they open My class. It is disabled whenever Publish is. Nothing tells the coach how many screens it reached: learner devices never report back.
+- **Unpublish** sets `latest` to `null`: learners see "Nothing from your coach yet" (at once, if My class is open).
+- Both show a toast with **Undo**, which restores what learners saw before. It re-publishes that content **now, by this coach** (the rules require `publishedAt == request.time` and `publishedBy == request.auth.uid` for a coach), and never with `force`. The status line always says which page learners see and since when.
 
 The rules allow a coach to change only `latest` and `updatedAt` on the class document, and only while the class is active and the coach is listed, approved and unsuspended.
 

@@ -1,8 +1,8 @@
 ---
 type: System Reference
 title: Data Model
-description: Every piece of stored data and its shape — the learner app's localStorage keys and Cache Storage, the coach app's session and test keys, every Firestore collection and document (institutions, coaches and their approval, requests, classes …) with its fields and who reads and writes it, every Cloud Storage path, the declared indexes, and the class code format.
-tags: [data-model, localstorage, firestore, cloud-storage, class-code, indexes, schema]
+description: Every piece of stored data and its shape — the learner app's localStorage keys and Cache Storage, the coach app's session and test keys, every Firestore collection and document (institutions, coaches and their approval, requests, classes …) with its fields and who reads and writes it, the Realtime Database's push signals, every Cloud Storage path, the declared indexes, and the class code format.
+tags: [data-model, localstorage, firestore, realtime-database, cloud-storage, class-code, indexes, schema]
 status: stable
 ---
 
@@ -28,7 +28,7 @@ Nothing the learner app keeps leaves the device, except the class code ([securit
 | `simplify-my-class-v1` | My class reader (`tools/my-class.js`) | `{ page, screen }` — `page` is `"<code>\|<pageId>\|<publishedAt>"`, `screen` the index on show |
 | `simplify-device-v1` | `device.js` | device settings, below |
 | `simplify-class-v1` | `class-data.js` | `{ code, name, latest, checkedAt }` — the class as last read; `latest` is `{ pageId, title, markdown, publishedAt }` (ISO string) or `null`; `checkedAt` ms |
-| `simplify-class-emulator` | `class-data.js`, development only | `"on"`, or `{"firestore":"http://127.0.0.1:…","storage":"http://127.0.0.1:…"}`; read only on localhost |
+| `simplify-class-emulator` | `class-data.js`, development only | `"on"`, or `{"firestore":"http://127.0.0.1:…","storage":"http://127.0.0.1:…","database":"http://127.0.0.1:…"}` (`database` optional, default port 9000); read only on localhost |
 
 Money fields: `moneyValue`, `spendValue`, `needValue` are the box's text as typed; `moneySource` is `"typed"` or `"notes"`; `pickedNotes` the cents of each note or coin tapped in the picker, in order; `items` is `[{ value }]` or, for a shopping list, `[{ name, value }]`. I need, Show a card and the set-up page save no tool state; the key pattern `simplify-<id>-v1` comes from `app.js` `storageKey()`.
 
@@ -85,7 +85,7 @@ Database `(default)` in project `simplify-special` (Firestore in asia-southeast1
 | `coaches/{uid}` | `name` (≤ 60), `institutions` (0–10 different institution ids), `otherPlace` (≤ 120: a school or centre not in the list, in the coach's words; at least one of the two), `note` (≤ 300), `email` (the sign-in email), `status` (`pending` → `approved` \| `declined`; back to `pending` when a declined coach asks again), `createdAt`; later `decidedAt`, `decidedBy`, `decisionLog` (the `adminLog` entry of the decision), `decisionMessage` (≤ 300, only while `declined`: what the coach is told), `reappliedAt` (when a declined coach asked again), `institutionsChangedAt` (when the coach last changed `institutions` or `otherPlace`), `suspended` (bool) with `suspendLog`. Profiles from before 2026-09-24 may also hold a free-text `org` (≤ 80) | that coach; admins (and list) | the coach creates it `pending` (signed in with Google) and edits `name` / `note` / `institutions` / `otherPlace` (+ `institutionsChangedAt`), or asks again (`declined` → `pending` + `reappliedAt`); an admin sets `status` / `decidedAt` / `decidedBy` / `decisionLog` (+ `decisionMessage`), or `suspended` / `suspendLog` — each with its `adminLog` entry in the same commit — or puts one listed institution in place of `otherPlace` |
 | `requests/{id}` | `uid`, `kind` (`"join-class"`), `classCode`, `note` (≤ 300), `status` (`pending` → `approved` \| `declined`), `createdAt`, `decidedAt`, `decidedBy`, `decisionLog`, `resultCode`. Older documents may be `kind: "new-class"` with `className` and `org` | its coach (`get`, and list with `where("uid", "==", uid)`); admins | an approved coach creates it `pending`; an admin decides it once, with its `adminLog` entry |
 | `classes/{code}` | `name` (≤ 30), `institution` (an institution id), `status` (`active` \| `suspended`), `latest`, `createdAt`, `updatedAt`. Classes from before 2026-09-24 have a free-text `org` (≤ 80) instead of `institution` | **anyone, `get` by exact code while `active`**; its listed coaches even while suspended; an approved coach may `get` a code that does not exist (the check before making a class); admins (and list) | an approved coach creates it, with its `classCoaches`, for one of their own active institutions; admins pause it and take a page down; its coaches change only `latest` and `updatedAt` |
-| `classes/{code}.latest` | `null`, or `{ pageId, title (≤ 80), markdown (≤ 20,000), publishedAt, publishedBy }` | as the class | publish / unpublish by a class's coach; take-down by an admin |
+| `classes/{code}.latest` | `null`, or `{ pageId, title (≤ 80), markdown (≤ 20,000), publishedAt, publishedBy, force? }` — `force: true` when the coach ticked "Show it now on open screens" (absent otherwise; an undo never sets it) | as the class | publish / unpublish by a class's coach; take-down by an admin |
 | `classes/{code}/pages/{pageId}` | `title` (≤ 80), `markdown` (≤ 20,000), `createdAt`, `createdBy`, `updatedAt`, `updatedBy`, `publishedAt` (when it was last published) | its coaches, admins | its coaches create, save and delete; admins delete |
 | `classes/{code}/pictures/{pictureId}` | `words` (≤ 80), `file` (`"pictures/<id>.jpg"`), `width`, `height` (1–1600), `createdAt`, `createdBy` | its coaches, admins | its coaches create it (after uploading the file), edit `words` and delete; admins delete |
 | `classes/{code}/videos/{videoId}` | `status` (`rendering` → `ready` → `approved`, or `failed`, or `discarded`), `prompt`, `words`, `seconds`, `planId`, `interactionId`, `usageMonth`, `createdBy`, `createdAt`, `updatedAt`; later `bytes`, `error`, `approvedBy`, `discardedBy` | its coaches, admins | functions only (`startVideo`, `checkVideo`, `approveVideo`, `discardVideo`); admins may delete |
@@ -104,6 +104,16 @@ Database `(default)` in project `simplify-special` (Firestore in asia-southeast1
 ### Indexes
 
 `firestore.indexes.json` declares two composite indexes on `requests`: (`uid` ascending, `createdAt` descending) and (`status` ascending, `createdAt` ascending). The coach app's current queries are equality-only (`where("uid", "==", …)`, `where("status", "==", "pending")`) and sort on the device, which needs no composite index. Two field overrides turn off indexing of the long text fields, `pages.markdown` and `classes.latest.markdown`, which are never queried.
+
+## Realtime Database
+
+Instance `simplify-special-default-rtdb` (asia-southeast1), `https://simplify-special-default-rtdb.asia-southeast1.firebasedatabase.app`. It holds one thing, the push signal learner devices stream while the app is on screen ([my class](/learner/my-class.md#hearing-about-a-new-page)); rules in `database.rules.json`.
+
+| Path | Shape | Read by | Written by |
+|---|---|---|---|
+| `signals/{code}` | `{ at, force }` — `at` is `classes/{code}.latest.publishedAt` in ms, `force` whether the coach asked for it to be shown now; absent when the class has no page or is paused | anyone, by the exact code (9 characters of the class-code alphabet); nothing can be listed | the `classSignal` function only (Admin SDK), on every change to `classes/{code}` that changes the signal |
+
+Nothing about a learner or a device is stored: devices only read, and the database keeps no list of who listens.
 
 ## Cloud Storage
 

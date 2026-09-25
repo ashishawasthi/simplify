@@ -1,8 +1,8 @@
 ---
 type: Operations Runbook
 title: Cloud Project
-description: What exists in the Firebase / Google Cloud project simplify-special (billing, APIs, Firestore, the Storage bucket and its CORS, the functions' service account and IAM, the Storage service agent, the budget, Authentication, Cloud Functions, Hosting and the custom domain, the first admin), how each was set up on 2026-09-23 and how to recreate it, and the hosts a school network must allow.
-tags: [firebase, google-cloud, iam, firestore, cloud-storage, cloud-functions, authentication, hosting, runbook]
+description: What exists in the Firebase / Google Cloud project simplify-special (billing, APIs, Firestore, the Realtime Database for the push signal, the Storage bucket and its CORS, the functions' service account and IAM, the Storage service agent, the budget, Authentication, Cloud Functions and the classSignal trigger, Hosting and the custom domain, the first admin), how each was set up (2026-09-23; the Realtime Database 2026-09-26) and how to recreate it, and the hosts a school network must allow.
+tags: [firebase, google-cloud, iam, firestore, realtime-database, cloud-storage, cloud-functions, eventarc, authentication, hosting, runbook]
 status: stable
 ---
 
@@ -14,18 +14,19 @@ Everything Simplify runs on lives in one Firebase / Google Cloud project, `simpl
 |---|---|
 | Billing | Blaze (pay as you go), billing enabled |
 | Firestore | `(default)`, Native mode, Standard edition, `asia-southeast1`, delete protection on, free tier applies, point-in-time recovery off |
+| Realtime Database | `simplify-special-default-rtdb` (the default instance), `asia-southeast1`, rules from `database.rules.json`; holds only `signals/{code}` |
 | Storage bucket | `gs://simplify-special.firebasestorage.app`, region `ASIA-SOUTHEAST1`, Standard class, read-only CORS from `storage-cors.json`, 7-day soft delete |
-| Functions' identity | `simplify-functions@simplify-special.iam.gserviceaccount.com`: `roles/aiplatform.user`, `roles/datastore.user` on the project; `roles/storage.objectAdmin` on the bucket only |
+| Functions' identity | `simplify-functions@simplify-special.iam.gserviceaccount.com`: `roles/aiplatform.user`, `roles/datastore.user`, `roles/firebasedatabase.admin`, `roles/eventarc.eventReceiver` on the project; `roles/storage.objectAdmin` on the bucket only |
 | Storage rules → Firestore | Firebase Storage service agent holds `roles/firebaserules.firestoreServiceAgent` |
 | Budget | "simplify-special monthly (S$50)": S$50 a month, this project only, alerts at 50%, 90% and 100% of actual spend |
 | Authentication | Google provider on; authorized domains `simplify.whiz.coach`, `simplify-special.web.app`, `simplify-special.firebaseapp.com`, `localhost` |
-| Cloud Functions | six 2nd-gen callables in `asia-southeast1`, Node.js 22, 256 MiB, max 10 instances, running as `simplify-functions`, invokable by `allUsers` |
+| Cloud Functions | six 2nd-gen callables in `asia-southeast1`, Node.js 22, 256 MiB, max 10 instances, running as `simplify-functions`, invokable by `allUsers`; one Firestore trigger, `classSignal`, through Eventarc |
 | Hosting | default site `simplify-special` (`simplify-special.web.app`), custom domain `simplify.whiz.coach` active with its certificate |
 | AI | Vertex AI API on; Gemini called on the `global` endpoint (see [AI models](/platform/ai-models.md)) |
 
 ## Billing and APIs
 
-The project is on the **Blaze** plan: Cloud Storage for Firebase needs it for a bucket since 3 February 2026, and so do Cloud Functions. The APIs the app depends on are enabled: `firestore`, `firebasestorage`, `storage`, `firebaserules`, `identitytoolkit`, `securetoken`, `firebasehosting`, `cloudfunctions`, `run`, `cloudbuild`, `artifactregistry`, `eventarc`, `aiplatform` and `billingbudgets` (all `.googleapis.com`).
+The project is on the **Blaze** plan: Cloud Storage for Firebase needs it for a bucket since 3 February 2026, and so do Cloud Functions. The APIs the app depends on are enabled: `firestore`, `firebasestorage`, `storage`, `firebaserules`, `identitytoolkit`, `securetoken`, `firebasehosting`, `cloudfunctions`, `run`, `cloudbuild`, `artifactregistry`, `eventarc`, `aiplatform`, `billingbudgets` and `firebasedatabase` (all `.googleapis.com`).
 
 ```sh
 gcloud billing projects link simplify-special --billing-account=<BILLING_ACCOUNT_ID>
@@ -33,7 +34,7 @@ gcloud services enable firestore.googleapis.com firebasestorage.googleapis.com s
   firebaserules.googleapis.com identitytoolkit.googleapis.com securetoken.googleapis.com \
   firebasehosting.googleapis.com cloudfunctions.googleapis.com run.googleapis.com cloudbuild.googleapis.com \
   artifactregistry.googleapis.com eventarc.googleapis.com aiplatform.googleapis.com \
-  billingbudgets.googleapis.com --project simplify-special
+  billingbudgets.googleapis.com firebasedatabase.googleapis.com --project simplify-special
 ```
 
 ## Firestore
@@ -44,6 +45,21 @@ One database, `(default)`, in `asia-southeast1` (Singapore), Native mode, with d
 gcloud firestore databases create --database="(default)" --location=asia-southeast1 \
   --type=firestore-native --delete-protection --project simplify-special
 firebase deploy --only firestore:rules,firestore:indexes
+```
+
+## Realtime Database
+
+One instance, the project's default, `simplify-special-default-rtdb` in `asia-southeast1` (Singapore), at `https://simplify-special-default-rtdb.asia-southeast1.firebasedatabase.app`, created on 2026-09-26. It holds only the push signal learner devices stream (`signals/{code}` = `{ at, force }`, see [data model](/platform/data-model.md#realtime-database)); the `classSignal` function writes it and `database.rules.json` lets anyone read one class's node by its exact code and nothing else. The stream answers directly (no redirect) and with `Access-Control-Allow-Origin: *`.
+
+`firebase database:instances:create` makes only extra instances, and `firebase init database` asks questions, so the default instance was made with the Realtime Database Management API:
+
+```sh
+gcloud services enable firebasedatabase.googleapis.com --project simplify-special
+curl -X POST -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "Content-Type: application/json" \
+  -H "x-goog-user-project: simplify-special" \
+  "https://firebasedatabase.googleapis.com/v1beta/projects/simplify-special/locations/asia-southeast1/instances?databaseId=simplify-special-default-rtdb" \
+  -d '{"type":"DEFAULT_DATABASE"}'
+firebase deploy --only database
 ```
 
 ## Storage bucket
@@ -63,7 +79,7 @@ Deleted objects are kept for 7 days (the bucket's default soft-delete policy).
 
 ## The functions' service account
 
-The Cloud Functions run as `simplify-functions@simplify-special.iam.gserviceaccount.com` (`serviceAccount` in `setGlobalOptions` in `functions/index.js`), not as the default compute account, so they get only what they use: calling Gemini, reading and writing Firestore through the Admin SDK, and reading and writing objects in the one bucket.
+The Cloud Functions run as `simplify-functions@simplify-special.iam.gserviceaccount.com` (`serviceAccount` in `setGlobalOptions` in `functions/index.js`), not as the default compute account, so they get only what they use: calling Gemini, reading and writing Firestore through the Admin SDK, reading and writing objects in the one bucket, writing the push signal to the Realtime Database (`roles/firebasedatabase.admin`: no narrower predefined role lets the Admin SDK write data), and receiving the `classSignal` trigger's Firestore events (`roles/eventarc.eventReceiver`).
 
 ```sh
 gcloud iam service-accounts create simplify-functions --display-name="Simplify Cloud Functions" \
@@ -71,6 +87,8 @@ gcloud iam service-accounts create simplify-functions --display-name="Simplify C
 SA=serviceAccount:simplify-functions@simplify-special.iam.gserviceaccount.com
 gcloud projects add-iam-policy-binding simplify-special --member=$SA --role=roles/aiplatform.user
 gcloud projects add-iam-policy-binding simplify-special --member=$SA --role=roles/datastore.user
+gcloud projects add-iam-policy-binding simplify-special --member=$SA --role=roles/firebasedatabase.admin
+gcloud projects add-iam-policy-binding simplify-special --member=$SA --role=roles/eventarc.eventReceiver
 gcloud storage buckets add-iam-policy-binding gs://simplify-special.firebasestorage.app \
   --member=$SA --role=roles/storage.objectAdmin
 ```
@@ -110,6 +128,13 @@ The coach app's web config (`public/coach/js/firebase-config.js`) comes from `fi
 
 Six 2nd-gen HTTPS callables, `writePage`, `planVideo`, `startVideo`, `checkVideo`, `approveVideo` and `discardVideo`, in `asia-southeast1`, on Node.js 22 (`runtime` in `firebase.json`), 256 MiB, at most 10 instances each (`maxInstances` in `functions/index.js`), running as `simplify-functions`. Each Cloud Run service grants `roles/run.invoker` to `allUsers`, as callables require; every handler checks the caller itself (`requireClassCoach` in `functions/lib.js`). Environment: `GCLOUD_PROJECT` (set by the platform) and the optional `SIMPLIFY_BUCKET`, defaulting to `simplify-special.firebasestorage.app`. There are no secrets: Gemini is reached through Vertex AI with the service account's own credentials.
 
+One Firestore trigger, `classSignal` (`onDocumentWritten("classes/{code}")`, same region, same identity), writes the push signal to the Realtime Database whenever a class's page changes (`functions/signal.js`). It is delivered through Eventarc: the Eventarc service agent (`service-908084220716@gcp-sa-eventarc.iam.gserviceaccount.com`, `roles/eventarc.serviceAgent`) and `simplify-functions`' `roles/eventarc.eventReceiver`. The very first deploy of a trigger in a project can fail with "Permission denied while using the Eventarc Service Agent" while those permissions spread; deploying again a few minutes later works. Eventarc delivers each event through a Pub/Sub push subscription that calls the function's Cloud Run service as `simplify-functions`, so that account needs `roles/run.invoker` on the `classsignal` service — granted on that one service only (2026-09-26), since the CLI did not grant it. Without it the logs show 403 "lacks run.routes.invoke" and no signal is written. A function deleted and made again needs it again:
+
+```sh
+gcloud run services add-iam-policy-binding classsignal --region asia-southeast1 --project simplify-special \
+  --member=serviceAccount:simplify-functions@simplify-special.iam.gserviceaccount.com --role=roles/run.invoker
+```
+
 A merge to `main` deploys them, after the tests and before the website (see [release and deploy](/operations/release-and-deploy.md#ci-workflows)). By hand, only when CI is unavailable:
 
 ```sh
@@ -138,7 +163,7 @@ A school's filtered network must allow these hosts over HTTPS:
 
 | For | Hosts |
 |---|---|
-| The learner app, including My class | `simplify.whiz.coach`, `firestore.googleapis.com`, `firebasestorage.googleapis.com`; `www.youtube-nocookie.com` if pages embed YouTube |
+| The learner app, including My class | `simplify.whiz.coach`, `firestore.googleapis.com`, `firebasestorage.googleapis.com`, `simplify-special-default-rtdb.asia-southeast1.firebasedatabase.app` (the push stream; without it a new page still arrives when My class opens); `www.youtube-nocookie.com` if pages embed YouTube |
 | The coach app, in addition | `apis.google.com`, `accounts.google.com`, `identitytoolkit.googleapis.com`, `securetoken.googleapis.com`, `simplify-special.firebaseapp.com`, `asia-southeast1-simplify-special.cloudfunctions.net`, `lh3.googleusercontent.com` |
 
 The learner list is the learner CSP's `connect-src` and `frame-src`; the coach list follows the `/coach` CSP plus Google's sign-in page (see [security](/platform/security.md)).
@@ -155,5 +180,6 @@ gcloud storage buckets describe gs://simplify-special.firebasestorage.app --form
 gcloud storage buckets get-iam-policy gs://simplify-special.firebasestorage.app
 gcloud projects get-iam-policy simplify-special --format=json
 gcloud functions list --project simplify-special
+firebase database:instances:list --project simplify-special
 gcloud billing budgets list --billing-account=<BILLING_ACCOUNT_ID> --billing-project=simplify-special
 ```

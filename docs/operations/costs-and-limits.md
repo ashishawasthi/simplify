@@ -1,8 +1,8 @@
 ---
 type: System Reference
 title: Costs and Limits
-description: What Simplify costs to run and what keeps the bill small — the Blaze plan and the S$50 budget alert (it warns, it does not cap), Hosting transfer and the offline download per device, Firestore and Storage at pilot scale, the AI unit costs and the per-coach monthly limits (200 Flash requests, 5 videos) enforced on the server, and how often learner devices ask for a new page.
-tags: [costs, billing, blaze, budget, limits, gemini, hosting, quotas]
+description: What Simplify costs to run and what keeps the bill small — the Blaze plan and the S$50 budget alert (it warns, it does not cap), Hosting transfer and the offline download per device, Firestore and Storage at pilot scale, the AI unit costs and the per-coach monthly limits (200 Flash requests, 5 videos) enforced on the server, the Realtime Database push stream (tiny, and only while the app is on screen), and how often learner devices ask for a new page.
+tags: [costs, billing, blaze, budget, limits, gemini, hosting, quotas, realtime-database]
 status: stable
 ---
 
@@ -24,8 +24,9 @@ limit is enforced. The resources themselves are in [cloud project](/operations/c
 |---|---|---|
 | Firebase Hosting (storage and transfer) | Every learner and coach page load; the service worker's install on each release | Within the free allowance. A first visit downloads the whole offline copy (about 190 files, ~4 MB, ~3.5 MB of it images); a release costs each device only the changed files, because the worker revalidates with ETags and unchanged images come back as bodiless 304s (see [offline and updates](/platform/offline-and-updates.md)). Firebase's pages disagree on the exact free Hosting allowance, so check the console's usage page rather than a number here. |
 | Cloud Firestore (asia-southeast1) | Learner devices reading their class (one document read per check); the coach app's listeners and writes; the functions' usage counters | Cents a month or less — free tier applies |
+| Realtime Database (asia-southeast1) | One stream per learner device **while the app is on screen**, to its class's signal `{ at, force }` (a few dozen bytes per publish); written only by the `classSignal` function | Free tier (1 GB stored, 10 GB downloaded a month). Blaze allows 200,000 streams open at once per database — far beyond a pilot |
 | Cloud Storage (asia-southeast1) | Class pictures (≤ 2 MB each, usually far less) and approved videos (~3 MB for 8 s), downloaded once per device and then kept offline | Cents a month |
-| Cloud Functions (2nd gen, asia-southeast1) | The six callables, only when a coach uses Write with AI or videos; at most 10 instances | Negligible |
+| Cloud Functions (2nd gen, asia-southeast1) | The six callables, only when a coach uses Write with AI or videos; the `classSignal` trigger, once per change to a class; at most 10 instances each | Negligible |
 | Vertex AI — Gemini Flash | `writePage`, `planVideo` | A fraction of a cent per request |
 | Vertex AI — Gemini Omni | `startVideo` | About US$0.10 per second of video: US$0.30–1.00 a clip (3–10 s), about US$0.80 at the usual 8 s |
 
@@ -55,9 +56,10 @@ month** (UTC+8), checked on the server before any model is called:
 
 ## What keeps the rest small
 
-- **Learner devices ask rarely**: a device reads its class when the menu shows or the app comes to the front, at most
-  every 10 minutes, and whenever My class opens (not twice within 15 seconds) — one small document read each time. See
-  [My class](/learner/my-class.md#when-it-checks-for-a-new-page).
+- **Learner devices ask only when there is something new**: while the app is on screen, a device listens to its
+  class's push signal and reads the class (one small document read) only when the signal says the page changed; it
+  also reads it when My class opens (not twice within 15 seconds). The stream is closed in the background. See
+  [My class](/learner/my-class.md#hearing-about-a-new-page).
 - **Media is fetched once**: pictures and videos are kept in the device's `simplify-class-media` cache and only the
   files of the latest page are downloaded; pictures are resized to ≤ 1600 px in the coach's browser before upload.
 - **No analytics, no logging of learners**, so there is nothing else to store or bill.
