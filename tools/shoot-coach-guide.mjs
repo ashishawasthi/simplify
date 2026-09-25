@@ -6,6 +6,9 @@
 //   node tools/shoot-coach-guide.mjs editor poster   only these
 //   SHOOT_DIR=<folder> node tools/shoot-coach-guide.mjs   write there instead,
 //                                                  to look before replacing
+//   SHOOT_DIR=<folder> SHOOT_VIEWPORT=820x1180 node tools/shoot-coach-guide.mjs
+//                              every scene at another size, the whole window,
+//                              no crop — to review the screens, e.g. on an iPad
 //
 // Each scene seeds the stand-in (window.FAKE), opens a coach app address,
 // drives it to the state to show (setup), waits for it (expect), and captures
@@ -318,8 +321,8 @@ export const SCENES = {
       requests: [{ id: "r2", uid: "coach-3", kind: "join-class", classCode: "K7M3RQP9T", note: "Ms Tan's class", status: "pending", createdAt: ${at(0, 7, 58)} }] }`,
     setup: `await waitFor(() => $$(".admin-card").length >= 4);`,
     expect: `byText("h2", "Coaches waiting for approval (1)") && byText("h2", "Requests to join a class (1)")`,
-    clip: { selectors: [".coach-header .brand", ".header-nav", "main h1", "main .lead", "#adm-wait-h", "#adm-wait-h + .admin-list .admin-card",
-      "#adm-req-h", "#adm-req-h + .admin-list .admin-card"], pad: 16, maxWidth: 880 },
+    clip: { selectors: [".coach-header .brand", ".header-nav", "main h1", "main .lead", "#adm-wait-h", "#adm-wait-h ~ .admin-list .admin-card",
+      "#adm-req-h", "#adm-req-h ~ .admin-list .admin-card"], pad: 16, maxWidth: 880 },
   },
   "admin-classes": {
     ...DESKTOP, path: "/coach/#admin",
@@ -364,6 +367,14 @@ export const SCENES = {
     expect: `byText(".phone-where", "Screen 2 of 5")`,
   },
 };
+
+// SHOOT_VIEWPORT=<w>x<h>: a scene at that size, the whole window, uncropped
+function reviewing(s) {
+  const size = /^(\d+)x(\d+)$/.exec(process.env.SHOOT_VIEWPORT ?? "");
+  if (!size) return s;
+  const { clip, ...rest } = s;
+  return { ...rest, width: Number(size[1]), height: Number(size[2]), scale: 1 };
+}
 
 // ---------- the smoke-test form of a scene (tools/smoke/coach-guide.mjs) ----------
 
@@ -466,7 +477,7 @@ async function main() {
 
   let failed = 0;
   for (const name of names) {
-    const s = SCENES[name];
+    const s = reviewing(SCENES[name]);
     const problems = [];
     const { browserContextId } = await send("Target.createBrowserContext");
     const { targetId } = await send("Target.createTarget", { url: "about:blank", browserContextId });

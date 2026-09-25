@@ -485,7 +485,10 @@ progress { width: 100%; height: 10px; accent-color: var(--c-accent); }
 .inst-form { padding: 14px 16px; border: 2px solid var(--c-hair); border-radius: var(--c-radius); background: var(--c-soft); }
 
 /* ---------- the QR poster ---------- */
-.poster-tools { max-width: 760px; margin: 0 auto 20px; }
+.poster-tools { max-width: 760px; margin: 0 auto 12px; }
+.poster-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
+.poster-head h1 { margin: 0; }
+.poster-note { max-width: 760px; margin: 16px auto 0; color: var(--c-muted); }
 .poster {
   max-width: 760px; margin: 0 auto; padding: 36px 40px; text-align: center;
   border: 2px solid var(--c-hair); border-radius: 16px; background: #fff;
@@ -514,11 +517,16 @@ progress { width: 100%; height: 10px; accent-color: var(--c-accent); }
 /* forms and lists read best at a line's length, whatever the screen */
 .request-list, details.fold, .admin-screen .form-narrow { max-width: 760px; }
 
+/* below a laptop's width the email steps aside, so the header stays one row
+   on an iPad (About you, and Sign out's tooltip, still say who is signed in) */
+@media (max-width: 1023px) {
+  .account-email { display: none; }
+}
+
 @media (max-width: 700px) {
   /* the account beside the name, the pages under them: a shorter header */
   .account { order: 2; }
   .header-nav { order: 3; flex-basis: 100%; }
-  .account-email { display: none; }
 }
 
 @media (max-width: 520px) {

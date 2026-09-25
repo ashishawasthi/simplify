@@ -78,10 +78,11 @@ export function mountEditor(ws, { onPicture, onVideo, onYoutube }) {
       title),
     h("div", { class: "field" },
       h("label", { for: "page-text" }, "The page"),
-      h("p", { class: "field-hint", id: "page-text-help" },
-        "Each line shows as it is. A line with only --- starts the next screen. Use the buttons for the rest."),
       toolbar,
-      text),
+      text,
+      // under the box, not above it: the words to write come first
+      h("p", { class: "field-hint", id: "page-text-help" },
+        "Each line shows as it is. A line with only --- starts the next screen. Use the buttons for the rest.")),
     h("div", { class: "editor-foot" }, status, count, remove));
 
   // ---------- typing and saving ----------

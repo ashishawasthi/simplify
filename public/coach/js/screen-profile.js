@@ -66,9 +66,9 @@ export function profileScreen(root, ctx, { isNew }) {
   });
 
   const lead = isNew
-    ? "Before you can use Simplify as a coach, the admin checks who you are and where you work. Only you and the admin see this."
+    ? "The admin checks this before you can use Simplify. Only you and the admin see it."
     : gate === "about"
-      ? "Simplify now asks where you work. Choose your institutions, then Save. Only you and the admin see this."
+      ? "Simplify now asks where you work. Only you and the admin see this."
       : "Only you and the admin see this.";
   root.append(h("section", { class: "screen" },
     h("h1", null, "About you"),
