@@ -268,6 +268,46 @@ Object.assign(SCENES, {
   `, `document.querySelectorAll('#tool-now-next .nn-item').length === 4 &&
     document.querySelector('#tool-now-next .nn-item.is-now .nn-face .nn-words')?.textContent === 'Bus'`),
 
+  // Time sums: how long from 2:10 pm until 3:30 pm
+  "time-sums": scene("screen-time-sums", "/#time-sums", `
+    const set = (id, v) => { const el = document.getElementById(id); el.value = v; el.dispatchEvent(new Event("input", { bubbles: true })); };
+    set("ts-from", "14:10");
+    set("ts-until", "15:30");
+    document.activeElement.blur();
+    scrollTo(0, 0);
+  `, panel("1 hour 20 minutes | 2:10 pm to 3:30 pm")),
+
+  // Time sums: what time it will be 20 minutes after 3:50 pm
+  "time-sums-after": scene("screen-time-sums-after", "/#time-sums", `
+    const set = (id, v) => { const el = document.getElementById(id); el.value = v; el.dispatchEvent(new Event("input", { bubbles: true })); };
+    $('#tool-time-sums .ts-mode[data-mode="after"]').click();
+    set("ts-from", "15:50");
+    const mins = $$("#tool-time-sums .ts-number input")[1];
+    mins.value = "20";
+    mins.dispatchEvent(new Event("input", { bubbles: true }));
+    document.activeElement.blur();
+    scrollTo(0, 0);
+  `, panel("4:10 pm | 20 minutes after 3:50 pm")),
+
+  "stop-check": scene("screen-stop-check", "/#stop-check", ``,
+    `document.querySelectorAll('#tool-stop-check .sk-ask').length === 10`),
+
+  "stop-check-card": scene("screen-stop-check-card", "/#stop-check", `
+    $('#tool-stop-check .sk-ask[data-ask="code"]').click();
+    await pause(400);
+    document.activeElement.blur();
+  `, `document.querySelector('.card-sheet')?.open && document.querySelector('.card-words').textContent === 'STOP. Show a trusted adult.'`),
+
+  // a device with two money tools taken off the menu: tucked under Money's ＋2, opened
+  "menu-tucked": scene("screen-menu-tucked", "/", `
+    deviceSettings({ hidden: ["next-dollar", "next-note"] });
+    await pause(200);
+    $("#tuck-money").click();
+    await pause(200);
+    document.activeElement.blur();
+    scrollTo(0, 0);
+  `, `document.querySelectorAll('#tucked-money li').length === 2 && !document.getElementById('tucked-money').hidden`),
+
   // the rest of the menu: My day and Talk
   "menu-more": scene("screen-menu-more", "/", `
     $('#menu h2[data-group="my-day"]').scrollIntoView({ block: "start" });
