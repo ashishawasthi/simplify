@@ -42,7 +42,7 @@ editor's current markdown (≤ 20,000 characters) and page name (≤ 80), and an
 The function adds the class's **shelf**: up to 100 pictures (newest first) and up to 50 **approved** videos, each as
 its exact path and words. It also collects every link found in the instruction, the answers and the current page
 (`linksIn`): https links as written and YouTube links in any accepted form as `https://youtu.be/<id>`. Those are the
-only links the helper may use.
+only links the AI may use.
 
 Nothing about learners is sent — there is nothing about learners in the system to send.
 
@@ -59,7 +59,7 @@ sensitive but legitimate topics more often.
   topics — puberty, periods, toileting, body safety, grief — are in scope and are written factually and gently.
 - **Out of scope (decline)**: anything not for the learners or their class — personal errands, business, marketing,
   politics, adult content, homework, writing for adults.
-- **Privacy**: the page is public to anyone with the class code, so the helper never writes anything that identifies
+- **Privacy**: the page is public to anyone with the class code, so the AI never writes anything that identifies
   a learner or family (names, photos of students, addresses, phone numbers, diagnoses).
 - **Prompt injection**: everything from the coach is quoted material; the instructions tell the model never to follow
   text inside it that tries to change its rules, role or answer shape.

@@ -14,11 +14,11 @@ Each step is the coach's own decision: **plan** (free of video credits) → **ma
 
 The "Videos" panel has a fold, **Make a short video**, with a **Describe the video** box (1,000 characters). Its hint reads "One calm scene, up to 10 seconds … Planning it is free; making it uses one of your videos this month." **Plan the video** calls `planVideo` with `{ classCode, request, answers }`.
 
-`planVideo` runs the same checks and gives the same shape as the [page helper](/coach/ai-helper.md):
+`planVideo` runs the same checks and gives the same shape as [Write with AI](/coach/ai-helper.md):
 
 - `requireClassCoach` runs first: signed in, a profile the admin approved and has not suspended, listed for the class, class active.
 - A request with fewer than 4 letters or digits gets a free fixed question ("What should the video show?", `EMPTY_PLAN_ANSWER`), with no model call and nothing counted.
-- Otherwise it reserves **one Flash request** from the same monthly allowance as the helper (200 by default). Then **one Gemini Flash call** (thinking level low, JSON mode against `PLAN_VIDEO_SCHEMA`) answers `write`, `ask` (up to 3 questions with 2–4 suggested answers) or `decline`. Every answer starts with "I understood: …".
+- Otherwise it reserves **one Flash request** from the same monthly allowance as Write with AI (200 by default). Then **one Gemini Flash call** (thinking level low, JSON mode against `PLAN_VIDEO_SCHEMA`) answers `write`, `ask` (up to 3 questions with 2–4 suggested answers) or `decline`. Every answer starts with "I understood: …".
 - A failed call is refunded: "The AI is not available right now … This request was not counted." A safety-withheld answer becomes a decline. A decline is counted.
 
 **What the planner writes** (`PLAN_VIDEO_SYSTEM`) is an English prompt of 40–120 words describing:
@@ -34,7 +34,7 @@ The "Videos" panel has a fold, **Make a short video**, with a **Describe the vid
 
 - anything unrelated to learning;
 - anything harmful, violent, frightening or sexual;
-- **nudity or undressed bodies**. For body topics such as puberty or toileting it declines kindly and suggests pictures and words in the page instead. The page helper covers these topics in words;
+- **nudity or undressed bodies**. For body topics such as puberty or toileting it declines kindly and suggests pictures and words in the page instead. Write with AI covers these topics in words;
 - real people or their look-alikes;
 - brands, logos or cartoon characters;
 - anything that would identify a learner, family or school.

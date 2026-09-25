@@ -7,7 +7,7 @@ status: stable
 ---
 
 This document owns which AI models run, where, and how they are called. Only the Cloud Functions call a model — the
-learner app and the coach app never do. What a coach experiences is in [the AI helper](/coach/ai-helper.md) and
+learner app and the coach app never do. What a coach experiences is in [Write with AI](/coach/ai-helper.md) and
 [videos](/coach/videos.md).
 
 ## Models
@@ -75,7 +75,7 @@ for the model.
 | `EMPTY_WRITE_ANSWER`, `EMPTY_PLAN_ANSWER` | The free question returned, without a model call, when the instruction is too short to act on |
 
 The product rules these encode — and what the functions check afterwards — are in
-[the AI helper](/coach/ai-helper.md#what-the-function-checks) and [videos](/coach/videos.md).
+[Write with AI](/coach/ai-helper.md#what-the-function-checks) and [videos](/coach/videos.md).
 
 ## Omni: text to video
 
