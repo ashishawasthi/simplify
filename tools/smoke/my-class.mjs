@@ -469,6 +469,24 @@ const scenes = [
     expect: inPage(() => location.hash === "#my-class" && text("#tool-my-class .mc-screen h2") === "Going to the dentist"),
   },
   {
+    name: "set-up: after Open My class, All done goes to the menu, not back to set-up",
+    path: `/#join=${CODE}`,
+    init: HELPERS + NET({ docs: { [CODE]: doc(PAGE) } }),
+    setup: run(async () => {
+      await until(() => shown("#class-setup-slot .cs-ask"));
+      await tap("#class-setup-slot .cs-yes");
+      await tap("#class-setup-slot .cs-open");
+      await until(() => text("#tool-my-class .mc-screen h2") === "Going to the dentist");
+      for (let i = 0; i < 20 && text("#tool-my-class .mc-next") !== "All done✔"; i++) {
+        await tap("#tool-my-class .mc-next");
+        await new Promise((r) => setTimeout(r, 500)); // past the double-tap guard
+      }
+      await tap("#tool-my-class .mc-next");
+    }),
+    expect: inPage(() => !document.getElementById("menu").hidden && location.hash === "" &&
+      document.getElementById("tool-setup").hidden),
+  },
+  {
     name: "set-up: No to the question leaves the device as it was",
     path: `/#join=${CODE}`,
     init: HELPERS + NET({ docs: { [CODE]: doc(PAGE) } }),

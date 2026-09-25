@@ -127,7 +127,7 @@ The section has three states, one at a time.
 
 **Current** — "This device follows", the class's name, "Code: …", and "✏️ Change" and "✕ Leave".
 
-- "Open My class" (with the school picture) shows only right after joining — by QR code or by Yes — and opens the reader with `shell.go("my-class")`.
+- "Open My class" (with the school picture) shows only right after joining — by QR code or by Yes — and opens the reader in place of the set-up page (`shell.go("my-class", null, { replace: true })`), so Back and All done lead to the menu, never back to an open set-up page.
 - In Safari on an iPad or iPhone (`navigator.standalone === false`) a note says "Simplify on the Home Screen keeps its own settings: type this code on its set-up page too." A QR code opens Safari, whose storage is not the installed app's, so an installed iPad app gets its class by typing the code in its own set-up page.
 - **Change** shows the code box while the device still follows its class, with a "Keep 3 Kindness" button to go back.
 - **Leave** clears `classCode` and `className` at once (toast "Left 3 Kindness", with Put it back); the saved page and the media cache are deleted only at the next start (`forgetClassIfNone()`), so the undo can still bring them back. Focus goes to the section's heading.

@@ -165,8 +165,8 @@ function makeShell(id) {
       return () => screenListeners.delete(fn);
     },
     setBusy: (busy) => setBusy(id, busy),
-    go: (to, params) => {
-      if (onScreen()) go(to, params);
+    go: (to, params, options) => {
+      if (onScreen()) go(to, params, options);
     },
     back: () => {
       if (onScreen()) back();
@@ -330,8 +330,9 @@ function route({ fresh } = {}) {
 }
 
 // shell.go(): open another screen, as a new step in the history, one step
-// further from the start of the visit than this one
-function go(id, params) {
+// further from the start of the visit than this one — or, with replace, in
+// place of this step, so Back never finds this screen again
+function go(id, params, { replace = false } = {}) {
   if (!screens.has(id)) {
     console.error(`go(): there is no screen "${id}"`);
     return;
@@ -340,7 +341,8 @@ function go(id, params) {
   const hash = `#${id}${query ? `?${query}` : ""}`;
   // no hashchange for pushState, so route() is called here; already there:
   // no new step, the screen is just shown afresh
-  if (location.hash !== hash) history.pushState({ steps: steps + 1, seen: true }, "", hash);
+  if (replace) history.replaceState({ steps, seen: true }, "", hash);
+  else if (location.hash !== hash) history.pushState({ steps: steps + 1, seen: true }, "", hash);
   route({ fresh: true });
 }
 

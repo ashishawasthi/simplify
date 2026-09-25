@@ -75,11 +75,14 @@
 //   setBusy(on)            true while a reload would disrupt (a Wait timer
 //                          running): a new version then waits until the app
 //                          next goes to the background. false once it stops.
-//   go(id, params)         open another screen: go("wait", { m: 2 }). Adds a
+//   go(id, params, opts)   open another screen: go("wait", { m: 2 }). Adds a
 //                          step to the history, so Back comes back here, and
 //                          🏠 still returns to the menu; the new screen's
 //                          show() gets fresh: true. An id with no screen is
 //                          an error in the console, and nothing happens.
+//                          { replace: true } puts it in place of this screen
+//                          instead, so Back never comes back here (the
+//                          set-up page, once its hold is done).
 //   back()                 return to the screen before this one, as Back
 //                          does — or to the menu, if this is the first screen
 //                          of the visit (a shared link), rather than out of
