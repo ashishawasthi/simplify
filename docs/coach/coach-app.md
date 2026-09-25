@@ -38,7 +38,7 @@ The Firebase JS SDK **12.19.0** (app, auth, firestore, storage, functions) and *
 
 Rules applied before the hash, from `coachGate()` in `public/coach/js/institutions.js`: signed out, every address shows Sign in; signed in with no `coaches/{uid}` profile, or one from before institutions (no `institutions`), About you comes first (the admin too). Then `#admin` opens for an admin whatever their own status (an admin may approve themself), and `#about` for anyone. A coach whose `status` is `pending` (or missing) sees **Waiting for approval** at every other address, and one whose status is `declined` sees **Not approved**; only an approved coach reaches My classes, a class or a poster. `<CODE>` is normalised with `normaliseCode` and must pass `isClassCode`, or the route falls through to My classes. Each screen returns a clean-up function that runs before the next one opens (the class screen stops its Firestore listeners there). On every screen change the new `<h1>` receives focus and becomes part of `document.title`. A screen that throws while opening shows "Something went wrong" instead of a blank page.
 
-The header shows the signed-in email and **Sign out** whenever someone is signed in, and the nav (My classes, Admin, About you) once the profile is known; Admin appears only when `admins/{uid}` exists, which is read once at sign-in. The footer links to the coach guide, `/coach/guide.html`.
+The header shows the signed-in email and **Sign out** whenever someone is signed in — the email only from 1024 px wide, so an iPad's header stays one row (Sign out's `title` says "Signed in as …", and About you shows it too) — and the nav (My classes, Admin, About you) once the profile is known; Admin appears only when `admins/{uid}` exists, which is read once at sign-in. The footer links to the coach guide, `/coach/guide.html`.
 
 The profile is **watched live** (`cloud.watchProfile`, an `onSnapshot` of `coaches/{uid}`): when the admin's decision changes what the coach may do, the screen changes as it happens — Waiting for approval becomes My classes without a reload. It never re-routes under someone typing in About you or working on the Admin screen. A profile that is "not found" only in the device's cache is treated as no connection, so nobody is sent to About you by mistake.
 
@@ -96,7 +96,7 @@ A class has any number of pages in `classes/{code}/pages/{id}` (`title` up to 80
 
 ### Editor and toolbar
 
-A plain `<textarea>` with a toolbar (`public/coach/js/editor.js`). The text changes are pure functions in `public/coach/js/edit.js`, tested by `tools/test-coach.mjs`:
+A plain `<textarea>` with a toolbar above it and one line of help under it ("Each line shows as it is. A line with only --- starts the next screen. …") (`public/coach/js/editor.js`). The text changes are pure functions in `public/coach/js/edit.js`, tested by `tools/test-coach.mjs`:
 
 | Button | Does |
 |---|---|
@@ -139,7 +139,7 @@ The rules allow a coach to change only `latest` and `updatedAt` on the class doc
 
 ## QR poster
 
-`#poster/<CODE>` (`public/coach/js/screen-poster.js`) is an A4 sheet for printing (`@media print` in `public/coach/css/coach.css` hides everything else). It shows the class name, a QR code for `https://simplify.whiz.coach/#join=<CODE>`, the code in big letters, three set-up steps for the adult with the learner's device (the third spells out the way to the set-up page — ℹ️ How to use this app → Set up this device → Open set-up — for a device with no camera or a Home Screen app), and the site's address. The QR is an SVG drawn with DOM calls from uqr's modules (`qrSvg` in `public/coach/js/qr.js`), with error correction level Q and a 4-module quiet zone. The code is printed as well for an iPad whose camera opens Safari rather than the home-screen app. Nothing on the poster leads to the coach app. How a learner device joins is in [menu and setup](/learner/menu-and-setup.md), and the site's other QR card is in [share card](/operations/share-card.md).
+`#poster/<CODE>` (`public/coach/js/screen-poster.js`) has **Print** beside its heading and the note about sharing it only with the class's families *under* the poster, so an iPad shows the whole poster, QR code first, without scrolling. The poster is an A4 sheet for printing (`@media print` in `public/coach/css/coach.css` hides everything else). It shows the class name, a QR code for `https://simplify.whiz.coach/#join=<CODE>`, the code in big letters, three set-up steps for the adult with the learner's device (the third spells out the way to the set-up page — ℹ️ How to use this app → Set up this device → Open set-up — for a device with no camera or a Home Screen app), and the site's address. The QR is an SVG drawn with DOM calls from uqr's modules (`qrSvg` in `public/coach/js/qr.js`), with error correction level Q and a 4-module quiet zone. The code is printed as well for an iPad whose camera opens Safari rather than the home-screen app. Nothing on the poster leads to the coach app. How a learner device joins is in [menu and setup](/learner/menu-and-setup.md), and the site's other QR card is in [share card](/operations/share-card.md).
 
 ## Errors and the toast
 

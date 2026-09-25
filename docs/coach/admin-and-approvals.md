@@ -36,7 +36,7 @@ To remove an admin, delete the document in the console. Admins cannot make other
 
 ## The Admin screen
 
-It loads five things: the pending requests, every coach, every class with its coaches (`classCoaches`), the institutions, and `config/limits`. Its lead line: "Approve a coach only after checking who they are and where they work. Let a coach join a class only after checking they really coach it." Every action shows a toast; everything but approving a join request has **Undo**.
+It loads five things: the pending requests, every coach, every class with its coaches (`classCoaches`), the institutions, and `config/limits`. There is no lead above the screen; what to check is a one-line hint under each waiting list, shown only while it has someone in it: "Approve only after checking who they are and where they work." and "Approve only after checking they really coach that class." Every action shows a toast; everything but approving a join request has **Undo**.
 
 ### Coaches waiting for approval
 

@@ -321,7 +321,7 @@ export const SCENES = {
       requests: [{ id: "r2", uid: "coach-3", kind: "join-class", classCode: "K7M3RQP9T", note: "Ms Tan's class", status: "pending", createdAt: ${at(0, 7, 58)} }] }`,
     setup: `await waitFor(() => $$(".admin-card").length >= 4);`,
     expect: `byText("h2", "Coaches waiting for approval (1)") && byText("h2", "Requests to join a class (1)")`,
-    clip: { selectors: [".coach-header .brand", ".header-nav", "main h1", "main .lead", "#adm-wait-h", "#adm-wait-h ~ .admin-list .admin-card",
+    clip: { selectors: [".coach-header .brand", ".header-nav", "main h1", "#adm-wait-h", "#adm-wait-h ~ .admin-list .admin-card",
       "#adm-req-h", "#adm-req-h ~ .admin-list .admin-card"], pad: 16, maxWidth: 880 },
   },
   "admin-classes": {
