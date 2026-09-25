@@ -8,9 +8,11 @@ Singapore. It opens on one menu of big buttons, and each tool is one screen that
 - **Money** — Can I buy?, What is the change?, Next dollar, Next note, Make the amount, Make a shopping list: type,
   dictate or tap pictures of Singapore notes and coins, and get a green, red or blue answer at once.
 - **My day** — Now and next (with the whole day as My day), Wait (a shrinking disc), Steps (one step at a time for
-  daily tasks).
+  daily tasks), Time sums (how long until a time, or what time it will be after some minutes).
 - **Talk** — I need (cards for asking when speech fails), Show a card (big cards to show a bus captain, cashier or
   onlooker).
+- **Stay safe** — Stop and check (someone asked for a code, money, photos or a meet-up: stop, show a trusted adult,
+  or call the 1799 ScamShield Helpline).
 - **My class** — the latest page from the learner's coach, one screen at a time, once a class is set up on the
   device.
 
@@ -66,6 +68,8 @@ node tools/test-i-need.mjs      # I need's cards, settings, sentences and body m
 node tools/test-now-next.mjs    # Now and next's list rules
 node tools/test-show-card.mjs   # Show a card's wording (LTA's words exactly) and settings
 node tools/test-steps.mjs       # the Steps decks, Next/Back and Fewer steps
+node tools/test-time-sums.mjs   # Time sums' arithmetic and every answer's words
+node tools/test-stop-check.mjs  # Stop and check's asks and every word on its card
 node tools/test-voice.mjs       # the recorded voice: every sentence Speak says has its clip, in the map and sw.js
 node tools/test-pictures.mjs    # the picture set: list vs files, SVG safety, size, licence notices
 node tools/test-class.mjs       # class markdown, class codes, reading a class, the service worker's exclusions

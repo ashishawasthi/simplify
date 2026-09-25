@@ -22,10 +22,10 @@ The one list of pictures. Each entry, made with `pic(id, words, group, file = id
 | `words` | Its default label: plain Singapore English, 1–3 literal words |
 | `group` | Its section in the picker (`PICTURE_GROUPS`): **My day** (`day`), **I need** (`need`), **Going out** (`out`), **Steps** (`steps`); a picture in two groups is listed once, under the first |
 
-Today: **84 pictures** in 80 files (45 My day, 11 I need, 15 Going out, 13 Steps), plus 8 menu icons, in **86 SVG
-files** (59 from Noto Emoji, 27 our own, 12 of those built around Noto parts), about 344 KB in all.
+Today: **84 pictures** in 80 files (45 My day, 11 I need, 15 Going out, 13 Steps), plus 10 tool pictures and 11 menu
+icons, in **97 SVG files** (70 from Noto Emoji, 27 our own, 12 of those built around Noto parts), about 381 KB in all.
 
-Exports: `PICTURES`, `PICTURE_GROUPS`, `NOTO_FILES` (our file → its upstream Noto file), `MENU_ICONS`,
+Exports: `PICTURES`, `PICTURE_GROUPS`, `NOTO_FILES` (our file → its upstream Noto file), `MENU_ICONS`, `TOOL_PICTURES`,
 `pictureSrc(id)`, `menuIconSrc(id)` and `pictureImg(id, { alt })` (an `<img>` element). Lookups use `Object.hasOwn`,
 so an id such as `toString` finds nothing.
 
@@ -34,6 +34,15 @@ so an id such as `toString` finds nothing.
 `MENU_ICONS` maps each menu tool and group heading (ids from `public/js/tools.js`) to a file. They are **not** in
 `PICTURES`, so the picker never offers them as cards; menu-only files are named `menu-*.svg`. `app.js` fills each
 `[data-menu-icon]` slot on the menu from `menuIconSrc`, and the set-up page uses the same icons.
+
+## Tool pictures
+
+`TOOL_PICTURES` (id → file) holds pictures only one tool's own screens use: Stop and check's asks (`code`,
+`id-card`, `password`, `send-money`, `photo`, `meet-up`, `link`, `secret`, `prize`) and Time sums' `clock`. They are
+Noto Emoji, built by the same script and found by `pictureSrc()` / `pictureImg()` like any picture, but they are not
+in `PICTURES`, so the picker never offers them — and so their words need no recorded voice clip (every picker
+picture's words are recorded for I want's sentence; see [the recorded voice](/platform/voice.md)). An id may not also
+be a picker picture (`node tools/test-pictures.mjs`).
 
 ## Where the files come from
 

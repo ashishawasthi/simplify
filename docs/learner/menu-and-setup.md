@@ -18,8 +18,9 @@ Order and groups come from `GROUPS` and `TOOLS` in `public/js/tools.js`; `index.
 |---|---|---|---|
 | Top, no heading | — | My class | `school.svg` (only once the device follows a class) |
 | Money | 💰 Money (system emoji) | Can I buy? · What is the change? · Next dollar · Next note · Make the amount · Make a shopping list | 🛒 · a drawn 50¢ coin · 💲 · a drawn $10 note · a drawn $2 note and $1 coin · 📝 |
-| My day | `menu-my-day.svg` My day | Now and next · Wait · Steps | `menu-now-next.svg` · `more-time.svg` · `menu-steps.svg` |
+| My day | `menu-my-day.svg` My day | Now and next · Wait · Steps · Time sums | `menu-now-next.svg` · `more-time.svg` · `menu-steps.svg` · `clock.svg` |
 | Talk | `menu-talk.svg` Talk | I need · Show a card | `menu-i-need.svg` · `menu-show-card.svg` |
+| Stay safe | `menu-safe.svg` Stay safe | Stop and check | `stop.svg` |
 
 - Money comes first so the buttons people knew from the money-only app stay where they were. The money tools keep their emoji and the app's own note and coin drawings (`[data-picture]`, drawn by `moneySvg()` from `public/js/currency-data.js`).
 - Every other tile and group heading has `data-menu-icon`, which `app.js` fills with an `<img>` from `MENU_ICONS` in `public/js/pictures.js` — the app's own files, so the menu looks the same on Android and iPad (a newer emoji such as 🪪 is an empty box on older Android). See [pictures](/learner/pictures.md#menu-icons).
@@ -34,7 +35,25 @@ Order and groups come from `GROUPS` and `TOOLS` in `public/js/tools.js`; `index.
 2. it could not start (its `mount()` threw or returned no `show()`), or
 3. it is My class and the device follows no class (`classCode` is null).
 
-A group whose every tool is hidden loses its heading too. Hiding a tool only takes its button off the menu: its address still works, so I need's Break can open Wait on a device whose menu hides Wait.
+Hiding a tool only takes its button off the menu: its address still works, so I need's Break can open Wait on a device whose menu hides Wait.
+
+### Tools taken off the menu are tucked away, not gone
+
+A tool in the `hidden` list (case 1) is **tucked away** under its group rather than removed (2026-09-26, the owner's
+request). `app.js` wraps each group heading in a `.group-row` with a small round button on its right, **＋N**
+(`.tuck-btn`, `aria-expanded`, `aria-controls`, named "Money: 2 more tools"). Tapped, it shows `ul.tucked-list`
+under the group's own tiles: copies of the tucked tools' tiles, in menu order, with a **dashed** edge (their drawn
+notes and coins drawn afresh — a copied drawing would point at its gradient inside the hidden tile), and turns into
+**−N**. It closes again every time the menu comes back.
+
+Why a button in each heading row rather than one panel for all groups: the menu is one column of full-width tiles,
+so the only free space is the right side of each heading row — the button sits there, and its negative margins keep
+the row as tall as the heading alone, so a closed group costs **no height**; opened, the tucked tools appear next to
+their group's own, where the student looks for them. A single "More tools" panel at the end would always take a row
+and separate tools from their groups. The one cost: a group whose every tool is tucked away keeps its heading row
+(with its ＋N). A group with nothing on the menu and nothing tucked away (only tools that could not start) loses its
+heading. Tools that could not start (case 2) and My class without a class (case 3) are not tucked — they are simply
+not there.
 
 ### The My class tile
 

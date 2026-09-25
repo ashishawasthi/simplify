@@ -66,6 +66,8 @@ This document owns the shape of the learner app in `public/`: which module does 
 | `tools/steps.js`, `tools/steps-decks.js` | Steps: the screen and its set-up section, and the decks and moves — [steps](/learner/steps.md) |
 | `tools/i-need.js`, `tools/i-need-cards.js`, `tools/i-need-body.js`, `tools/i-need-hurts.js` | I need: the grid and set-up section, the cards and words, the body drawing, the Hurts sheet — [I need](/learner/i-need.md) |
 | `tools/show-card.js`, `tools/show-card-cards.js` | Show a card: the screen and set-up section, the cards and settings — [show a card](/learner/show-card.md) |
+| `tools/time-sums.js`, `tools/time-sums-calc.js` | Time sums: the screen, and its arithmetic and answers — [time sums](/learner/time-sums.md) |
+| `tools/stop-check.js`, `tools/stop-check-cards.js` | Stop and check: the screen, and its asks and card words — [stop and check](/learner/stop-check.md) |
 
 **Class** (My class — see [my class](/learner/my-class.md))
 

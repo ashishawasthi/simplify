@@ -24,7 +24,7 @@ designed-but-unbuilt work, so nothing there describes a shipped system.
 ## Areas
 
 - [Platform](/platform/index.md) (6 documents) — How the app is built — the static shell, the tool contract, offline and updates, security headers, data and AI models.
-- [Learner app](/learner/index.md) (10 documents) — One document per screen a learner touches — the menu and set-up, the money tools, the daily-life tools, My class.
+- [Learner app](/learner/index.md) (12 documents) — One document per screen a learner touches — the menu and set-up, the money tools, the daily-life tools, My class.
 - [Coach platform](/coach/index.md) (5 documents) — The coach app at /coach/ — classes, the markdown page, pictures, YouTube, Write with AI, videos, and the admin's approvals.
 - [Operations](/operations/index.md) (5 documents) — Running what exists — local development and tests, releasing, the cloud project, costs and limits.
 - [Product and research](/product/index.md) (3 documents) — Why the app is the way it is — the design rules for autistic learners, and the research behind the tools.

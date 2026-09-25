@@ -5,6 +5,6 @@ Design notes for work that does **not** exist in the code. Nothing in this secti
 > **Not implemented.** Every entry below is a design, not a description of running code.
 
 - [Coach Platform — Put Off](/plans/coach-platform-later.md) — Coach-platform features deliberately left out of the first build — Microsoft sign-in, App Check, several classes per device, per-learner content, read receipts, replies, push, a parent view, a class-wide tool list, video edits, longer and portrait videos — with what each would need.
-- [Next and Later Tools](/plans/next-tools.md) — Learner tools researched and scored but not built — Say it, How I feel, Order food, My trip, Time sums, Stop and check, Break, About me, Print view, and the Later list — with each one's screen, scores, effort and the caution that goes with it.
+- [Next and Later Tools](/plans/next-tools.md) — Learner tools researched and scored but not built — Say it, How I feel, Order food, My trip, Break, About me, Print view, and the Later list (Time sums and Stop and check are built) — with each one's screen, scores, effort and the caution that goes with it.
 
 Back to the [documentation index](/index.md).

@@ -1,7 +1,7 @@
 ---
 type: Plan
 title: Next and Later Tools
-description: Learner tools researched and scored but not built — Say it, How I feel, Order food, My trip, Time sums, Stop and check, Break, About me, Print view, and the Later list — with each one's screen, scores, effort and the caution that goes with it.
+description: Learner tools researched and scored but not built — Say it, How I feel, Order food, My trip, Break, About me, Print view, and the Later list (Time sums and Stop and check are built) — with each one's screen, scores, effort and the caution that goes with it.
 tags: [plan, roadmap, tools, daily-life, learner]
 status: draft
 ---
@@ -9,7 +9,9 @@ status: draft
 **None of these tools exists in the code.** They come from the tool catalogue of the
 [daily-life research](/product/daily-life-research.md) (2026-09-23), which scored each candidate: Impact (1–5) = need
 × evidence × how often it's needed in Singapore daily life; Fit (1–5) = offline, one screen, no accounts, small;
-Effort S (days), M (a week or two), L (more — usually drawings). The first release — Wait, I need, Now and next,
+Effort S (days), M (a week or two), L (more — usually drawings). **Time sums** and **Stop and check** have since been
+built (2026-09-26; see [Time sums](/learner/time-sums.md) and [Stop and check](/learner/stop-check.md)) and are left
+out below. The first release — Wait, I need, Now and next,
 Show a card, Steps and My class — is built; see the [learner area](/learner/index.md).
 
 Every tool here would follow the [design principles](/product/design-principles.md) and plug into the shell like the
@@ -23,8 +25,6 @@ existing tools ([adding a tool](/platform/architecture.md)).
 | **How I feel** | Five bands (colour, size, one word; faces optional) → the student's own "what helps me" pictures | 4 / 5 | S | Words must match the school's own programme (Zones or a 5-point scale); no branding; nothing saved |
 | **Order food** | Drink (kopi, teh, Milo, water + O, C, kosong, siew dai, peng), a food row (halal by default), here or tapau / dabao / bungkus → one big sentence to show; then Can I buy? and "return the tray" | 4 / 4 | M + L drawings | Builds the words, not a menu; device voices may mispronounce kopi terms |
 | **My trip** | MRT first (trains stop at every station): line colour, station code, "towards …", stops to go, where to get off; "Something is wrong" scripts | 4 / 4 | M | Buses skip stops unless someone presses the bell, so a tap-per-stop counter miscounts — use the stop name and the bus's own next-stop display where there is one. A training aid, never a safety device |
-| **Time sums** | "How long until 3:30?", "What time will it be in 20 minutes?" — two boxes and the answer panel, like the money tools | 3 / 5 | S | SPED functional numeracy teaches money and time together |
-| **Stop and check** | Someone asks for an OTP, Singpass, a PayNow transfer, photos or a meet-up → "Stop. Show a trusted adult." | 3 / 5 | S | Teens with phones; a very Singapore-specific scam risk |
 | **Break** | Breathe (optional, never the default), Move, Quiet — each short, ending on "Back to …" | 3 / 5 | S | Some interoception-sensitive children find breathing exercises distressing |
 | **About me** | One card, written by the student with support: how I communicate, what helps, what upsets me, Call my family | 3 / 3 | S | Personal phones only, never a shared iPad; show and flip, hand the phone only to uniformed staff, teachers or clinicians; back it with the phone's lock-screen emergency info |
 | **Print view** | Paper copies of I need, Show a card, Now and next and each Steps deck | 3 / 5 | S | Batteries die; phones are banned in secondary schools during school hours |
