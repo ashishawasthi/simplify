@@ -1,5 +1,12 @@
 {
   "projects": {
     "default": "simplify-special"
+  },
+  "targets": {
+    "simplify-special": {
+      "storage": {
+        "main": ["simplify-special.firebasestorage.app"]
+      }
+    }
   }
 }
