@@ -77,6 +77,8 @@ gcloud storage buckets add-iam-policy-binding gs://simplify-special.firebasestor
 
 Whoever deploys the functions must be allowed to act as this account (`roles/iam.serviceAccountUser` on it; project owners already are). The Firebase CLI also checks, before any functions deploy, that the deployer may act as the App Engine default account `simplify-special@appspot.gserviceaccount.com`, although nothing runs as it (there is no App Engine app, scheduled job or extension). That account held the project-wide Editor role by Google's default; the owner removed it (2026-09-25), so it holds no roles, and the CI deploy account may act as it without gaining anything. If a Google service ever needs it again, it will fail with a permission error naming that account.
 
+Function builds (Cloud Build) run as the default compute account `908084220716-compute@developer.gserviceaccount.com`, so a deployer must be allowed to act as it too. It also held Editor by default; the owner replaced that (2026-09-25) with **Cloud Build Builder** alone — read the uploaded source, write build logs, push the image to `gcf-artifacts` — which is all a build uses (nothing else runs as it: no VMs, no Cloud Run jobs). A build failing for a missing permission would name this account; put the permission (not Editor) back.
+
 ## Storage rules can read Firestore
 
 `storage.rules` decides who is a class's coach with `firestore.get(…/classCoaches/$(code))` and `firestore.get(…/coaches/$(uid))`, and who is an admin with `firestore.exists(…/admins/$(uid))`. Those lookups need `roles/firebaserules.firestoreServiceAgent` on the Cloud Storage for Firebase service agent; without it every coach upload fails. An interactive `firebase deploy --only storage` offers to grant it; by hand:
