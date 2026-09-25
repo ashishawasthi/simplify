@@ -305,7 +305,9 @@ export function mountClassSetup(container, shell, params) {
     shell.showToast(`Left ${before.className || formatClassCode(before.classCode)}`, () => setDevice(before));
     heading.focus({ preventScroll: true });
   });
-  openClass.addEventListener("click", () => shell.go("my-class"));
+  // in place of set-up: the learner's Back and All done then lead to the
+  // menu, never back to an open set-up page
+  openClass.addEventListener("click", () => shell.go("my-class", null, { replace: true }));
 
   // an undo, or a change made in another tab
   shell.onDeviceChange(() => {

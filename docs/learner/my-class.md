@@ -23,7 +23,7 @@ the class (on the set-up page) removes it.
 - The page is split into **screens** at each `---` line and drawn by the shared parser
   (`parseClassMarkdown` + `renderScreen` from `public/js/class-markdown.js`) — text nodes only, never HTML.
 - **◀ Back** and **Next ▶** sit at the bottom, always in the same place; on the last screen Next reads **All done**
-  and returns to where the learner came from. Progress dots show the place (up to 12 screens; more show "3 / 20").
+  and returns to where the learner came from — the menu, when My class was opened from the set-up page. Progress dots show the place (up to 12 screens; more show "3 / 20").
   Screen readers hear "Screen 3 of 7".
 - Under the page: "Updated Tue 8:05 am" (`publishedWords`: "today 8:05 am", a weekday within the week, then
   "22 Sept", with the year when it differs).

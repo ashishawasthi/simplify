@@ -122,7 +122,7 @@ Before `show()` the shell has already closed any open card (`closeCard`) and pic
 | `onDeviceChange(fn)` | `fn(device)` after any device-settings change (including one made in another tab); returns an unsubscribe |
 | `onScreenChange(fn)` | `fn(id)` each time a screen is put on show (`null` for the menu); returns an unsubscribe. My class uses it to refresh while the menu shows |
 | `setBusy(on)` | Tell `update.js` a reload would disrupt now (a running Wait, a playing class video) |
-| `go(id, params)` | Open another screen as a new history step: `go("wait", { m: 2 })`. The new screen's `show()` gets `fresh: true`. An unknown id is a console error and nothing happens |
+| `go(id, params, { replace })` | Open another screen as a new history step: `go("wait", { m: 2 })`. The new screen's `show()` gets `fresh: true`. With `replace: true` it takes the place of this step instead, so Back never returns here (set-up's "Open My class"). An unknown id is a console error and nothing happens |
 | `back()` | What Back does — except on the first screen of a visit, where it shows the menu instead of leaving the app |
 
 `showToast`, `setClearAll`, `result.*`, `go` and `back` do nothing unless this tool is the one on screen, so a tool may call them from a timer or a promise without checking. Tools never set `location.hash` or call `history` themselves: the shell keeps its own notes in `history.state`.
