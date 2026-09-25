@@ -16,7 +16,7 @@ const {
   insertBlock, toggleHeading, toggleList, toggleBold,
 } = await import("../public/coach/js/edit.js");
 const {
-  MAX_INSTITUTIONS, fold, matches, groupByOrg, placeLine, namesOf, sameList, coachGate, changedAfterApproval,
+  MAX_INSTITUTIONS, fold, matches, groupByOrg, placeLine, namesOf, sameList, coachGate, changedAfterApproval, workPlaces,
 } = await import("../public/coach/js/institutions.js");
 
 // tools/seed/institutions.json as seeded, plus a retired place and another organisation
@@ -150,6 +150,12 @@ const cases = [
   ["gate: no profile", coachGate(null), "about"],
   ["gate: a profile from before institutions", coachGate({ name: "A", org: "AWWA School @ Napiri", status: "approved" }), "about"],
   ["gate: waiting", coachGate({ institutions: ["a"], status: "pending" }), "pending"],
+  ["gate: waiting, with only a place not in the list", coachGate({ institutions: [], otherPlace: "Rainbow Centre", status: "pending" }), "pending"],
+  ["gate: no place at all", coachGate({ institutions: [], otherPlace: "  ", status: "pending" }), "about"],
+  ["work places: listed, then the one not in the list",
+    JSON.stringify(workPlaces({ institutions: ["a"], otherPlace: " Rainbow Centre " }, [{ id: "a", name: "A School", active: true }])),
+    JSON.stringify(["A School", "Rainbow Centre (not in the list yet)"])],
+  ["work places: none", JSON.stringify(workPlaces(null, [])), "[]"],
   ["gate: no status yet counts as waiting", coachGate({ institutions: ["a"] }), "pending"],
   ["gate: declined", coachGate({ institutions: ["a"], status: "declined" }), "declined"],
   ["gate: approved (suspended is said on My classes)", coachGate({ institutions: ["a"], status: "approved", suspended: true }), "approved"],

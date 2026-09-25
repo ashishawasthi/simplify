@@ -16,9 +16,9 @@ import {
   GoogleAuthProvider, signInWithPopup, signOut as authSignOut, onAuthStateChanged,
 } from "../vendor/firebase/12.19.0/firebase-auth.js";
 import {
-  initializeFirestore, connectFirestoreEmulator, Timestamp, doc, collection, query, where,
+  initializeFirestore, connectFirestoreEmulator, Timestamp, doc, collection, query, where, orderBy, limit,
   getDoc, getDocs, setDoc, updateDoc, deleteDoc, addDoc, onSnapshot, writeBatch, runTransaction,
-  serverTimestamp, arrayUnion,
+  serverTimestamp, arrayUnion, arrayRemove, deleteField,
 } from "../vendor/firebase/12.19.0/firebase-firestore.js";
 import {
   getStorage, connectStorageEmulator, ref, uploadBytesResumable, deleteObject, getBlob,
@@ -162,17 +162,26 @@ export function watchProfile(uid, onData, onError) {
   }, (err) => onError?.(friendly(err)));
 }
 
-// A new profile waits for the admin (status "pending"). A change of
-// institutions is stamped, so the admin can see it came after approval.
-export async function saveProfile(user, { name, note, institutions }, { isNew, before }) {
+// A new profile waits for the admin (status "pending"). Where they work is
+// institutions from the list and/or otherPlace, a place not in the list yet
+// in their own words ("" for none). A change of either is stamped, so the
+// admin can see it came after approval.
+export async function saveProfile(user, { name, note, institutions, otherPlace = "" }, { isNew, before }) {
+  const samePlaces = sameList(before?.institutions, institutions) && (before?.otherPlace ?? "") === otherPlace;
   await attempt(() => (isNew
     ? setDoc(doc(db, "coaches", user.uid), {
-      name, note, institutions, email: user.email, status: "pending", createdAt: serverTimestamp(),
+      name, note, institutions, ...(otherPlace ? { otherPlace } : {}), email: user.email, status: "pending", createdAt: serverTimestamp(),
     })
     : updateDoc(doc(db, "coaches", user.uid), {
-      name, note, institutions,
-      ...(sameList(before?.institutions, institutions) ? {} : { institutionsChangedAt: serverTimestamp() }),
+      name, note, institutions, otherPlace: otherPlace || deleteField(),
+      ...(samePlaces ? {} : { institutionsChangedAt: serverTimestamp() }),
     })));
+}
+
+// A coach the admin declined asks again, once they have changed About you:
+// back to waiting, stamped.
+export async function askAgain(uid) {
+  await attempt(() => updateDoc(doc(db, "coaches", uid), { status: "pending", reappliedAt: serverTimestamp() }));
 }
 
 // Every institution (the admin's list, retired ones too): [{ id, name, org, type, area, active }]
@@ -407,6 +416,78 @@ export async function getUsage(uid) {
 }
 
 // ---------- the admin ----------
+//
+// Every admin action is written together with an adminLog entry: who (the
+// signed-in admin's uid and Google email), what, when, and a note — for an
+// approval, how the admin checked. firestore.rules refuse a decision on a
+// coach or a request, or a suspension, without its entry. `admin` below is
+// the signed-in user, { uid, email }.
+
+const cut = (value, max) => String(value ?? "").slice(0, max);
+const coachFacts = (coach) => ({ coach: coach.id, coachName: cut(coach.name, 60), coachEmail: cut(coach.email, 200) });
+const classFacts = (cls) => ({ classCode: cls.id, className: cut(cls.name, 30) });
+const institutionFacts = (id, inst) => ({ institution: id, institutionName: cut(inst.name, 80) });
+
+// a new entry's reference and its fields (the undefined ones are left out)
+function logEntry(admin, action, fields = {}) {
+  const ref = doc(collection(db, "adminLog"));
+  return [ref, {
+    action, adminUid: admin.uid, adminEmail: admin.email, at: serverTimestamp(), ...fields, note: cut(fields.note, 500),
+  }];
+}
+
+// one admin action and its entry, together; returns the entry's id
+async function logged(admin, action, fields, write) {
+  const [ref, entry] = logEntry(admin, action, fields);
+  await attempt(async () => {
+    const batch = writeBatch(db);
+    batch.set(ref, entry);
+    write?.(batch, ref.id);
+    await batch.commit();
+  });
+  return ref.id;
+}
+
+// The log, newest first (the latest `max` entries): [{ id, action, adminUid, adminEmail, at, note, … }]
+export async function adminLog(max = 300) {
+  return attempt(async () => {
+    const snap = await getDocs(query(collection(db, "adminLog"), orderBy("at", "desc"), limit(max)));
+    return snap.docs.map(plain);
+  }, "The admin history could not be loaded. Try again.");
+}
+
+// Entries by id (older ones than the latest loaded): the ones found
+export async function logEntries(ids) {
+  const found = await Promise.all(ids.map(async (id) => {
+    try {
+      const snap = await getDoc(doc(db, "adminLog", id));
+      return snap.exists() ? plain(snap) : null;
+    } catch {
+      return null;
+    }
+  }));
+  return found.filter(Boolean);
+}
+
+// How many are waiting for an admin (coaches, and requests to join a class),
+// live: onCount(n) now and whenever it changes. Returns a stop function.
+export function watchWaiting(onCount) {
+  const counts = { coaches: null, requests: null };
+  const tell = () => {
+    if (counts.coaches != null && counts.requests != null) onCount(counts.coaches + counts.requests);
+  };
+  const stops = [
+    onSnapshot(query(collection(db, "coaches"), where("status", "==", "pending")), (snap) => {
+      counts.coaches = snap.size;
+      tell();
+    }, (err) => console.warn("waiting coaches", err)),
+    onSnapshot(query(collection(db, "requests"), where("status", "==", "pending")), (snap) => {
+      counts.requests = snap.size;
+      tell();
+    }, (err) => console.warn("waiting requests", err)),
+  ];
+  return () => stops.forEach((stop) => stop());
+}
 
 export async function pendingRequests() {
   return attempt(async () => {
@@ -431,34 +512,78 @@ export async function allClasses() {
   });
 }
 
-export async function setCoachSuspended(uid, suspended) {
-  await attempt(() => updateDoc(doc(db, "coaches", uid), { suspended }));
+// "approved", "declined", or back to "pending": stamped with who and when,
+// and logged. note: how the admin checked (an approval needs 10 characters
+// or more) or why; message: what a declined coach is told (they see it).
+// Returns the entry's id.
+export async function decideCoach(coach, status, admin, { note = "", message = "" } = {}) {
+  return logged(admin, `coach-${status}`, { ...coachFacts(coach), note }, (batch, id) => {
+    batch.update(doc(db, "coaches", coach.id), {
+      status, decidedAt: serverTimestamp(), decidedBy: admin.uid, decisionLog: id,
+      decisionMessage: status === "declined" && message ? cut(message, 300) : deleteField(),
+    });
+  });
 }
 
-// "approved", "declined", or back to "pending" (an undo): stamped with who and when
-export async function decideCoach(uid, status, adminUid) {
-  await attempt(() => updateDoc(doc(db, "coaches", uid), { status, decidedAt: serverTimestamp(), decidedBy: adminUid }));
+// note: why (kept in the history; the coach only sees that they are paused).
+// Returns the entry's id.
+export async function setCoachSuspended(coach, suspended, admin, note = "") {
+  return logged(admin, suspended ? "coach-suspended" : "coach-unsuspended", { ...coachFacts(coach), note }, (batch, id) => {
+    batch.update(doc(db, "coaches", coach.id), { suspended, suspendLog: id });
+  });
 }
 
-// Add (id null: a new id) or change an institution; returns its id.
-export async function saveInstitution(id, { name, org, type, area, active }) {
+// The coach wrote a place not in the list (otherPlace): the admin puts a
+// listed one on their profile in its place.
+export async function addPlaceToCoach(coach, instId, inst, admin) {
+  await logged(admin, "coach-place-added", { ...coachFacts(coach), ...institutionFacts(instId, inst), detail: cut(coach.otherPlace, 200) }, (batch) => {
+    batch.update(doc(db, "coaches", coach.id), { institutions: arrayUnion(instId), otherPlace: deleteField() });
+  });
+}
+
+// Add (id null: a new id) or change an institution; returns its id. forCoach:
+// the coach who named it (otherPlace) — it goes on their profile in its place.
+export async function saveInstitution(id, { name, org, type, area, active }, admin, { forCoach } = {}) {
   const ref = id ? doc(db, "institutions", id) : doc(collection(db, "institutions"));
-  await attempt(() => setDoc(ref, { name, org, type, area, active, updatedAt: serverTimestamp() }));
+  const data = { name, org, type, area, active };
+  await logged(admin, id ? "institution-edited" : "institution-added", {
+    ...institutionFacts(ref.id, data), ...(forCoach ? coachFacts(forCoach) : {}),
+    detail: cut([org, type, area].filter(Boolean).join(" · "), 200),
+  }, (batch) => {
+    batch.set(ref, { ...data, updatedAt: serverTimestamp() });
+    if (forCoach) batch.update(doc(db, "coaches", forCoach.id), { institutions: arrayUnion(ref.id), otherPlace: deleteField() });
+  });
   return ref.id;
 }
 
 // Retire (false) or bring back (true); never deleted — profiles and classes point at it
-export async function setInstitutionActive(id, active) {
-  await attempt(() => updateDoc(doc(db, "institutions", id), { active, updatedAt: serverTimestamp() }));
+export async function setInstitutionActive(inst, active, admin, note = "") {
+  await logged(admin, active ? "institution-restored" : "institution-retired", { ...institutionFacts(inst.id, inst), note }, (batch) => {
+    batch.update(doc(db, "institutions", inst.id), { active, updatedAt: serverTimestamp() });
+  });
 }
 
-export async function setClassStatus(code, status) {
-  await attempt(() => updateDoc(doc(db, "classes", code), { status, updatedAt: serverTimestamp() }));
+export async function setClassStatus(cls, status, admin, note = "") {
+  await logged(admin, status === "active" ? "class-restored" : "class-suspended", { ...classFacts(cls), note }, (batch) => {
+    batch.update(doc(db, "classes", cls.id), { status, updatedAt: serverTimestamp() });
+  });
 }
 
 // null takes the page down; an earlier latest (as it was) puts it back
-export async function adminSetLatest(code, latest) {
-  await attempt(() => updateDoc(doc(db, "classes", code), { latest, updatedAt: serverTimestamp() }));
+export async function adminSetLatest(cls, latest, admin, note = "") {
+  const title = latest ?? cls.latest;
+  await logged(admin, latest ? "page-put-back" : "page-taken-down", {
+    ...classFacts(cls), note, detail: cut(title?.title || "Untitled page", 200),
+  }, (batch) => {
+    batch.update(doc(db, "classes", cls.id), { latest, updatedAt: serverTimestamp() });
+  });
+}
+
+// A coach off one class (or back on it: an undo)
+export async function setCoachOfClass(cls, coach, on, admin, note = "") {
+  await logged(admin, on ? "coach-added" : "coach-removed", { ...classFacts(cls), ...coachFacts(coach), note }, (batch) => {
+    batch.update(doc(db, "classCoaches", cls.id), { uids: on ? arrayUnion(coach.id) : arrayRemove(coach.id) });
+  });
 }
 
 function stillPending(snap) {
@@ -467,31 +592,44 @@ function stillPending(snap) {
   }
 }
 
-// Approve a request to join a class: the coach is added to the class, and
-// the request says which class. All or nothing. Returns the class's code.
-export async function approveRequest(request, adminUid) {
+// Approve a request to join a class: the coach is added to the class, the
+// request says which class, and the log says how the admin checked (10
+// characters or more). All or nothing. Returns the class's code.
+export async function approveRequest(request, admin, { note, coach, cls }) {
   const requestDoc = doc(db, "requests", request.id);
   const code = request.classCode;
+  const [logRef, entry] = logEntry(admin, "join-approved", {
+    request: request.id, ...(coach ? coachFacts(coach) : { coach: request.uid }), ...(cls ? classFacts(cls) : { classCode: code }), note,
+  });
   await attempt(() => runTransaction(db, async (tx) => {
     stillPending(await tx.get(requestDoc));
     const link = await tx.get(doc(db, "classCoaches", code));
     if (!link.exists()) {
       throw new CloudError("no-class", `There is no class with the code ${formatCode(code)}. Decline this request instead.`);
     }
+    tx.set(logRef, entry);
     tx.update(doc(db, "classCoaches", code), { uids: arrayUnion(request.uid) });
-    tx.update(requestDoc, { status: "approved", decidedAt: serverTimestamp(), decidedBy: adminUid, resultCode: code });
+    tx.update(requestDoc, { status: "approved", decidedAt: serverTimestamp(), decidedBy: admin.uid, decisionLog: logRef.id, resultCode: code });
   }));
   return code;
 }
 
-export async function declineRequest(request, adminUid) {
-  await attempt(() => updateDoc(doc(db, "requests", request.id), {
-    status: "declined", decidedAt: serverTimestamp(), decidedBy: adminUid,
-  }));
+export async function declineRequest(request, admin, { note = "", coach, cls } = {}) {
+  const code = request.classCode;
+  await logged(admin, "join-declined", {
+    request: request.id, ...(coach ? coachFacts(coach) : { coach: request.uid }),
+    ...(cls ? classFacts(cls) : code ? { classCode: code } : {}), note,
+  }, (batch, id) => {
+    batch.update(doc(db, "requests", request.id), {
+      status: "declined", decidedAt: serverTimestamp(), decidedBy: admin.uid, decisionLog: id,
+    });
+  });
 }
 
-export async function saveLimits(uid, { flashPerMonth, videosPerMonth }) {
-  await attempt(() => setDoc(doc(db, "config", "limits"), {
-    flashPerMonth, videosPerMonth, updatedAt: serverTimestamp(), updatedBy: uid,
-  }, { merge: true }));
+export async function saveLimits(admin, { flashPerMonth, videosPerMonth }) {
+  await logged(admin, "limits-changed", { detail: `${flashPerMonth} AI requests and ${videosPerMonth} videos a month` }, (batch) => {
+    batch.set(doc(db, "config", "limits"), {
+      flashPerMonth, videosPerMonth, updatedAt: serverTimestamp(), updatedBy: admin.uid,
+    }, { merge: true });
+  });
 }

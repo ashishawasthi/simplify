@@ -51,6 +51,13 @@ export function namesOf(ids, list) {
   });
 }
 
+// Where a coach works, by name: their institutions, then the place they
+// wrote that is not in the list yet (otherPlace), marked as such
+export function workPlaces(profile, list) {
+  const other = String(profile?.otherPlace ?? "").trim();
+  return [...namesOf(profile?.institutions, list), ...(other ? [`${other} (not in the list yet)`] : [])];
+}
+
 export function sameList(a, b) {
   const x = Array.isArray(a) ? a : [];
   const y = Array.isArray(b) ? b : [];
@@ -58,11 +65,13 @@ export function sameList(a, b) {
 }
 
 // Which screen a signed-in person gets, from their profile:
-//   "about"    no profile yet, or one from before institutions (choose them first)
+//   "about"    no profile yet, or one from before institutions (say where
+//              they work first: a listed place, or one not in the list yet)
 //   "pending"  waiting for the admin      "declined"  the admin said no
 //   "approved" may use the platform (a suspended coach is told so on My classes)
 export function coachGate(profile) {
-  if (!profile || !Array.isArray(profile.institutions) || !profile.institutions.length) return "about";
+  if (!profile || !Array.isArray(profile.institutions)) return "about";
+  if (!profile.institutions.length && !String(profile.otherPlace ?? "").trim()) return "about";
   if (profile.status === "approved") return "approved";
   if (profile.status === "declined") return "declined";
   return "pending";

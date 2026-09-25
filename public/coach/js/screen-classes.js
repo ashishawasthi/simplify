@@ -96,7 +96,11 @@ export function classesScreen(root, ctx) {
     if (!alive) return;
     const mine = (profile?.institutions ?? []).map((id) => list.find((i) => i.id === id)).filter((i) => i?.active);
     newWhere.replaceChildren(...mine.map((i) => h("option", { value: i.id }, i.area && !i.name.includes(i.area) ? `${i.name} (${i.area})` : i.name)));
-    if (!mine.length && list.length) {
+    const other = String(profile?.otherPlace ?? "").trim();
+    if (!mine.length && other) {
+      // their school is not in the list yet: the admin adds it (Admin → the coach's card)
+      newProblem.replaceChildren(notice(`“${other}” isn't in the list yet. When the admin adds it, you can make a class there.`, { tone: "info" }));
+    } else if (!mine.length && list.length) {
       newProblem.replaceChildren(notice("None of your institutions is listed any more. Change them in About you first.", { tone: "warning",
         action: h("a", { class: "btn btn-secondary", href: "#about" }, "About you") }));
     }

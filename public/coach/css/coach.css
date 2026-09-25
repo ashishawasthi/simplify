@@ -70,6 +70,12 @@ a { color: var(--c-accent); text-underline-offset: 3px; }
   border-radius: 8px; font-weight: 600; text-decoration: none;
 }
 .header-nav a[aria-current="page"] { background: var(--c-accent-soft); }
+/* how many wait for an admin: on the Admin link and the Waiting tab */
+.nav-count {
+  display: inline-block; min-width: 1.6em; margin-left: 6px; padding: 1px 7px; font-size: 14px; font-weight: 800;
+  line-height: 1.4; text-align: center; color: #fff; background: var(--c-warn-line); border-radius: 999px;
+}
+.nav-count[hidden] { display: none; }
 .account { display: flex; align-items: center; gap: 10px; margin-left: auto; min-width: 0; }
 .account-email { font-size: 15px; color: var(--c-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 40vw; }
 main { max-width: 1320px; margin: 0 auto; padding: 20px 16px 48px; }
@@ -464,6 +470,41 @@ progress { width: 100%; height: 10px; accent-color: var(--c-accent); }
 .facts dd .chip { margin-top: 4px; white-space: normal; }
 .facts-wide { font-size: 17px; max-width: 760px; }
 .plain-list { list-style: none; margin: 0; padding: 0; }
+
+/* the admin's tabs: a row that scrolls sideways on a phone rather than wrap */
+.admin-screen h1 { margin-bottom: 8px; }
+.admin-tabs {
+  display: flex; gap: 4px; margin: 0 -16px; padding: 0 16px; overflow-x: auto;
+  border-bottom: 2px solid var(--c-hair); scrollbar-width: none;
+}
+.admin-tabs::-webkit-scrollbar { display: none; }
+.admin-tab {
+  flex: none; display: inline-flex; align-items: center; min-height: 48px; padding: 0 14px; margin-bottom: -2px;
+  font-weight: 700; color: var(--c-muted); text-decoration: none; border-bottom: 4px solid transparent;
+}
+.admin-tab[aria-current="page"] { color: var(--c-accent); border-bottom-color: var(--c-accent); }
+.admin-body > .section:first-child, .admin-body > div > .section:first-child { margin-top: 20px; }
+
+/* a note to go with a decision, opened in its card */
+.decision-form { margin-top: 12px; padding: 12px 14px; background: var(--c-soft); border: 2px solid var(--c-hair); border-radius: var(--c-radius); }
+.decision-form .actions { margin-top: 0; }
+.decision-left { font-size: 15px; }
+.decision-left:empty { display: none; }
+.other-place { font-weight: 700; }
+.record { display: flex; flex-direction: column; gap: 2px; }
+.record-note { color: var(--c-muted); }
+.record q, .log-note q { font-style: italic; color: var(--c-text); }
+.class-coaches { display: grid; gap: 4px; }
+.class-coach { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 10px; }
+.class-coach .btn-small { min-height: 40px; padding: 4px 12px; }
+
+/* the admin history */
+.log-list { list-style: none; margin: 0; padding: 0; max-width: 760px; border-top: 1px solid var(--c-hair); }
+.log-row { padding: 10px 0; border-bottom: 1px solid var(--c-hair); }
+.log-row p { margin: 0; }
+.log-what { font-size: 17px; }
+.log-note { margin-top: 2px !important; font-size: 16px; color: var(--c-muted); }
+.log-when { margin-top: 2px !important; font-size: 15px; color: var(--c-muted); overflow-wrap: anywhere; }
 
 /* the institutions (admin) */
 .inst-tools { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px; max-width: 760px; margin: 12px 0; }

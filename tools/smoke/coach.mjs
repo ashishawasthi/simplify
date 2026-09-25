@@ -36,6 +36,7 @@ function fakeCloud() {
     classes: { K7M3RQP9T: { name: "3 Kindness", institution: "awwa-school-napiri", status: "active", latest: null, createdAt: now } },
     coachesOf: { K7M3RQP9T: ["coach-1"] },
     requests: [],
+    log: [],
     pages: { K7M3RQP9T: [] },
     pictures: { K7M3RQP9T: [] },
     videos: { K7M3RQP9T: [] },
@@ -69,6 +70,12 @@ function fakeCloud() {
     return () => watchers.delete(w);
   }
   const cls = (code) => S.classes[code];
+  // an admin log entry (as cloud.js writes it with each admin action): its id
+  function logged(admin, action, fields) {
+    const logId = id("log");
+    S.log.unshift({ id: logId, action, adminUid: admin.uid, adminEmail: admin.email, at: new Date(), note: "", ...fields });
+    return logId;
+  }
   window.__fakeNotify = notify; // a scene changes __fake, then says so (the admin approving, elsewhere)
   const clip = () => URL.createObjectURL(new Blob([Uint8Array.from(atob(window.__sampleMp4), (c) => c.charCodeAt(0))], { type: "video/mp4" }));
 
@@ -99,6 +106,7 @@ function fakeCloud() {
       const changed = !isNew && JSON.stringify(before?.institutions ?? []) !== JSON.stringify(profile.institutions);
       S.profiles[user.uid] = { ...(S.profiles[user.uid] ?? {}), ...profile, email: user.email,
         ...(isNew ? { status: "pending", createdAt: new Date() } : {}), ...(changed ? { institutionsChangedAt: new Date() } : {}) };
+      if (!profile.otherPlace) delete S.profiles[user.uid].otherPlace; // as cloud.js: no empty place kept
       notify();
       return later();
     },
@@ -235,52 +243,101 @@ function fakeCloud() {
     pendingRequests: async () => later(copy(S.requests.filter((r) => r.status === "pending"))),
     allCoaches: async () => later(Object.entries(S.profiles).map(([uid, p]) => ({ id: uid, ...copy(p) }))),
     allClasses: async () => later(Object.entries(S.classes).map(([code, c]) => ({ id: code, ...copy(c), uids: [...(S.coachesOf[code] ?? [])] }))),
-    async setCoachSuspended(uid, suspended) {
-      S.profiles[uid].suspended = suspended;
+    // every admin action goes into S.log, as cloud.js writes it (newest first)
+    adminLog: async () => later(copy(S.log)),
+    logEntries: async (ids) => later(copy(S.log.filter((e) => ids.includes(e.id)))),
+    watchWaiting(onCount) {
+      return watch(() => Object.values(S.profiles).filter((p) => p.status === "pending").length
+        + S.requests.filter((r) => r.status === "pending").length, onCount);
+    },
+    async setCoachSuspended(coach, suspended, admin, note = "") {
+      const logId = logged(admin, suspended ? "coach-suspended" : "coach-unsuspended", { coach: coach.id, coachName: coach.name, note });
+      Object.assign(S.profiles[coach.id], { suspended, suspendLog: logId });
+      return later(logId);
+    },
+    async setClassStatus(c, status, admin, note = "") {
+      logged(admin, status === "active" ? "class-restored" : "class-suspended", { classCode: c.id, className: c.name, note });
+      cls(c.id).status = status;
       return later();
     },
-    async setClassStatus(code, status) {
-      cls(code).status = status;
+    async adminSetLatest(c, latest, admin, note = "") {
+      logged(admin, latest ? "page-put-back" : "page-taken-down", { classCode: c.id, className: c.name, note });
+      cls(c.id).latest = copy(latest);
       return later();
     },
-    async adminSetLatest(code, latest) {
-      cls(code).latest = copy(latest);
+    async setCoachOfClass(c, coach, on, admin, note = "") {
+      S.calls.push({ name: "setCoachOfClass", code: c.id, uid: coach.id, on });
+      logged(admin, on ? "coach-added" : "coach-removed", { classCode: c.id, className: c.name, coach: coach.id, coachName: coach.name, note });
+      const list = S.coachesOf[c.id];
+      S.coachesOf[c.id] = on ? [...new Set([...list, coach.id])] : list.filter((u) => u !== coach.id);
       return later();
     },
-    async approveRequest(req, adminUid) {
-      S.calls.push({ name: "approveRequest", id: req.id });
+    async approveRequest(req, admin, { note, cls: c } = {}) {
+      S.calls.push({ name: "approveRequest", id: req.id, note });
+      if (!note || note.trim().length < 10) throw new CloudError("permission-denied", "You can't do this.");
       const r = S.requests.find((x) => x.id === req.id);
+      const logId = logged(admin, "join-approved", { request: r.id, coach: r.uid, classCode: r.classCode, className: c?.name, note });
       S.coachesOf[r.classCode].push(r.uid);
-      Object.assign(r, { status: "approved", resultCode: r.classCode, decidedBy: adminUid });
+      Object.assign(r, { status: "approved", resultCode: r.classCode, decidedBy: admin.uid, decisionLog: logId });
       return later(r.classCode);
     },
-    async decideCoach(uid, status, adminUid) {
-      S.calls.push({ name: "decideCoach", uid, status });
-      Object.assign(S.profiles[uid], { status, decidedAt: new Date(), decidedBy: adminUid });
+    async decideCoach(coach, status, admin, { note = "", message = "" } = {}) {
+      S.calls.push({ name: "decideCoach", uid: coach.id, status, note, message });
+      if (status === "approved" && note.trim().length < 10) throw new CloudError("permission-denied", "You can't do this.");
+      const logId = logged(admin, `coach-${status}`, { coach: coach.id, coachName: coach.name, note });
+      const p = S.profiles[coach.id];
+      Object.assign(p, { status, decidedAt: new Date(), decidedBy: admin.uid, decisionLog: logId });
+      if (status === "declined" && message) p.decisionMessage = message;
+      else delete p.decisionMessage;
+      notify();
+      return later(logId);
+    },
+    async addPlaceToCoach(coach, iid, inst, admin) {
+      S.calls.push({ name: "addPlaceToCoach", uid: coach.id, iid });
+      logged(admin, "coach-place-added", { coach: coach.id, institution: iid, institutionName: inst.name });
+      const p = S.profiles[coach.id];
+      p.institutions = [...(p.institutions ?? []), iid];
+      delete p.otherPlace;
       notify();
       return later();
     },
-    async saveInstitution(iid, data) {
-      S.calls.push({ name: "saveInstitution", iid, data: copy(data) });
+    async saveInstitution(iid, data, admin, { forCoach } = {}) {
+      S.calls.push({ name: "saveInstitution", iid, data: copy(data), forCoach: forCoach?.id });
       const newIid = iid ?? id("inst");
+      logged(admin, iid ? "institution-edited" : "institution-added", { institution: newIid, institutionName: data.name, ...(forCoach ? { coach: forCoach.id } : {}) });
       const at = S.institutions.findIndex((i) => i.id === newIid);
       if (at >= 0) S.institutions[at] = { id: newIid, ...data };
       else S.institutions.push({ id: newIid, ...data });
+      if (forCoach) {
+        const p = S.profiles[forCoach.id];
+        p.institutions = [...(p.institutions ?? []), newIid];
+        delete p.otherPlace;
+        notify();
+      }
       return later(newIid);
     },
-    async setInstitutionActive(iid, active) {
-      S.calls.push({ name: "setInstitutionActive", iid, active });
-      S.institutions.find((i) => i.id === iid).active = active;
+    async setInstitutionActive(inst, active, admin, note = "") {
+      S.calls.push({ name: "setInstitutionActive", iid: inst.id, active });
+      logged(admin, active ? "institution-restored" : "institution-retired", { institution: inst.id, institutionName: inst.name, note });
+      S.institutions.find((i) => i.id === inst.id).active = active;
       return later();
     },
-    async declineRequest(req, adminUid) {
-      S.calls.push({ name: "declineRequest", id: req.id });
-      Object.assign(S.requests.find((x) => x.id === req.id), { status: "declined", decidedBy: adminUid });
+    async declineRequest(req, admin, { note = "" } = {}) {
+      S.calls.push({ name: "declineRequest", id: req.id, note });
+      const logId = logged(admin, "join-declined", { request: req.id, coach: req.uid, note });
+      Object.assign(S.requests.find((x) => x.id === req.id), { status: "declined", decidedBy: admin.uid, decisionLog: logId });
       return later();
     },
-    async saveLimits(uid, limits) {
+    async saveLimits(admin, limits) {
       S.calls.push({ name: "saveLimits", limits });
+      logged(admin, "limits-changed", { detail: `${limits.flashPerMonth} AI requests and ${limits.videosPerMonth} videos a month` });
       Object.assign(S.limits, limits);
+      return later();
+    },
+    async askAgain(uid) {
+      S.calls.push({ name: "askAgain", uid });
+      Object.assign(S.profiles[uid], { status: "pending", reappliedAt: new Date() });
+      notify();
       return later();
     },
   };
@@ -294,7 +351,7 @@ const NAMES = [
   "publishPage", "setLatest", "mediaUrl", "addPicture", "setPictureWords", "deletePicture", "draftVideoUrl",
   "callFunction", "getLimits", "getUsage", "pendingRequests", "allCoaches", "allClasses", "setCoachSuspended",
   "decideCoach", "saveInstitution", "setInstitutionActive", "setClassStatus", "adminSetLatest", "approveRequest",
-  "declineRequest", "saveLimits",
+  "declineRequest", "saveLimits", "adminLog", "logEntries", "watchWaiting", "setCoachOfClass", "addPlaceToCoach", "askAgain",
 ];
 export const STUBS = { // (also used to take screenshots)
   "/coach/js/cloud.js": `window.__sampleMp4 = "${SAMPLE_MP4}";\n(${fakeCloud})();\nexport const { ${NAMES.join(", ")} } = window.__fakeCloud;\n`,
@@ -401,6 +458,41 @@ export default [
     }),
     expect: inPage(() => JSON.stringify(__fake.profiles["coach-1"].institutions) === '["awwa-school-napiri","awwa-school-bedok"]' &&
       __fake.profiles["coach-1"].status === "pending" && !__fake.calls.some((c) => c.name === "callFunction")),
+  }),
+  scene({
+    name: "sign up with a school not in the list: typed under the list, waiting, then approved — a class waits for the admin to list it",
+    path: "/coach/",
+    init: seed(`{ user: null, profiles: {}, coachesOf: {}, nextUser: { uid: "new-2", email: "kaur@example.com", name: "Ms Kaur" } }`),
+    setup: run(async () => {
+      byText("button", "Sign in with Google").click();
+      await waitFor(() => $("h1")?.textContent === "About you" && $(".pick-option"));
+      const save = byText("button", "Save and continue");
+      const other = byText(".field", "Not in the list?").querySelector("input");
+      if (!save.disabled) throw new Error("Save works with no place");
+      type(other, "  Rainbow Centre   Yishun Park School ");
+      if (save.disabled) throw new Error("Save needs a listed place even with one typed");
+      save.click();
+      await waitFor(() => $("h1")?.textContent === "Waiting for approval" && byText(".facts dd li", "Rainbow Centre Yishun Park School (not in the list yet)"));
+      Object.assign(__fake.profiles["new-2"], { status: "approved", decidedAt: new Date() });
+      __fakeNotify();
+      await waitFor(() => $("h1")?.textContent === "My classes" && byText(".notice", "isn't in the list yet"));
+    }),
+    expect: inPage(() => __fake.profiles["new-2"].otherPlace === "Rainbow Centre Yishun Park School" &&
+      JSON.stringify(__fake.profiles["new-2"].institutions) === "[]" && byText("button", "Make the class").disabled),
+  }),
+  scene({
+    name: "not approved, with the admin's message: change About you, then ask the admin again",
+    path: "/coach/#classes",
+    init: seed(`{ profiles: { "coach-1": { name: "Ms Tan", institutions: ["awwa-school-napiri"], note: "", email: "coach@example.com",
+      status: "declined", decisionMessage: "Please add a work email I can check." } } }`),
+    setup: run(async () => {
+      await waitFor(() => $("h1")?.textContent === "Not approved");
+      if (!byText(".notice", "The admin says: “Please add a work email I can check.”")) throw new Error("the admin's message isn't shown");
+      byText("button", "Ask the admin again").click();
+      await waitFor(() => $("h1")?.textContent === "Waiting for approval");
+    }),
+    expect: inPage(() => __fake.profiles["coach-1"].status === "pending" && __fake.profiles["coach-1"].reappliedAt &&
+      __fake.calls.some((c) => c.name === "askAgain")),
   }),
   scene({
     name: "not approved: a plain note to contact the admin",
@@ -804,7 +896,7 @@ export default [
 
   // ---------- admin ----------
   scene({
-    name: "admin: approve a coach (Undo first), decline another, approve a join request, save the limits",
+    name: "admin: approve a coach saying how (Undo first), decline another with a message, approve a join request, save the limits",
     path: "/coach/#admin",
     init: seed(`{ admins: ["coach-1"], profiles: {
         "coach-1": { name: "Ms Tan", institutions: ["awwa-school-napiri"], note: "Admin", email: "coach@example.com", status: "approved" },
@@ -816,52 +908,166 @@ export default [
       coachesOf: { K7M3RQP9T: ["coach-2"] } }`),
     setup: run(async () => {
       await waitFor(() => byText("h2", "Coaches waiting for approval (3)"));
+      // the link counts what a query finds (status "pending"); the tab also counts Mr Ong, from before approvals
+      await waitFor(() => $("#nav a[data-route=admin] .nav-count").textContent === "3");
+      if ($(".admin-tab .nav-count")?.textContent !== "4") throw new Error("the Waiting tab doesn't count");
       const card = (name) => byText("#adm-wait-h ~ .admin-list .admin-card", name);
+      const button = (el, text) => [...el.querySelectorAll("button")].find((b) => b.textContent === text);
       if (!byText(".admin-card", "Form teacher of 5 Joy, call the office") || !card("Mr Lim").textContent.includes("AWWA School @ Bedok")) throw new Error("no way to check the coach");
       if (!card("Mr Ong")?.textContent.includes("Organisation")) throw new Error("a coach from before institutions is not waiting, or has no organisation shown");
-      [...card("Mr Lim").querySelectorAll("button")].find((b) => b.textContent === "Approve").click();
+      button(card("Mr Lim"), "Approve").click();
+      await waitFor(() => card("Mr Lim").querySelector(".decision-form textarea") === document.activeElement);
+      const box = card("Mr Lim").querySelector("textarea");
+      if (box.placeholder !== "For example: seen taking classes at AWWA School @ Napiri") throw new Error(`the example: ${box.placeholder}`);
+      if (!button(card("Mr Lim"), "Approve").disabled) throw new Error("Approve works with no note");
+      type(box, "seen him");
+      if (!button(card("Mr Lim"), "Approve").disabled || !byText(".decision-left", "2 more letters")) throw new Error("a note under 10 letters is taken");
+      type(box, "Seen taking classes at AWWA School @ Napiri on Monday");
+      button(card("Mr Lim"), "Approve").click();
       await waitFor(() => !card("Mr Lim") && byText("h2", "Coaches waiting for approval (2)"));
       byText(".toast-btn", "Undo").click();
-      await waitFor(() => card("Mr Lim"));
-      [...card("Ms Wong").querySelectorAll("button")].find((b) => b.textContent === "Decline").click();
-      await waitFor(() => !card("Ms Wong"));
-      [...card("Mr Lim").querySelectorAll("button")].find((b) => b.textContent === "Approve").click(); // the decline is written now
-      await waitFor(() => __fake.calls.some((c) => c.name === "decideCoach"));
-      [...byText(".admin-card", "Join K7M-3RQ-P9T (3 Kindness)").querySelectorAll("button")].find((b) => b.textContent === "Approve").click();
+      await waitFor(() => card("Mr Lim")?.querySelector("textarea")?.value === "Seen taking classes at AWWA School @ Napiri on Monday");
+      button(card("Mr Lim"), "Approve").click();
+      await waitFor(() => !card("Mr Lim"));
+      button(card("Ms Wong"), "Decline").click();
+      await waitFor(() => card("Ms Wong").querySelector("textarea"));
+      if (button(card("Ms Wong"), "Decline").disabled) throw new Error("a decline needs no message");
+      type(card("Ms Wong").querySelector("textarea"), "Please add a work email I can check.");
+      button(card("Ms Wong"), "Decline").click(); // Mr Lim's approval is written now
+      await waitFor(() => !card("Ms Wong") && __fake.calls.some((c) => c.name === "decideCoach"));
+      const join = () => byText(".admin-card", "Join K7M-3RQ-P9T (3 Kindness)");
+      button(join(), "Approve").click();
+      await waitFor(() => join().querySelector("textarea"));
+      if (join().querySelector("textarea").placeholder !== "For example: seen teaching 3 Kindness with Mr Lim") throw new Error("the join example");
+      type(join().querySelector("textarea"), "Seen teaching 3 Kindness with Mr Lim");
+      button(join(), "Approve").click();
       await waitFor(() => byText(".toast", "Approved: Ms Tan can now work on 3 Kindness"));
+      byText(".admin-tab", "Limits").click();
+      await waitFor(() => $$("input[type=number]").length === 2 && location.hash === "#admin/limits");
       const [flash] = $$("input[type=number]");
       type(flash, "150");
       byText("button", "Save the limits").click();
-      await waitFor(() => __fake.limits.flashPerMonth === 150);
+      await waitFor(() => byText(".toast", "Limits saved: 150 AI requests"));
+      byText(".admin-tab", "History").click();
+      await waitFor(() => $(".log-row"));
     }),
-    expect: inPage(() => __fake.profiles["coach-2"].status === "approved" && __fake.profiles["coach-3"].status === "declined" &&
-      __fake.calls.filter((c) => c.name === "decideCoach").length === 2 && __fake.coachesOf.K7M3RQP9T.includes("coach-1") &&
-      !byText("#adm-wait-h ~ .admin-list", "Mr Lim") && byText(".admin-card h3", "Ms Wong") && byText(".admin-card .chip", "Not approved") &&
-      !$("#nav a[data-route=admin]").hidden),
+    expect: inPage(() => {
+      const lim = __fake.profiles["coach-2"];
+      const entry = __fake.log.find((e) => e.id === lim.decisionLog);
+      return lim.status === "approved" && entry?.action === "coach-approved" && entry.note === "Seen taking classes at AWWA School @ Napiri on Monday" &&
+        entry.adminUid === "coach-1" && entry.adminEmail === "coach@example.com" &&
+        __fake.profiles["coach-3"].status === "declined" && __fake.profiles["coach-3"].decisionMessage === "Please add a work email I can check." &&
+        __fake.calls.filter((c) => c.name === "decideCoach").length === 2 && __fake.coachesOf.K7M3RQP9T.includes("coach-1") &&
+        __fake.log.some((e) => e.action === "join-approved" && e.note === "Seen teaching 3 Kindness with Mr Lim") &&
+        byText(".log-row", "Ms Tan approved Mr Lim as a coach") && byText(".log-row", "How they checked: Seen taking classes") &&
+        byText(".log-row", "Ms Tan declined Ms Wong") && byText(".log-row", "set the monthly limits: 150 AI requests") &&
+        !$("#nav a[data-route=admin]").hidden;
+    }),
   }),
   scene({
-    name: "admin: the coach list — approve later, suspend, and institutions changed after approval",
+    name: "admin: the coach list — who approved them and how, approve later, suspend with a reason, changed after approval",
+    path: "/coach/#admin/coaches",
+    init: seed(`{ admins: ["coach-1"], profiles: {
+        "coach-1": { name: "Ms Tan", institutions: ["awwa-school-napiri"], note: "Admin", email: "coach@example.com", status: "approved",
+          decidedAt: new Date(2026, 8, 1), decidedBy: "migration" },
+        "coach-2": { name: "Mr Lim", institutions: ["awwa-school-napiri", "awwa-school-bedok"], note: "", email: "lim@example.com",
+          status: "approved", decidedAt: new Date(2026, 8, 1), decidedBy: "coach-1", decisionLog: "log0", institutionsChangedAt: new Date(2026, 8, 20, 9, 0) },
+        "coach-3": { name: "Ms Wong", institutions: ["awwa-eic-hougang"], note: "", email: "wong@example.com", status: "declined", decidedAt: new Date() },
+        "coach-5": { name: "Mr Goh", institutions: ["awwa-school-bedok"], note: "", email: "goh@example.com", status: "approved", decidedAt: new Date(2026, 8, 2), decidedBy: "coach-1" } },
+      log: [{ id: "log0", action: "coach-approved", adminUid: "coach-1", adminEmail: "coach@example.com", at: new Date(2026, 8, 1, 10, 0),
+        note: "Seen taking classes at AWWA School @ Napiri", coach: "coach-2", coachName: "Mr Lim" }] }`),
+    setup: run(async () => {
+      await waitFor(() => byText("h2", "Coaches (4)"));
+      const card = (name) => byText("#adm-coach-h + .admin-list .admin-card", name);
+      const button = (el, text) => [...el.querySelectorAll("button")].find((b) => b.textContent === text);
+      if (!card("Mr Lim").querySelector(".chip.is-waiting")?.textContent.includes("after approval")) throw new Error("no word that the institutions changed");
+      if (card("Ms Tan").textContent.includes("after approval")) throw new Error("said for a coach who did not change them");
+      if (!card("Mr Lim").textContent.includes("Approved byMs Tan · 1 Sep") || !card("Mr Lim").textContent.includes("Checked: Seen taking classes at AWWA School @ Napiri")) throw new Error(`no record of who approved and how: ${card("Mr Lim").textContent}`);
+      if (!card("Mr Goh").textContent.includes("no note of how")) throw new Error("a decision from before the history isn't said so");
+      if (!card("Ms Tan").textContent.includes("when approvals began")) throw new Error("the migration's approval");
+      button(card("Ms Wong"), "Approve").click();
+      await waitFor(() => card("Ms Wong").querySelector("textarea"));
+      type(card("Ms Wong").querySelector("textarea"), "Called the EIC office, they confirmed");
+      button(card("Ms Wong"), "Approve").click();
+      await waitFor(() => byText(".toast", "Approved: Ms Wong"));
+      button(card("Mr Lim"), "Suspend").click();
+      await waitFor(() => card("Mr Lim").querySelector("textarea"));
+      type(card("Mr Lim").querySelector("textarea"), "Left the school");
+      button(card("Mr Lim"), "Suspend").click();
+      await waitFor(() => __fake.profiles["coach-2"].suspended === true && card("Mr Lim").textContent.includes("Why: Left the school"));
+    }),
+    expect: inPage(() => __fake.profiles["coach-3"].status === "approved" && byText("#adm-coach-h + .admin-list .admin-card", "Suspended") &&
+      __fake.log.some((e) => e.action === "coach-suspended" && e.note === "Left the school" && e.coach === "coach-2")),
+  }),
+  scene({
+    name: "admin: a school not in the list — add it from the coach's card (on their profile at once), or pick the listed one",
     path: "/coach/#admin",
     init: seed(`{ admins: ["coach-1"], profiles: {
         "coach-1": { name: "Ms Tan", institutions: ["awwa-school-napiri"], note: "Admin", email: "coach@example.com", status: "approved" },
-        "coach-2": { name: "Mr Lim", institutions: ["awwa-school-napiri", "awwa-school-bedok"], note: "", email: "lim@example.com",
-          status: "approved", decidedAt: new Date(2026, 8, 1), institutionsChangedAt: new Date(2026, 8, 20, 9, 0) },
-        "coach-3": { name: "Ms Wong", institutions: ["awwa-eic-hougang"], note: "", email: "wong@example.com", status: "declined", decidedAt: new Date() } } }`),
+        "coach-6": { name: "Ms Kaur", institutions: [], otherPlace: "Rainbow Centre Yishun Park School", note: "Teacher, 2 Grace",
+          email: "kaur@example.com", status: "pending", createdAt: new Date() },
+        "coach-7": { name: "Mr Tay", institutions: [], otherPlace: "AWWA Bedok", note: "", email: "tay@example.com", status: "pending", createdAt: new Date() } } }`),
     setup: run(async () => {
-      await waitFor(() => byText("h2", "Coaches"));
-      const card = (name) => byText("#adm-coach-h + .admin-list .admin-card", name);
-      if (!card("Mr Lim").querySelector(".chip.is-waiting")?.textContent.includes("after approval")) throw new Error("no word that the institutions changed");
-      if (card("Ms Tan").textContent.includes("after approval")) throw new Error("said for a coach who did not change them");
-      [...card("Ms Wong").querySelectorAll("button")].find((b) => b.textContent === "Approve").click();
-      await waitFor(() => byText(".toast", "Approved: Ms Wong"));
-      [...card("Mr Lim").querySelectorAll("button")].find((b) => b.textContent === "Suspend").click();
-      await waitFor(() => __fake.profiles["coach-2"].suspended === true);
+      await waitFor(() => byText("h2", "Coaches waiting for approval (2)"));
+      const card = (name) => byText("#adm-wait-h ~ .admin-list .admin-card", name);
+      const button = (el, text) => [...el.querySelectorAll("button")].find((b) => b.textContent === text);
+      if (!card("Ms Kaur").textContent.includes("Not in the list“Rainbow Centre Yishun Park School”")) throw new Error("the place they typed isn't shown");
+      button(card("Ms Kaur"), "Approve").click();
+      await waitFor(() => card("Ms Kaur").querySelector(".decision-form .notice"));
+      if (!card("Ms Kaur").querySelector("textarea").placeholder.includes("Rainbow Centre Yishun Park School")) throw new Error("the example isn't their school");
+      button(card("Ms Kaur"), "Cancel").click();
+      button(card("Ms Kaur"), "Add it to the list").click();
+      await waitFor(() => card("Ms Kaur").querySelector(".inst-form"));
+      const [name, org, type_, area] = card("Ms Kaur").querySelectorAll(".inst-form input");
+      if (name.value !== "Rainbow Centre Yishun Park School") throw new Error("the name isn't filled in");
+      type(org, "Rainbow Centre");
+      type(type_, "SPED school");
+      type(area, "Yishun");
+      button(card("Ms Kaur"), "Add, and put it on their profile").click();
+      await waitFor(() => byText(".toast", "put it on Ms Kaur's profile") && !card("Ms Kaur").textContent.includes("Not in the list"));
+      if (!card("Ms Kaur").textContent.includes("Works atRainbow Centre Yishun Park School")) throw new Error("not on the card");
+      button(card("Mr Tay"), "It's already listed").click();
+      await waitFor(() => card("Mr Tay").querySelector("select"));
+      const select = card("Mr Tay").querySelector("select");
+      select.value = "awwa-school-bedok";
+      select.dispatchEvent(new Event("change"));
+      button(card("Mr Tay"), "Put it on their profile").click();
+      await waitFor(() => card("Mr Tay").textContent.includes("Works atAWWA School @ Bedok"));
     }),
-    expect: inPage(() => __fake.profiles["coach-3"].status === "approved" && byText("#adm-coach-h + .admin-list .admin-card", "Suspended")),
+    expect: inPage(() => {
+      const kaur = __fake.profiles["coach-6"];
+      const added = __fake.institutions.find((i) => i.name === "Rainbow Centre Yishun Park School");
+      return added && kaur.institutions.includes(added.id) && !("otherPlace" in kaur) &&
+        __fake.profiles["coach-7"].institutions.join() === "awwa-school-bedok" && !("otherPlace" in __fake.profiles["coach-7"]) &&
+        __fake.log.some((e) => e.action === "institution-added" && e.coach === "coach-6") &&
+        __fake.log.some((e) => e.action === "coach-place-added" && e.coach === "coach-7") && fits();
+    }),
+  }),
+  scene({
+    name: "admin: classes — take a coach off a class (Undo puts them back); the history lists both, and searches",
+    path: "/coach/#admin/classes",
+    init: seed(`{ admins: ["coach-1"], profiles: {
+        "coach-1": { name: "Ms Tan", institutions: ["awwa-school-napiri"], note: "", email: "coach@example.com", status: "approved" },
+        "coach-2": { name: "Mr Lim", institutions: ["awwa-school-napiri"], note: "", email: "lim@example.com", status: "approved" } },
+      coachesOf: { K7M3RQP9T: ["coach-1", "coach-2"] } }`),
+    setup: run(async () => {
+      await waitFor(() => byText("h2", "Classes (1)"));
+      const line = () => byText(".class-coach", "Mr Lim");
+      line().querySelector("button").click();
+      await waitFor(() => !line() && __fake.coachesOf.K7M3RQP9T.join() === "coach-1");
+      byText(".toast-btn", "Undo").click();
+      await waitFor(() => line() && __fake.coachesOf.K7M3RQP9T.includes("coach-2"));
+      byText(".admin-tab", "History").click();
+      await waitFor(() => $$(".log-row").length === 2);
+      type($(".admin-body input[type=search]"), "undo");
+      await waitFor(() => $$(".log-row").length === 1);
+    }),
+    expect: inPage(() => byText(".log-row", "Ms Tan put Mr Lim back on 3 Kindness (K7M-3RQ-P9T)") && byText(".log-row", "Why: Undo") &&
+      __fake.log.some((e) => e.action === "coach-removed" && e.coach === "coach-2")),
   }),
   scene({
     name: "admin: institutions — add one, edit it, retire it (Undo brings it back)",
-    path: "/coach/#admin",
+    path: "/coach/#admin/places",
     init: seed(`{ admins: ["coach-1"] }`),
     setup: run(async () => {
       await waitFor(() => byText("h2", "Institutions (4 in the list)"));
@@ -889,8 +1095,30 @@ export default [
     expect: inPage(() => {
       const added = __fake.institutions.find((i) => i.name === "AWWA Home and Day Activity Centre");
       return added && added.active === true && added.area === "Pasir Ris Drive 3" && added.type === "Day activity centre" &&
-        __fake.calls.filter((c) => c.name === "setInstitutionActive").length === 2 && fits();
+        __fake.calls.filter((c) => c.name === "setInstitutionActive").length === 2 &&
+        ["institution-added", "institution-edited", "institution-retired", "institution-restored"].every((a) => __fake.log.some((e) => e.action === a)) && fits();
     }),
+  }),
+  scene({
+    name: "iPad: the admin's tabs in one row, the first waiting coach in view",
+    path: "/coach/#admin",
+    viewport: { width: 820, height: 1180 },
+    init: seed(`{ admins: ["coach-1"], profiles: {
+        "coach-1": { name: "Ms Tan", institutions: ["awwa-school-napiri"], note: "", email: "coach@example.com", status: "approved" },
+        "coach-2": { name: "Mr Lim", institutions: ["awwa-school-napiri"], note: "Form teacher", email: "lim@example.com", status: "pending", createdAt: new Date() } } }`),
+    setup: run(() => waitFor(() => byText("h2", "Coaches waiting for approval (1)"))),
+    expect: inPage(() => {
+      const tops = new Set($$(".admin-tab").map((t) => Math.round(t.getBoundingClientRect().top)));
+      return tops.size === 1 && $(".admin-card").getBoundingClientRect().top < innerHeight / 2 && fits();
+    }),
+  }),
+  scene({
+    name: "phone: the admin's tabs scroll sideways; the page doesn't",
+    path: "/coach/#admin/history",
+    viewport: { width: 375, height: 812 },
+    init: seed(`{ admins: ["coach-1"] }`),
+    setup: run(() => waitFor(() => byText("h2", "History"))),
+    expect: inPage(() => byText(".admin-tab[aria-current=page]", "History") && fits()),
   }),
   scene({
     name: "not an admin: #admin shows My classes, and no Admin link",

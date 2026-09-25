@@ -60,8 +60,8 @@ export function institutionPicker({ institutions, chosen = [], onChange }) {
     const full = picked.length >= MAX_INSTITUTIONS;
     if (!groups.length) {
       list.replaceChildren(h("p", { class: "pick-empty" }, search.value.trim()
-        ? `Nothing matches “${search.value.trim()}”. Try fewer words, or tell the admin where you work in the note below.`
-        : "The admin has not listed any institutions yet. Tell the admin where you work in the note below."));
+        ? `Nothing matches “${search.value.trim()}”. Try fewer words, or type your school's name under the list.`
+        : "The admin has not listed any institutions yet. Type your school's name under the list."));
       return;
     }
     list.replaceChildren(...groups.map((g) => h("fieldset", { class: "pick-group" },

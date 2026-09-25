@@ -1,6 +1,7 @@
 // About you: the name, where the coach works (one or more institutions from
-// the admin's list) and a note that let the admin check a coach is who they
-// say, before approving them. Only the coach and the admin see it
+// the admin's list, and/or a school or centre not in the list yet, in their
+// own words — the admin adds it) and a note that let the admin check a coach
+// is who they say, before approving them. Only the coach and the admin see it
 // (firestore.rules, coaches/{uid}). The sign-in email is kept with it, and
 // can't be changed here. A new profile waits for the admin's approval.
 
@@ -20,13 +21,20 @@ export function profileScreen(root, ctx, { isNew }) {
     hint: "For example: your role, and a work email or phone number the admin can check.",
   });
   const where = h("div", null, h("p", { class: "loading", role: "status" }, "Loading the institutions…"));
+  const other = field({
+    label: "Not in the list? Type the name of your school or centre", maxLength: 120, value: saved.otherPlace ?? "",
+    hint: "The admin adds it to the list.",
+  });
   const problem = h("div");
   const save = h("button", { class: "btn btn-primary", type: "submit" }, isNew || gate === "about" ? "Save and continue" : "Save");
   let picker = null;
 
-  // a name and at least one institution; Save waits for them rather than refusing
-  const update = () => { save.disabled = !name.input.value.trim() || !picker?.value().length; };
+  // a name and at least one place (listed, or typed); Save waits for them rather than refusing
+  const update = () => {
+    save.disabled = !name.input.value.trim() || !picker || (!picker.value().length && !other.input.value.trim());
+  };
   name.input.addEventListener("input", update);
+  other.input.addEventListener("input", update);
   update();
 
   async function loadInstitutions() {
@@ -44,15 +52,18 @@ export function profileScreen(root, ctx, { isNew }) {
   }
 
   const form = h("form", { class: "stack form-narrow", novalidate: true },
-    name.field, where, note.field,
+    name.field, where, other.field, note.field,
     h("p", { class: "small" }, "Signed in as ", h("strong", null, user.email), "."),
     problem,
     h("div", { class: "actions" }, save));
   form.addEventListener("submit", (e) => e.preventDefault());
   busyButton(save, async () => {
     problem.replaceChildren();
-    const next = { name: name.input.value.trim(), note: note.input.value.trim(), institutions: picker?.value() ?? [] };
-    if (!next.name || !next.institutions.length) return;
+    const next = {
+      name: name.input.value.trim(), note: note.input.value.trim(), institutions: picker?.value() ?? [],
+      otherPlace: other.input.value.trim().replace(/\s+/g, " "),
+    };
+    if (!next.name || (!next.institutions.length && !next.otherPlace)) return;
     const creating = !ctx.profile;
     try {
       await cloud.saveProfile(user, next, { isNew: creating, before: ctx.profile });
@@ -60,7 +71,8 @@ export function profileScreen(root, ctx, { isNew }) {
       problem.append(notice(err.message, { tone: "problem" }));
       return;
     }
-    ctx.setProfile({ ...saved, ...next, email: user.email, ...(creating ? { status: "pending" } : {}) });
+    const { otherPlace, ...rest } = { ...saved, ...next };
+    ctx.setProfile({ ...rest, ...(otherPlace ? { otherPlace } : {}), email: user.email, ...(creating ? { status: "pending" } : {}) });
     toast.show(creating ? "Saved. The admin will look at it." : "Saved");
     ctx.go("#classes");
   });

@@ -10,7 +10,8 @@
 //   #class/<CODE>   a class: its pages, the editor and preview, the helper,
 //                   the picture and video shelves, Publish
 //   #poster/<CODE>  the class's QR poster, to print
-//   #admin          the admin's screen (only for an admin)
+//   #admin[/<tab>]  the admin's screen (only for an admin): waiting,
+//                   coaches, classes, places, history or limits
 //   #about          About you
 // Signed out, every address shows Sign in; signed in with no profile yet (or
 // one from before institutions), About you comes first. The profile is
@@ -46,6 +47,8 @@ let shown = null; // the screen on show
 let stopProfile = null; // stops watching coaches/{uid}
 let latestProfile = null; // the profile as last heard, even before the screen is ready
 let turn = 0; // bumped at every sign-in change, so a late answer for an earlier one is dropped
+let stopWaiting = null; // stops watching how many wait for an admin
+let waiting = 0; // coaches and join requests waiting for an admin (the Admin link says so)
 
 const ctx = Object.freeze({
   cloud,
@@ -72,7 +75,12 @@ function renderHeader() {
   // who is signed in, for the widths that hide the email (css/coach.css)
   $("sign-out").title = signedIn ? `Signed in as ${user.email}` : "";
   nav.hidden = !(signedIn && ready && profile);
-  nav.querySelector('[data-route="admin"]').hidden = !admin;
+  const adminLink = nav.querySelector('[data-route="admin"]');
+  adminLink.hidden = !admin;
+  const count = adminLink.querySelector(".nav-count");
+  count.hidden = !(admin && waiting > 0);
+  count.textContent = String(waiting);
+  adminLink.setAttribute("aria-label", admin && waiting > 0 ? `Admin, ${waiting} waiting` : "Admin");
 }
 
 function markNav(name) {
@@ -136,7 +144,7 @@ function route() {
   // an admin's screen needs no coach approval: an admin may approve themself
   if (name === "admin" && admin) {
     markNav("admin");
-    return show(adminScreen);
+    return show(adminScreen, arg);
   }
   if (name === "about" || gate === "about") {
     markNav("about");
@@ -194,6 +202,9 @@ async function load(next) {
   const mine = ++turn;
   stopProfile?.();
   stopProfile = null;
+  stopWaiting?.();
+  stopWaiting = null;
+  waiting = 0;
   latestProfile = null;
   ready = false;
   profile = null;
@@ -208,6 +219,13 @@ async function load(next) {
     profile = latestProfile ?? found;
     admin = isAdmin;
     ready = true;
+    if (admin) {
+      stopWaiting = cloud.watchWaiting((n) => {
+        if (mine !== turn) return;
+        waiting = n;
+        renderHeader();
+      });
+    }
   } catch (err) {
     if (mine !== turn) return;
     clear();
@@ -229,6 +247,8 @@ $("sign-out").addEventListener("click", async () => {
   clear(); // stop listening to the class first, or its listeners fail once signed out
   stopProfile?.();
   stopProfile = null;
+  stopWaiting?.();
+  stopWaiting = null;
   showLoading("Signing out…");
   // a shared iPad: whoever signs in next starts at My classes, not in this class
   history.replaceState(null, "", "#classes");
