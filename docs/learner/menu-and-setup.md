@@ -90,16 +90,16 @@ Every visit starts behind one big button, "⚙️ Hold to open set-up": press an
 - Works with a finger (pointer capture, so a finger that wanders off the button still counts), a mouse, or Space/Enter held down. A long press can't open a context menu or start a text selection.
 - Under `prefers-reduced-motion` there is no ring, only the hold.
 - The finger that held is still down when the settings appear: clicks on the settings are ignored until it lifts, and for 500 ms after, so the lift can't flip whatever switch is now under it.
-- Once open, focus goes to the "Show on the menu" heading. Leaving the page (`hide()`), or opening `#setup` again, puts it back behind the hold.
+- Once open, focus goes to the first section's heading, "My class" (or "Show on the menu" if the class section could not open). Leaving the page (`hide()`), or opening `#setup` again, puts it back behind the hold.
 
 ### What it shows, in order
 
 Every switch is a whole row (`role="switch"`, `aria-checked`), with its state in colour, a mark (✔ or none), the knob's side and a word (On/Off). Every change is saved the moment it is made and offered back in the toast with "↩ Put it back". The page uses plain words, never `.pic-words`.
 
-1. **Show on the menu** — a switch per tool (not My class), grouped under each group's picture and name like the menu, each with the tool's menu picture. Toast: "Wait: off the menu" / "Wait: on the menu".
-2. **Words and sound** — "Pictures only (hide words)" (toast "Pictures only: on/off") and "Speak button on cards" (toast "Speak button: on/off").
-3. **Each tool's own section**, for every tool whose module exports `setup()`, in `TOOLS` order under the tool's picture and name: Steps, I need, Show a card. A section's `setup(section, shell)` runs the first time the settings open and its `show()` on later openings; its settings are saved as `tools[<id>]` through `setToolSettings()`. A section that throws is left out and the rest of the page works.
-4. **My class** — `public/js/class-setup.js`, in `div#class-setup-slot` (below).
+1. **My class** — `public/js/class-setup.js`, in `div#class-setup-slot` (below). It comes first because typing a class code is what the class poster sends most adults here to do.
+2. **Show on the menu** — a switch per tool (not My class), grouped under each group's picture and name like the menu, each with the tool's menu picture. Toast: "Wait: off the menu" / "Wait: on the menu".
+3. **Words and sound** — "Pictures only (hide words)" (toast "Pictures only: on/off") and "Speak button on cards" (toast "Speak button: on/off").
+4. **Each tool's own section**, for every tool whose module exports `setup()`, in `TOOLS` order under the tool's picture and name: Steps, I need, Show a card. A section's `setup(section, shell)` runs the first time the settings open and its `show()` on later openings; its settings are saved as `tools[<id>]` through `setToolSettings()`. A section that throws is left out and the rest of the page works.
 
 | Section | What an adult sets | Saved as `tools[<id>]` | Owner |
 |---|---|---|---|

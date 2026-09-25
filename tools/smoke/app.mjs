@@ -253,7 +253,7 @@ export default [
     expect: inPage(() => shown("#tool-setup .hold-btn") && !shown("#tool-setup .setup-settings")),
   },
   {
-    name: "set-up: holding opens a switch per tool, grouped like the menu, plus words and class",
+    name: "set-up: holding opens My class first, then a switch per tool grouped like the menu, and words",
     path: "/#setup",
     init: HELPERS,
     setup: HOLD,
@@ -270,7 +270,8 @@ export default [
           .every((b) => b.getAttribute("aria-checked") === (b === byName("Pictures only (hide words)") ? "false" : "true")) &&
         document.querySelectorAll('#tool-setup section[aria-labelledby="setup-menu-h"] .setup-group-label').length === 3 &&
         shown("#class-setup-slot") && !shown("#clear-all-wrap") &&
-        document.activeElement?.id === "setup-menu-h";
+        document.querySelector("#tool-setup .setup-section")?.id === "class-setup-slot" &&
+        document.activeElement?.id === "setup-class-h";
     }),
   },
   {
@@ -573,8 +574,8 @@ export default [
     setup: HOLD + run(async () => {
       const headings = [...document.querySelectorAll("#tool-setup .setup-section > h2")].map((h) => h.textContent.trim());
       const { TOOLS } = await import("/js/tools.js");
-      const want = ["Show on the menu", "Words and sound",
-        ...TOOLS.filter((t) => typeof t.setup === "function").map((t) => t.title), "My class"];
+      const want = ["My class", "Show on the menu", "Words and sound",
+        ...TOOLS.filter((t) => typeof t.setup === "function").map((t) => t.title)];
       if (headings.join("|") !== want.join("|") || !want.includes("I need")) throw new Error(headings.join("|"));
       if (!document.querySelector("#tool-setup .setup-tool-heading .tool-icon img")) throw new Error("no picture");
       document.querySelector(".stub-setting").click();

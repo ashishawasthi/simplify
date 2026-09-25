@@ -6,11 +6,13 @@
 // nothing happens.
 //
 // Behind it, each saved the moment it changes and undone from the toast:
+//   My class           class-setup.js mounts into div#class-setup-slot —
+//                      first, as typing the class code is what most adults
+//                      come here for (the poster sends them)
 //   Show on the menu   a switch per tool, grouped like the menu
 //   Words and sound    pictures only (hide words); the Speak button on cards
 //   <each tool's own>  a section per tool whose module exports setup(), in
 //                      menu order — the contract is in tools.js
-//   My class           class-setup.js mounts into div#class-setup-slot
 // Opened by a class's QR code (#join=<CODE>), the page skips the hold and
 // shows only the class section: whoever scanned it says "yes, my class".
 
@@ -68,7 +70,7 @@ export function mountSetup(block, shell) {
   const menuSection = make("section", "setup-section");
   const menuHeading = make("h2", null, "Show on the menu");
   menuHeading.id = "setup-menu-h";
-  menuHeading.tabIndex = -1; // focus lands here once the hold opens the page
+  menuHeading.tabIndex = -1; // focus lands here once the hold opens the page, if My class can't
   menuSection.setAttribute("aria-labelledby", menuHeading.id);
   menuSection.append(menuHeading);
 
@@ -139,7 +141,7 @@ export function mountSetup(block, shell) {
   classSlot.id = "class-setup-slot";
   classSlot.append(make("h2", null, "My class"), make("p", "setup-note", "Being built."));
 
-  settings.append(menuSection, wordsSection, ...toolSections.map((t) => t.section), classSlot);
+  settings.append(classSlot, menuSection, wordsSection, ...toolSections.map((t) => t.section));
   block.append(gate, settings);
 
   function toggleTool(tool) {
@@ -185,7 +187,8 @@ export function mountSetup(block, shell) {
     } catch (err) {
       console.error("the class section could not open", err);
     }
-    if (!joining) menuHeading.focus({ preventScroll: true }); // the hold button just went away
+    // the hold button just went away: to the first section's heading
+    if (!joining) (classSlot.querySelector("#setup-class-h") ?? menuHeading).focus({ preventScroll: true });
   }
 
   // back behind the hold: every visit starts with it again

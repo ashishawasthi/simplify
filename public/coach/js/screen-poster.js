@@ -22,7 +22,7 @@ export function posterScreen(root, { cloud }, code) {
     h("ol", { class: "poster-steps" },
       h("li", null, "Point the learner's phone or iPad camera at the QR code, and open the link."),
       h("li", null, "Simplify asks “Is this your class?”. Tap Yes."),
-      h("li", null, "No camera, or using Simplify from the home screen? Open Simplify's set-up page and type the class code.")),
+      h("li", null, "No camera, or Simplify on the Home Screen? At the bottom of Simplify's menu, tap ℹ️ How to use this app, then Set up this device, then Open set-up. Hold the button, then type the class code.")),
     h("p", { class: "poster-site" }, "simplify.whiz.coach"));
 
   root.append(h("section", { class: "screen poster-screen" },
