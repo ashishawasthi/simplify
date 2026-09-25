@@ -343,6 +343,44 @@ a.round-btn {
   color: var(--color-muted);
 }
 .group-label img { display: block; width: 28px; height: 28px; }
+/* The heading row: the group's name, and on the right — room the row already
+   has — the button for the tools the set-up page tucked away (js/app.js).
+   Its negative margins keep the row as tall as the heading alone. */
+.group-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 10px;
+}
+.group-row .group-label { margin: 0; }
+.tuck-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 56px;
+  height: 44px;
+  margin: -8px 0;
+  padding: 0 10px;
+  font-family: inherit;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--color-muted);
+  background: #fff;
+  border: 2px solid var(--color-border);
+  border-radius: 999px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.tuck-btn[aria-expanded="true"] { color: var(--color-primary-dark); border-color: var(--color-primary); background: #e3f2fd; }
+.tuck-btn:focus-visible { outline: 4px solid var(--color-primary); outline-offset: 3px; }
+.tuck-sign { font-size: 20px; }
+/* the tucked-away tools: under the group's own, quieter — a dashed edge */
+#menu .tool-list:has(+ .tucked-list:not([hidden])) { margin-bottom: 14px; }
+.tucked-list .tool-link { border-style: dashed; }
 .tool-link {
   display: flex;
   align-items: center;

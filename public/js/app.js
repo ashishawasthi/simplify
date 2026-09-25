@@ -81,12 +81,8 @@ initShowMoney({
 initToast({ toast: $("toast"), text: $("toast-text"), undo: $("toast-undo"), status: $("toast-status"), home: title });
 
 // menu pictures are the app's own note and coin drawings
-for (const slot of document.querySelectorAll("[data-picture]")) {
-  slot.innerHTML = slot.dataset.picture
-    .split(" ")
-    .map((cents) => moneySvg(DEFAULT_CURRENCY, Number(cents)))
-    .join("");
-}
+const drawMoney = (list) => list.split(" ").map((cents) => moneySvg(DEFAULT_CURRENCY, Number(cents))).join("");
+for (const slot of document.querySelectorAll("[data-picture]")) slot.innerHTML = drawMoney(slot.dataset.picture);
 // …and, for the other tools and their groups, pictures from the app's own
 // set, drawn the same on every phone and iPad
 for (const slot of document.querySelectorAll("[data-menu-icon]")) {
@@ -201,21 +197,98 @@ for (const { id } of TOOLS) {
 }
 
 // ---------- device settings: the menu, pictures only ----------
+// A tool the set-up page takes off this device's menu is not gone: it is
+// tucked away under its group. The group's heading row — which has room on
+// its right — gets a small ＋2 button that opens a list of those tools under
+// the group's own, and closes it again. Closed, it costs no height; it is
+// closed every time the menu comes back. A group whose every tool is tucked
+// away keeps just its heading and the button. Tools that could not start,
+// and My class before a class is set, are simply not there.
+
+const tucks = new Map(); // group id → { row, button, count, list }
+
+for (const list of menu.querySelectorAll("ul[data-group]")) {
+  const group = list.dataset.group;
+  const heading = menu.querySelector(`h2[data-group="${group}"]`);
+  if (!heading) continue; // My class has no heading, and nothing to tuck
+  // the heading and its button side by side, the button outside the heading
+  // so the heading's name stays the group's name
+  const row = document.createElement("div");
+  row.className = "group-row";
+  heading.before(row);
+  row.append(heading);
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "tuck-btn";
+  button.id = `tuck-${group}`;
+  button.setAttribute("aria-expanded", "false");
+  const plus = document.createElement("span");
+  plus.className = "tuck-sign";
+  plus.setAttribute("aria-hidden", "true");
+  const count = document.createElement("span");
+  count.className = "tuck-count";
+  count.setAttribute("aria-hidden", "true");
+  button.append(plus, count);
+  row.append(button);
+  const more = document.createElement("ul");
+  more.className = "tool-list tucked-list";
+  more.id = `tucked-${group}`;
+  more.hidden = true;
+  button.setAttribute("aria-controls", more.id);
+  list.after(more);
+  button.addEventListener("click", () => setTuckOpen(group, more.hidden));
+  tucks.set(group, { row, button, count, list: more, heading });
+}
+
+function setTuckOpen(group, open) {
+  const t = tucks.get(group);
+  if (!t) return;
+  const n = t.list.children.length;
+  t.list.hidden = !open || n === 0;
+  t.button.setAttribute("aria-expanded", String(!t.list.hidden));
+  t.button.querySelector(".tuck-sign").textContent = t.list.hidden ? "＋" : "−";
+  const name = t.heading.querySelector(".pic-words")?.textContent.trim() ?? "";
+  t.button.setAttribute("aria-label", `${name}: ${n} more ${n === 1 ? "tool" : "tools"}`);
+}
+
+function closeTucks() {
+  for (const group of tucks.keys()) setTuckOpen(group, false);
+}
 
 function applyDevice(device) {
   document.documentElement.toggleAttribute("data-pictures-only", device.picturesOnly);
-  for (const li of menu.querySelectorAll("li[data-tool]")) {
+  const tucked = new Set();
+  for (const li of menu.querySelectorAll("ul[data-group]:not(.tucked-list) > li[data-tool]")) {
     const id = li.dataset.tool;
-    li.hidden = device.hidden.includes(id) || broken.has(id) ||
-      // My class only once this device follows a class
-      (id === "my-class" && !device.classCode);
+    // My class only once this device follows a class
+    const absent = broken.has(id) || (id === "my-class" && !device.classCode);
+    const off = !absent && device.hidden.includes(id);
+    if (off) tucked.add(id);
+    li.hidden = absent || off;
   }
-  // a group with every tool hidden loses its heading too
-  for (const list of menu.querySelectorAll("ul[data-group]")) {
+  for (const list of menu.querySelectorAll("ul[data-group]:not(.tucked-list)")) {
+    const group = list.dataset.group;
     const empty = [...list.children].every((li) => li.hidden);
     list.hidden = empty;
-    const heading = menu.querySelector(`h2[data-group="${list.dataset.group}"]`);
-    if (heading) heading.hidden = empty;
+    const t = tucks.get(group);
+    if (!t) continue;
+    const away = [...list.children].filter((li) => tucked.has(li.dataset.tool));
+    const wasOpen = !t.list.hidden;
+    // copies, in menu order: the menu's own tiles keep their places
+    t.list.replaceChildren(...away.map((li) => {
+      const copy = li.cloneNode(true);
+      copy.hidden = false;
+      copy.classList.add("is-tucked");
+      // drawn notes and coins afresh: a copied drawing would keep pointing at
+      // its gradient inside the hidden tile, and paint nothing
+      for (const slot of copy.querySelectorAll("[data-picture]")) slot.innerHTML = drawMoney(slot.dataset.picture);
+      return copy;
+    }));
+    t.count.textContent = String(away.length);
+    t.button.hidden = away.length === 0;
+    // a group with nothing on the menu and nothing tucked away loses its heading
+    t.row.hidden = empty && away.length === 0;
+    setTuckOpen(group, wasOpen);
   }
 }
 
@@ -297,6 +370,7 @@ function route({ fresh } = {}) {
 
   const screen = next === null ? null : screens.get(next);
   menu.hidden = next !== null;
+  if (next === null) closeTucks(); // the menu comes back with its tucked-away tools closed
   for (const [screenId, s] of screens) s.block.hidden = screenId !== next;
   header.hidden = next === null;
   const name = screen ? screen.entry.title : "Simplify";

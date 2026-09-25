@@ -20,6 +20,11 @@ const HELPERS = `
   window.byName = (name) => [...document.querySelectorAll('#tool-setup .setup-switch')]
     .find((b) => b.querySelector('.setup-switch-name').textContent === name);
   window.calls = () => JSON.parse(sessionStorage.getItem("calls") ?? "[]");
+  window.waitFor = async (fn, ms = 3000) => {
+    const end = Date.now() + ms;
+    for (;;) { try { const v = await fn(); if (v) return v; } catch {} if (Date.now() > end) throw new Error("waited too long: " + fn); await pause(25); }
+  };
+  window.fits = () => document.documentElement.scrollWidth <= innerWidth;
 `;
 
 // A stand-in tool for the scenes about the shell (a scene's stubs): it
@@ -105,7 +110,7 @@ export default [
     expect: inPage(async () => {
       const { menuIconSrc } = await import("/js/pictures.js");
       const slots = [...document.querySelectorAll("#menu [data-menu-icon]")];
-      return slots.length === 8 && slots.every((slot) => {
+      return slots.length === 11 && slots.every((slot) => {
         const img = slot.querySelector("img");
         return img && img.getAttribute("src") === menuIconSrc(slot.dataset.menuIcon) && img.complete &&
           img.naturalWidth > 0 && img.alt === "";
@@ -268,7 +273,7 @@ export default [
         names.join("|") === [...onMenu.map((t) => t.title), "Pictures only (hide words)", "Speak button on cards"].join("|") &&
         [...document.querySelectorAll(own.replaceAll(",", " .setup-switch,") + " .setup-switch")]
           .every((b) => b.getAttribute("aria-checked") === (b === byName("Pictures only (hide words)") ? "false" : "true")) &&
-        document.querySelectorAll('#tool-setup section[aria-labelledby="setup-menu-h"] .setup-group-label').length === 3 &&
+        document.querySelectorAll('#tool-setup section[aria-labelledby="setup-menu-h"] .setup-group-label').length === 4 &&
         shown("#class-setup-slot") && !shown("#clear-all-wrap") &&
         document.querySelector("#tool-setup .setup-section")?.id === "class-setup-slot" &&
         document.activeElement?.id === "setup-class-h";
@@ -340,16 +345,40 @@ export default [
       JSON.parse(localStorage.getItem("simplify-device-v1")).hidden.length === 0),
   },
   {
-    name: "set-up: a group with every tool off loses its heading",
+    name: "set-up: a tool taken off the menu is tucked under its group's ＋, closed — and closed again back at the menu",
     path: "/#setup",
     init: HELPERS,
-    setup: HOLD + run(() => {
-      for (const name of ["Now and next", "Wait", "Steps"]) byName(name).click();
+    setup: HOLD + run(async () => {
+      for (const name of ["Now and next", "Wait", "Steps", "Time sums", "Next note"]) byName(name).click();
       location.hash = "";
+      await waitFor(() => shown("#menu"));
+      const row = (g) => document.querySelector(`#menu h2[data-group="${g}"]`).closest(".group-row");
+      const btn = (g) => document.getElementById(`tuck-${g}`);
+      // no height: the ＋ sits in the heading's row, as tall as the heading
+      if (Math.abs(row("money").getBoundingClientRect().height - document.querySelector('#menu h2[data-group="money"]').getBoundingClientRect().height) > 1) {
+        throw new Error("the ＋ makes the heading row taller");
+      }
+      if (shown("#tucked-money") || shown("#tucked-my-day")) throw new Error("open before a tap");
+      if (btn("money").textContent !== "＋1" || btn("my-day").textContent !== "＋4") throw new Error(`counts: ${btn("money").textContent} ${btn("my-day").textContent}`);
+      if (btn("talk").hidden === false || btn("safe").hidden === false) throw new Error("a ＋ with nothing tucked away");
+      if (shown('#menu ul[data-group="my-day"]:not(.tucked-list)') || !shown('#menu h2[data-group="my-day"]')) throw new Error("the empty group");
+      if (btn("money").getAttribute("aria-label") !== "Money: 1 more tool") throw new Error(btn("money").getAttribute("aria-label"));
+      btn("my-day").click();
+      await waitFor(() => shown("#tucked-my-day"));
+      const tucked = [...document.querySelectorAll("#tucked-my-day .tool-link")].map((a) => a.getAttribute("href")).join(" ");
+      if (tucked !== "#now-next #wait #steps #time-sums") throw new Error(`tucked: ${tucked}`);
+      if (btn("my-day").getAttribute("aria-expanded") !== "true" || btn("my-day").textContent !== "−4") throw new Error("not marked open");
+      btn("money").click();
+      await waitFor(() => shown("#tucked-money"));
+      // a copied note drawing is drawn afresh, so it paints
+      if (!document.querySelector('#tucked-money li[data-tool="next-note"] svg')) throw new Error("the note isn't drawn");
+      document.querySelector('#tucked-my-day a[href="#wait"]').click();
+      await waitFor(() => location.hash === "#wait" && shown("#tool-wait"));
+      history.back();
+      await waitFor(() => shown("#menu"));
     }),
-    expect: inPage(() => shown("#menu") && !shown('#menu h2[data-group="my-day"]') &&
-      !shown('#menu ul[data-group="my-day"]') && shown('#menu h2[data-group="talk"]') &&
-      shown('#menu h2[data-group="money"]')),
+    expect: inPage(() => !shown("#tucked-my-day") && !shown("#tucked-money") &&
+      document.getElementById("tuck-my-day").getAttribute("aria-expanded") === "false" && fits()),
   },
   {
     name: "set-up: pictures only hides the menu's words, not the set-up page's",
