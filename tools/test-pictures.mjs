@@ -11,7 +11,7 @@ import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  PICTURE_GROUPS, PICTURES, NOTO_FILES, MENU_ICONS, pictureSrc, pictureImg, menuIconSrc,
+  PICTURE_GROUPS, PICTURES, NOTO_FILES, MENU_ICONS, TOOL_PICTURES, pictureSrc, pictureImg, menuIconSrc,
 } from "../public/js/pictures.js";
 import { DRAWINGS, NOTO_TAG, COPYRIGHT, LICENSE_FILE, apacheText } from "./make-pictures.mjs";
 
@@ -33,7 +33,7 @@ const REQUIRED = {
 };
 
 // The menu's tools and group headings that have an icon (ids from js/tools.js).
-const MENU_IDS = "my-class my-day now-next wait steps talk i-need show-card";
+const MENU_IDS = "my-class my-day now-next wait steps talk i-need show-card time-sums safe stop-check";
 
 const results = [];
 const check = (name, problems) => results.push([name, problems.filter(Boolean)]);
@@ -67,7 +67,7 @@ check("required ids are in their group, or an earlier one", Object.entries(REQUI
 }));
 
 // ---- the menu's icons ----
-const pictureFiles = new Set(PICTURES.map((p) => p.file));
+const pictureFiles = new Set([...PICTURES.map((p) => p.file), ...Object.values(TOOL_PICTURES)]);
 check("MENU_ICONS: the menu's tools and headings, each a file", [
   Object.keys(MENU_ICONS).sort().join(" ") === MENU_IDS.split(" ").sort().join(" ")
     ? null : `keys ${Object.keys(MENU_ICONS).join(" ")}, expected ${MENU_IDS}`,
@@ -82,7 +82,12 @@ check("menu-only icons are named menu-*.svg, and never in the picker", [
 // Hosting ignores dotfiles (firebase.json), so a .DS_Store is not served.
 const onDisk = readdirSync(DIR).filter((f) => !f.startsWith("."));
 const svgsOnDisk = onDisk.filter((f) => f !== LICENSE_FILE);
-const used = [...new Set([...PICTURES.map((p) => p.file), ...Object.values(MENU_ICONS)])];
+const used = [...new Set([...PICTURES.map((p) => p.file), ...Object.values(TOOL_PICTURES), ...Object.values(MENU_ICONS)])];
+check("TOOL_PICTURES: ids and files, none a picker picture", Object.entries(TOOL_PICTURES).flatMap(([id, f]) => [
+  /^[a-z0-9]+(-[a-z0-9]+)*$/.test(id) ? null : `${id}: a bad id`,
+  PICTURES.some((p) => p.id === id || p.file === f) ? `${id}: also a picker picture` : null,
+  pictureSrc(id) === `/img/pic/${f}` ? null : `${id} → ${pictureSrc(id)}`,
+]));
 check("file names are <kebab>.svg", used.filter((f) => !/^[a-z0-9]+(-[a-z0-9]+)*\.svg$/.test(f)));
 check("every entry's file exists", used.filter((f) => !onDisk.includes(f)));
 check(`every file in public/img/pic is used (and ${LICENSE_FILE})`, svgsOnDisk.filter((f) => !used.includes(f)));

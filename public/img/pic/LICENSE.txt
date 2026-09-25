@@ -33,6 +33,8 @@ carry-tray.svg         parts: emoji_u1faf4.svg (moved, scaled and mirrored)
 changed.svg            emoji_u1f500.svg
 check-amount.svg       emoji_u1f440.svg
 clean-up.svg           emoji_u1f9f9.svg
+clock.svg              emoji_u1f552.svg
+code.svg               emoji_u1f522.svg
 computer.svg           emoji_u1f4bb.svg
 cook.svg               emoji_u1f373.svg
 doctor.svg             emoji_u1fa7a.svg
@@ -48,11 +50,15 @@ haircut.svg            emoji_u1f487.svg
 help.svg               emoji_u1f64b.svg
 homework.svg           emoji_u1f4dd.svg
 hurts.svg              emoji_u1f915.svg
+id-card.svg            emoji_u1faaa.svg
 library.svg            emoji_u1f4da.svg
 lift.svg               emoji_u1f6d7.svg
+link.svg               emoji_u1f517.svg
+meet-up.svg            emoji_u1f4cd.svg
 menu-i-need.svg        emoji_u270b.svg
 menu-my-day.svg        emoji_u1f5d3.svg
 menu-now-next.svg      emoji_u27a1.svg
+menu-safe.svg          emoji_u1f6e1.svg
 menu-show-card.svg     emoji_u1faaa.svg
 menu-steps.svg         emoji_u1f463.svg
 menu-talk.svg          emoji_u1f4ac.svg
@@ -61,10 +67,13 @@ music.svg              emoji_u1f3b5.svg
 no.svg                 emoji_u1f44e.svg
 pack-bag.svg           emoji_u1f392.svg
 park.svg               emoji_u1f333.svg
+password.svg           emoji_u1f511.svg
 phone.svg              emoji_u1f4f1.svg
+photo.svg              emoji_u1f4f7.svg
 play.svg               emoji_u26bd.svg
 playground.svg         emoji_u1f6dd.svg
 please.svg             emoji_u1f64f.svg
+prize.svg              emoji_u1f381.svg
 quiet-time.svg         emoji_u1f3a7.svg
 read.svg               emoji_u1f4d6.svg
 receipt.svg            emoji_u1f9fe.svg
@@ -72,6 +81,8 @@ recess.svg             parts: emoji_u1f34e.svg (moved and scaled)
 rub-hands.svg          parts: emoji_u1fae7.svg (moved, scaled and mirrored), emoji_u1faf1.svg (moved and scaled), emoji_u1faf2.svg (moved and scaled)
 school.svg             emoji_u1f3eb.svg
 seat.svg               emoji_u1f4ba.svg
+secret.svg             emoji_u1f92b.svg
+send-money.svg         emoji_u1f4b8.svg
 shop.svg               emoji_u1f6d2.svg
 shower.svg             emoji_u1f6bf.svg
 sleep.svg              emoji_u1f6cc.svg

@@ -13,8 +13,11 @@
 // Every file is square (viewBox 0 0 128 128); tools/test-pictures.mjs checks
 // the list against the files.
 //
-// MENU_ICONS (below) are the menu's own icons. They are not in PICTURES, so
-// the picker never offers them as cards.
+// MENU_ICONS (below) are the menu's own icons, and TOOL_PICTURES pictures that
+// only one tool's own screens use (Stop and check's asks, Time sums' clock).
+// Neither is in PICTURES, so the picker never offers them as cards — and so
+// their words need no recorded voice clip (tools/make-voice.mjs records every
+// picture's words for I want).
 //
 // Where the files come from
 // - Noto Emoji by Google (https://github.com/googlefonts/noto-emoji), whose
@@ -200,7 +203,19 @@ export const NOTO_FILES = Object.freeze({
   "space.svg": "emoji_u2194.svg",
   "soap.svg": "emoji_u1f9fc.svg",
   "check-amount.svg": "emoji_u1f440.svg",
+  // tool pictures only (TOOL_PICTURES)
+  "code.svg": "emoji_u1f522.svg",
+  "id-card.svg": "emoji_u1faaa.svg",
+  "password.svg": "emoji_u1f511.svg",
+  "send-money.svg": "emoji_u1f4b8.svg",
+  "photo.svg": "emoji_u1f4f7.svg",
+  "meet-up.svg": "emoji_u1f4cd.svg",
+  "link.svg": "emoji_u1f517.svg",
+  "secret.svg": "emoji_u1f92b.svg",
+  "prize.svg": "emoji_u1f381.svg",
+  "clock.svg": "emoji_u1f552.svg",
   // menu icons only (MENU_ICONS)
+  "menu-safe.svg": "emoji_u1f6e1.svg",
   "menu-now-next.svg": "emoji_u27a1.svg",
   "menu-steps.svg": "emoji_u1f463.svg",
   "menu-i-need.svg": "emoji_u270b.svg",
@@ -223,9 +238,32 @@ export const MENU_ICONS = Object.freeze({
   talk: "menu-talk.svg", // group heading, 💬
   "i-need": "menu-i-need.svg", // ✋
   "show-card": "menu-show-card.svg", // 🪪
+  "time-sums": "clock.svg", // 🕒 (a tool picture too)
+  safe: "menu-safe.svg", // group heading, 🛡
+  "stop-check": "stop.svg", // 🛑
 });
 
-const BY_ID = new Map(PICTURES.map((p) => [p.id, p]));
+// Pictures only a tool's own screens use: id → file. pictureSrc() and
+// pictureImg() find them like any picture; the picker never shows them.
+export const TOOL_PICTURES = Object.freeze({
+  // Stop and check: what someone asked for
+  code: "code.svg", // 🔢 a code sent to my phone (OTP)
+  "id-card": "id-card.svg", // 🪪 Singpass or IC
+  password: "password.svg", // 🔑
+  "send-money": "send-money.svg", // 💸
+  photo: "photo.svg", // 📷
+  "meet-up": "meet-up.svg", // 📍
+  link: "link.svg", // 🔗
+  secret: "secret.svg", // 🤫
+  prize: "prize.svg", // 🎁
+  // Time sums
+  clock: "clock.svg", // 🕒
+});
+
+const BY_ID = new Map([
+  ...Object.entries(TOOL_PICTURES).map(([id, file]) => [id, { id, file }]),
+  ...PICTURES.map((p) => [p.id, p]),
+]);
 
 // "/img/pic/<file>", or null for an id that isn't a picture
 export function pictureSrc(id) {

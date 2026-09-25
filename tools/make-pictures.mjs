@@ -41,7 +41,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { PICTURES, NOTO_FILES, MENU_ICONS } from "../public/js/pictures.js";
+import { PICTURES, NOTO_FILES, MENU_ICONS, TOOL_PICTURES } from "../public/js/pictures.js";
 
 export const NOTO_TAG = "v2.051";
 export const NOTO_COMMIT = "8998f5dd683424a73e2314a8c1f1e359c19e8742";
@@ -51,7 +51,7 @@ const ROOT = join(fileURLToPath(new URL(".", import.meta.url)), "..");
 const OUT = join(ROOT, "public", "img", "pic");
 
 // Every file the app uses: the pictures, then the menu-only icons.
-export const FILES = [...new Set([...PICTURES.map((p) => p.file), ...Object.values(MENU_ICONS)])];
+export const FILES = [...new Set([...PICTURES.map((p) => p.file), ...Object.values(TOOL_PICTURES), ...Object.values(MENU_ICONS)])];
 export const COPYRIGHT = "Copyright 2013 Google, Inc. All Rights Reserved.";
 export const LICENSE_FILE = "LICENSE.txt";
 

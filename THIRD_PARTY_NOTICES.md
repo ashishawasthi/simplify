@@ -103,9 +103,23 @@ whole was renamed, and renders pixel for pixel like its upstream file.
 | `menu-show-card.svg` | `emoji_u1faaa.svg` |
 | `menu-my-day.svg` | `emoji_u1f5d3.svg` |
 | `menu-talk.svg` | `emoji_u1f4ac.svg` |
+| `menu-safe.svg` | `emoji_u1f6e1.svg` |
+| `code.svg` | `emoji_u1f522.svg` |
+| `id-card.svg` | `emoji_u1faaa.svg` |
+| `password.svg` | `emoji_u1f511.svg` |
+| `send-money.svg` | `emoji_u1f4b8.svg` |
+| `photo.svg` | `emoji_u1f4f7.svg` |
+| `meet-up.svg` | `emoji_u1f4cd.svg` |
+| `link.svg` | `emoji_u1f517.svg` |
+| `secret.svg` | `emoji_u1f92b.svg` |
+| `prize.svg` | `emoji_u1f381.svg` |
+| `clock.svg` | `emoji_u1f552.svg` |
 
 The `menu-*.svg` files are the menu's icons (`MENU_ICONS` in
-`public/js/pictures.js`); the menu also uses `school.svg` and `more-time.svg`.
+`public/js/pictures.js`); the menu also uses `school.svg`, `more-time.svg`,
+`clock.svg` and `stop.svg`. `code.svg`, `id-card.svg`, `password.svg`,
+`send-money.svg`, `photo.svg`, `meet-up.svg`, `link.svg`, `secret.svg`,
+`prize.svg` and `clock.svg` are pictures only one tool uses (`TOOL_PICTURES`).
 
 ### Our drawings that contain Noto parts
 
