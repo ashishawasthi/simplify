@@ -140,11 +140,9 @@ export function classesScreen(root, ctx) {
       newProblem.append(notice(err.message, { tone: "problem" }));
       return;
     }
-    newName.input.value = "";
-    syncNew();
-    newBox.open = false;
     toast.show(`Made “${className}”. Its code is ${formatCode(code)}.`);
-    refresh();
+    // writing its page is what comes next
+    ctx.go(`#class/${code}`);
   });
 
   busyButton(joinSend, async () => {
