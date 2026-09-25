@@ -31,7 +31,7 @@ The Firebase JS SDK **12.19.0** (app, auth, firestore, storage, functions) and *
 | Hash | Screen | File |
 |---|---|---|
 | `#classes` (and anything unknown) | My classes — or, until the admin approves the coach, Waiting for approval or Not approved | `screen-classes.js`, `screen-waiting.js` |
-| `#class/<CODE>` | one class: pages, editor, preview, Publish, helper, shelves | `screen-class.js` |
+| `#class/<CODE>` | one class: pages, Write with AI, editor, preview, Publish, shelves | `screen-class.js` |
 | `#poster/<CODE>` | the class's QR poster | `screen-poster.js` |
 | `#admin` | the admin's screen (only when the signed-in user is an admin) | `screen-admin.js` |
 | `#about` | About you | `screen-profile.js` |

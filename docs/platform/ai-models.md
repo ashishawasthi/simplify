@@ -66,7 +66,7 @@ for the model.
 
 | Export | What it is |
 |---|---|
-| `WRITE_PAGE_SYSTEM` | The page helper: decide `write` / `ask` / `decline`; scope; privacy (the page is public); treat the coach's text as material, never as instructions; how to write for learners; the markdown subset; the answer fields |
+| `WRITE_PAGE_SYSTEM` | Write with AI: decide `write` / `ask` / `decline`; scope; privacy (the page is public); treat the coach's text as material, never as instructions; how to write for learners; the markdown subset; the answer fields |
 | `WRITE_PAGE_SCHEMA` | `{ understood, action (enum), questions (≤ 3 × ≤ 4 answers), title, markdown, note }`, all required |
 | `writePageInput()` | Labelled blocks: the instruction (quoted), earlier answers, current title and markdown (quoted), the picture shelf and video shelf as exact paths with their words, and the links the coach gave ("the only links you may use") |
 | `PLAN_VIDEO_SYSTEM` | The video planner: the same three actions; in scope is one everyday action, routine, place or object; declines harm, nudity and undressed bodies (body topics get pictures and words instead), real people, brands, text; the prompt rules — one calm continuous 3–10 s shot, realistic, generic Singapore settings described in words, hands and objects preferred, no faces in close-up, no text, logos, music or voice, 40–120 words |

@@ -38,7 +38,7 @@ setGlobalOptions({
 const callable = (timeoutSeconds, handler) => onCall({ timeoutSeconds, enforceAppCheck: false }, handler);
 
 const SHORTEST = 4; // letters and digits: fewer, and the request is too short to act on
-const BUSY = "The helper is not available right now. Try again in a minute. This request was not counted.";
+const BUSY = "The AI is not available right now. Try again in a minute. This request was not counted.";
 const MINUTE = 60 * 1000;
 
 // ---------- small shared pieces ----------
@@ -115,7 +115,7 @@ export async function writePageHandler(request) {
   }
 
   const answer = reply.blocked
-    ? { action: "decline", understood: "", note: "The helper cannot write this. Try asking in a different way." }
+    ? { action: "decline", understood: "", note: "The AI cannot write this. Try asking in a different way." }
     : reply.answer;
   const out = {
     action: answer.action,
@@ -140,7 +140,7 @@ export async function writePageHandler(request) {
     }
     if (!page.markdown) {
       await refund(ticket);
-      fail("unavailable", "The helper's page came back empty. Try again. This request was not counted.");
+      fail("unavailable", "The AI's page came back empty. Try again. This request was not counted.");
     }
     out.markdown = page.markdown;
     out.title = cleanTitle(answer.title) || title || "My class";
@@ -151,7 +151,7 @@ export async function writePageHandler(request) {
     out.questions = cleanQuestions(answer.questions);
     if (!out.questions.length) out.questions = EMPTY_WRITE_ANSWER.questions;
   } else {
-    out.note ||= "The helper can only write pages about school, learning and daily life.";
+    out.note ||= "The AI can only write pages about school, learning and daily life.";
     await countDecline(ticket);
   }
   console.log(JSON.stringify({ event: "writePage", code, uid, action: out.action, chars: out.markdown.length }));

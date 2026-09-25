@@ -58,7 +58,7 @@ export function mountPreview(ws) {
     if (key !== shown) {
       shown = key;
       if (!screens.length) {
-        screen.replaceChildren(h("p", { class: "phone-empty" }, "Nothing to show yet. Write the page, or ask the helper to write it."));
+        screen.replaceChildren(h("p", { class: "phone-empty" }, "Nothing to show yet. Write the page, or ask the AI to write it."));
       } else {
         try {
           screen.replaceChildren(lib.renderScreen(screens[index], { mediaUrl }));

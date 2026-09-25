@@ -1,22 +1,26 @@
 ---
 type: Product Contract
-title: The AI Helper
-description: How "Tell the helper what to write or change" works — what the coach app sends to writePage, the one Gemini Flash call that answers write / ask / decline with "I understood: …", what is in and out of scope, how the function checks the page before the coach sees it, the draft with Undo, and how each request is counted.
+title: Write with AI
+description: How "Write with AI" ("Tell the AI what to write or change") works — where it sits and when it folds away, — what the coach app sends to writePage, the one Gemini Flash call that answers write / ask / decline with "I understood: …", what is in and out of scope, how the function checks the page before the coach sees it, the draft with Undo, and how each request is counted.
 tags: [ai-helper, writepage, gemini-flash, write-ask-decline, page-check, monthly-limits, coach-app]
 status: stable
 ---
 
-This document owns the page helper on the class screen: `public/coach/js/helper.js` and `public/coach/js/questions.js`
+This document owns **Write with AI** on the class screen (called "the helper" in code and file names — never in
+anything a coach sees, because in Singapore "helper" means a domestic helper): `public/coach/js/helper.js` and `public/coach/js/questions.js`
 in the coach app, and the `writePage` callable in `functions/index.js` with its instructions in `functions/prompts.js`
 and its checks in `functions/check.js`. Model ids, the request shape and the test fakes are in
 [AI models](/platform/ai-models.md); the markdown a page may hold is in [markdown pages](/coach/markdown-pages.md).
 
 ## What the coach sees
 
-Under the editor, a **Helper** panel: "Tell the helper what to write or change" (a box of at most 1,000 characters),
-a hint with two examples ("Make this simpler", "Write a picture story about going to the dentist with my 4
-pictures"), **Ask the helper**, and the line "Helper requests: 12 of 200 this month". While it works: "The helper is
-writing. This can take up to a minute."
+Above the editor (below the pages bar, and in the same place in the page's order for keyboards and screen readers),
+a fold headed **Write with AI**. It is open on an empty page, where asking the AI is the easiest way to start, and
+folded to that one line on a page with words, so the editor stays in view; each page switch decides again, but never
+while the AI is writing, and asking always opens it. Inside: "Tell the AI what to write or change" (a box of at most
+1,000 characters), a hint with two examples ("Make this simpler", "Write a picture story about going to the dentist
+with my 4 pictures"), **Ask the AI**, and the line "AI requests: 12 of 200 this month". While it works: "The AI is
+writing. This can take up to a minute." Its answer and Undo therefore sit directly above the draft they are about.
 
 Every answer starts with one sentence **"I understood: …"** — the request restated in the model's words, including
 anything it assumed — so a badly worded instruction is visibly rewritten and a misunderstanding shows at once. Then
@@ -24,11 +28,11 @@ one of three:
 
 | Action | The coach sees |
 |---|---|
-| **write** | The new draft replaces the editor's title and text (`ws.editor.setDraft`); "The helper wrote a new draft in the editor. Read it, and check it in the preview, before you publish."; the helper's note if any; **Undo: bring back my text**, which restores exactly what was in the editor before the call. The draft is saved like any typing — **nothing reaches learners until the coach presses Publish** ([publish](/coach/coach-app.md#publish-and-unpublish)). |
-| **ask** | "The helper needs to know a little more:" and up to **3 questions**, each with up to **4 suggested answers** to tap (tap again to un-pick) or "Or in your own words". **Send my answers** calls `writePage` again with the same instruction plus the answered questions. |
-| **decline** | One kind line in an info box — never an error. For example "The helper can only write pages about school, learning and daily life." |
+| **write** | The new draft replaces the editor's title and text (`ws.editor.setDraft`); "The AI wrote a new draft in the editor below. Read it, and check it in the preview, before you publish."; the AI's note if any; **Undo: bring back my text**, which restores exactly what was in the editor before the call. The draft is saved like any typing — **nothing reaches learners until the coach presses Publish** ([publish](/coach/coach-app.md#publish-and-unpublish)). |
+| **ask** | "The AI needs to know a little more:" and up to **3 questions**, each with up to **4 suggested answers** to tap (tap again to un-pick) or "Or in your own words". **Send my answers** calls `writePage` again with the same instruction plus the answered questions. |
+| **decline** | One kind line in an info box — never an error. For example "The AI can only write pages about school, learning and daily life." |
 
-A failed call shows the function's plain message beside the panel (for example "The helper is not available right
+A failed call shows the function's plain message beside the panel (for example "The AI is not available right
 now. Try again in a minute. This request was not counted.").
 
 ## What is sent
@@ -81,11 +85,11 @@ what was asked.
 3. **Too short to act on** — fewer than 4 letters or digits across the instruction and answers: a free **ask**
    ("What should the page be about?" with four suggestions), **no model call and not counted**.
 4. **The limit** — `reserve(uid, "flash")` counts one request in a transaction *before* the model is called; at the
-   limit it refuses with "You have used all 200 helper requests for this month." (see
+   limit it refuses with "You have used all 200 AI requests for this month." (see
    [monthly limits](/coach/admin-and-approvals.md#monthly-limits)).
 5. **The model** — a failed call, a timeout (100 s), a cut-off or unparseable answer, or no valid action: the request
    is **refunded** and the coach sees the "not available … not counted" message. A safety-blocked answer becomes a
-   **decline** ("The helper cannot write this. Try asking in a different way.").
+   **decline** ("The AI cannot write this. Try asking in a different way.").
 6. **The page** — for a write, `cleanPage` in `functions/check.js`:
    - removes every HTML tag;
    - keeps a picture or video only if it is an exact `pictures/<id>.jpg` on the shelf or `videos/<id>.mp4` that is
@@ -99,7 +103,7 @@ what was asked.
    - parses the whole result once more and fails if anything unexpected remains.
 
    If anything was removed, the note says "I left out N things that pages cannot show (a picture not on the shelf, a
-   link you did not give, or HTML)." An empty result is refunded ("The helper's page came back empty. Try again. This
+   link you did not give, or HTML)." An empty result is refunded ("The AI's page came back empty. Try again. This
    request was not counted."). The title is cleaned of markdown characters and cut to 80.
 7. **The answer** — `understood` is forced to one sentence starting "I understood: " (≤ 400 characters); questions
    are cut to 3 × 4; the note to one line. Every reply carries `used` and `limit`, which update the usage line.

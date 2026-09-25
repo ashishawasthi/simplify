@@ -119,7 +119,7 @@ export function limitsFrom(snap) {
 
 const LIMIT_FIELD = { flash: "flashPerMonth", video: "videosPerMonth" };
 export const LIMIT_REACHED = {
-  flash: (limit) => `You have used all ${limit} helper requests for this month.`,
+  flash: (limit) => `You have used all ${limit} AI requests for this month.`,
   video: (limit) => `You have made all ${limit} videos for this month.`,
 };
 

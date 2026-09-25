@@ -85,7 +85,7 @@ Each class with its name, code, **Institution** (or the old **Organisation** of 
 
 | Limit | Default (`DEFAULT_LIMITS` in `functions/lib.js`) | Allowed by the rules | Counts |
 |---|---|---|---|
-| Helper requests per coach per month | 200 | 0–5,000 | `writePage` and `planVideo` calls (Gemini Flash) — see [the AI helper](/coach/ai-helper.md#counting) |
+| AI requests per coach per month | 200 | 0–5,000 | `writePage` and `planVideo` calls (Gemini Flash) — see [the AI helper](/coach/ai-helper.md#counting) |
 | Videos per coach per month | 5 | 0–100 | `startVideo` renders (Gemini Omni, about US$0.80 each) — see [videos](/coach/videos.md) |
 
 The form's hint: "The same for every coach, counted in Singapore months." A missing document, or a missing or invalid

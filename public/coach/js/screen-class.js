@@ -87,9 +87,9 @@ export function classScreen(root, ctx, code) {
 
   const workspace = h("div", { class: "workspace" },
     h("div", { class: "ws-pages" }, ws.editor.pagesBar),
+    h("div", { class: "ws-helper" }, helper.element),
     h("div", { class: "ws-editor" }, ws.editor.element),
     h("div", { class: "ws-side" }, preview.element, publish.element),
-    h("div", { class: "ws-helper" }, helper.element),
     h("div", { class: "ws-pictures" }, pictures.element),
     h("div", { class: "ws-videos" }, videos.element));
 

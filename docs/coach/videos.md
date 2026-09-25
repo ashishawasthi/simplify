@@ -19,7 +19,7 @@ The "Videos" panel has a fold, **Make a short video**, with a **Describe the vid
 - `requireClassCoach` runs first: signed in, a profile the admin approved and has not suspended, listed for the class, class active.
 - A request with fewer than 4 letters or digits gets a free fixed question ("What should the video show?", `EMPTY_PLAN_ANSWER`), with no model call and nothing counted.
 - Otherwise it reserves **one Flash request** from the same monthly allowance as the helper (200 by default). Then **one Gemini Flash call** (thinking level low, JSON mode against `PLAN_VIDEO_SCHEMA`) answers `write`, `ask` (up to 3 questions with 2–4 suggested answers) or `decline`. Every answer starts with "I understood: …".
-- A failed call is refunded: "The helper is not available right now … This request was not counted." A safety-withheld answer becomes a decline. A decline is counted.
+- A failed call is refunded: "The AI is not available right now … This request was not counted." A safety-withheld answer becomes a decline. A decline is counted.
 
 **What the planner writes** (`PLAN_VIDEO_SYSTEM`) is an English prompt of 40–120 words describing:
 

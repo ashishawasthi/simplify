@@ -394,11 +394,11 @@ export function adminScreen(root, ctx) {
   }
 
   function limitsForm() {
-    const flash = field({ label: "Helper requests per coach per month", type: "number", inputmode: "numeric", min: 0, max: 5000, step: 1, value: String(data.limits.flashPerMonth) });
+    const flash = field({ label: "AI requests per coach per month", type: "number", inputmode: "numeric", min: 0, max: 5000, step: 1, value: String(data.limits.flashPerMonth) });
     const videos = field({ label: "Videos per coach per month", type: "number", inputmode: "numeric", min: 0, max: 100, step: 1, value: String(data.limits.videosPerMonth) });
     const save = h("button", { class: "btn btn-primary", type: "submit" }, "Save the limits");
     const form = h("form", { class: "stack form-narrow", novalidate: true },
-      h("p", { class: "field-hint" }, "The same for every coach, counted in Singapore months. Helper requests are the page helper and video planning (Gemini Flash); each video costs about US$0.80."),
+      h("p", { class: "field-hint" }, "The same for every coach, counted in Singapore months. AI requests are writing pages and planning videos (Gemini Flash); each video costs about US$0.80."),
       flash.field, videos.field, h("div", { class: "actions" }, save));
     // numbers only, within the limits the rules allow: forgiven as typed, never refused
     const clamp = (input, max) => Math.min(max, Math.max(0, Math.round(Number(input.value) || 0)));
@@ -415,7 +415,7 @@ export function adminScreen(root, ctx) {
       data.limits = next;
       flash.input.value = String(next.flashPerMonth);
       videos.input.value = String(next.videosPerMonth);
-      toast.show(`Limits saved: ${next.flashPerMonth} helper requests and ${next.videosPerMonth} videos a month`, {
+      toast.show(`Limits saved: ${next.flashPerMonth} AI requests and ${next.videosPerMonth} videos a month`, {
         undo: () => cloud.saveLimits(user.uid, before).then(() => {
           data.limits = before;
           render();

@@ -375,7 +375,7 @@ export async function callFunction(name, data) {
   return attempt(async () => {
     const result = await httpsCallable(functions, name, { timeout: TIMEOUTS[name] ?? 70_000 })(data);
     return result.data;
-  }, "The helper could not answer. Try again in a minute.");
+  }, "The AI could not answer. Try again in a minute.");
 }
 
 // ---- monthly use ----

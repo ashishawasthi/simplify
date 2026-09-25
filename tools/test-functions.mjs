@@ -201,7 +201,7 @@ async function runInside() {
   r = await write("coachA");
   check("the 5th request of 5", [r.action, r.used, r.limit], ["write", 5, 5]);
   r = await write("coachA");
-  check("the 6th → limit reached", r, { error: "resource-exhausted", message: "You have used all 5 helper requests for this month." });
+  check("the 6th → limit reached", r, { error: "resource-exhausted", message: "You have used all 5 AI requests for this month." });
   r = await write("coachA", { instruction: "" });
   check("an empty instruction still gets its free question", [r.action, r.used, r.limit], ["ask", 5, 5]);
   await db.doc("config/limits").set({ flashPerMonth: 8 });

@@ -38,7 +38,7 @@ month** (UTC+8), checked on the server before any model is called:
 
 | Limit | Default | Worst case per coach per month |
 |---|---|---|
-| Helper requests (Gemini Flash: the page helper and video planning) | 200 | well under US$1 |
+| AI requests (Gemini Flash: Write with AI and video planning) | 200 | well under US$1 |
 | Videos (Gemini Omni) | 5 | about US$4 (at most US$5 at 10 s each) |
 
 - The defaults are `DEFAULT_LIMITS` in `functions/lib.js`; the admin changes them for everyone in `config/limits`

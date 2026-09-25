@@ -242,7 +242,7 @@ a.class-card-body:active { background: var(--c-accent-soft); }
   display: grid;
   gap: 20px;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-areas: "pages" "editor" "side" "helper" "pictures" "videos";
+  grid-template-areas: "pages" "helper" "editor" "side" "pictures" "videos";
 }
 .ws-pages { grid-area: pages; }
 .ws-editor { grid-area: editor; min-width: 0; }
@@ -253,7 +253,7 @@ a.class-card-body:active { background: var(--c-accent-soft); }
 @media (min-width: 1040px) {
   .workspace {
     grid-template-columns: minmax(0, 1fr) 400px;
-    grid-template-areas: "pages side" "editor side" "helper side" "pictures side" "videos side";
+    grid-template-areas: "pages side" "helper side" "editor side" "pictures side" "videos side";
     grid-template-rows: auto auto auto auto 1fr;
   }
   /* held in view while the page scrolls — so it must fit the screen: the
@@ -348,7 +348,9 @@ a.class-card-body:active { background: var(--c-accent-soft); }
 .publish-state.is-live::before { content: "● "; }
 .btn-publish { flex: 1 1 auto; }
 
-/* the helper and the video planner */
+/* Write with AI (the "helper" in the code) and the video planner */
+details.fold.helper { max-width: none; background: var(--c-soft); }
+details.fold.helper > summary h2 { margin: 0; font-size: 20px; color: inherit; }
 .helper-input { min-height: 90px; }
 .usage-line { margin: 0; font-size: 15px; color: var(--c-muted); }
 .actions .usage-line { margin-left: auto; }

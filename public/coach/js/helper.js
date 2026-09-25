@@ -1,4 +1,8 @@
-// The AI helper: "Tell the helper what to write or change". One call to the
+// Write with AI: "Tell the AI what to write or change". (Not "helper": in
+// Singapore that word means a domestic helper.) It sits above the editor, so
+// its answer and Undo are right above the draft it wrote; it folds away to
+// one line on a page that already has words, and opens on an empty one,
+// where it is the easiest way to start. One call to the
 // writePage function (Gemini Flash) answers in one of three ways, always
 // starting with "I understood: …" — so a request put badly is visibly put
 // right, and a misunderstanding shows at once:
@@ -20,17 +24,17 @@ export function mountHelper(ws) {
     id: "helper-input", class: "helper-input", rows: 3, maxLength: 1000,
     "aria-describedby": "helper-hint",
   });
-  const ask = h("button", { class: "btn btn-primary", type: "button" }, "Ask the helper");
+  const ask = h("button", { class: "btn btn-primary", type: "button" }, "Ask the AI");
   const usage = h("p", { class: "usage-line" });
   const result = h("div", { class: "helper-result", "aria-live": "polite" });
 
-  const element = h("section", { class: "helper panel", "aria-labelledby": "helper-h" },
-    h("h2", { id: "helper-h" }, "Helper"),
+  const element = h("details", { class: "fold helper" },
+    h("summary", null, h("h2", { id: "helper-h" }, "Write with AI")),
     h("div", { class: "field" },
-      h("label", { for: "helper-input" }, "Tell the helper what to write or change"),
+      h("label", { for: "helper-input" }, "Tell the AI what to write or change"),
       h("p", { class: "field-hint", id: "helper-hint" },
         "For example: “Make this simpler”, or “Write a picture story about going to the dentist with my 4 pictures”. " +
-        "It writes a draft in the editor for you to check. Nothing reaches learners until you publish."),
+        "It writes a draft in the editor below for you to check. Nothing reaches learners until you publish."),
       input),
     h("div", { class: "actions" }, ask, usage),
     result);
@@ -40,7 +44,7 @@ export function mountHelper(ws) {
   sync();
 
   function renderUsage() {
-    usage.textContent = `Helper requests: ${ws.usage.flash} of ${ws.limits.flashPerMonth} this month`;
+    usage.textContent = `AI requests: ${ws.usage.flash} of ${ws.limits.flashPerMonth} this month`;
   }
 
   async function call(answers = []) {
@@ -48,7 +52,8 @@ export function mountHelper(ws) {
     if (busy || (!instruction && !answers.length)) return;
     busy = true;
     sync();
-    fill(result, h("p", { class: "working" }, "The helper is writing. This can take up to a minute."));
+    element.open = true;
+    fill(result, h("p", { class: "working" }, "The AI is writing. This can take up to a minute."));
     const before = ws.editor.getText();
     let reply;
     try {
@@ -76,7 +81,7 @@ export function mountHelper(ws) {
       ws.editor.setDraft({ title: reply.title || undefined, markdown: reply.markdown });
       const undo = h("button", { class: "btn btn-secondary", type: "button" }, "Undo: bring back my text");
       const done = h("p", { class: "helper-done" },
-        "The helper wrote a new draft in the editor. Read it, and check it in the preview, before you publish.");
+        "The AI wrote a new draft in the editor below. Read it, and check it in the preview, before you publish.");
       undo.addEventListener("click", () => {
         ws.editor.setDraft(before);
         fill(result, understood, h("p", { class: "helper-done" }, "Your own text is back."));
@@ -87,7 +92,7 @@ export function mountHelper(ws) {
 
     if (reply.action === "ask") {
       fill(result, understood,
-        h("p", { class: "helper-done" }, "The helper needs to know a little more:"),
+        h("p", { class: "helper-done" }, "The AI needs to know a little more:"),
         note,
         questionsForm(reply.questions, (answers) => call(answers)));
       return;
@@ -95,8 +100,14 @@ export function mountHelper(ws) {
 
     // decline (and anything unexpected): calm, never an error
     fill(result, understood,
-      h("div", { class: "notice is-info" }, h("p", null, reply.note || "The helper can't write this.")));
+      h("div", { class: "notice is-info" }, h("p", null, reply.note || "The AI can't write this.")));
   }
+
+  // a page switch: open on an empty page, folded on one with words — but
+  // never folded while it is writing
+  ws.on("page", () => {
+    if (!busy) element.open = !ws.editor.getText().markdown.trim();
+  });
 
   ask.addEventListener("click", () => call());
   ws.on("usage", renderUsage);
