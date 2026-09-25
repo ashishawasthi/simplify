@@ -25,15 +25,16 @@ export function posterScreen(root, { cloud }, code) {
       h("li", null, "No camera, or Simplify on the Home Screen? At the bottom of Simplify's menu, tap ℹ️ How to use this app, then Set up this device, then Open set-up. Hold the button, then type the class code.")),
     h("p", { class: "poster-site" }, "simplify.whiz.coach"));
 
+  // Print beside the heading and the words under the poster: the poster
+  // itself — above all its QR code — is what fills the screen
   root.append(h("section", { class: "screen poster-screen" },
     h("div", { class: "poster-tools no-print" },
       h("a", { class: "back-link", href: `#class/${code}` }, h("span", { "aria-hidden": "true" }, "← "), "Back to the class"),
-      h("h1", null, "QR poster"),
-      h("p", { class: "lead" }, "Print it for the class, or show it on a screen. " +
-        "Anyone with the code can see what you publish, so share it only with your class's families."),
-      h("div", { class: "actions" }, printButton),
+      h("div", { class: "poster-head" }, h("h1", null, "QR poster"), printButton),
       state),
-    sheet));
+    sheet,
+    h("p", { class: "poster-note no-print" }, "Print it for the class, or show it on a screen. " +
+      "Anyone with the code can see what you publish, so share it only with your class's families.")));
 
   let alive = true;
   cloud.getClass(code).then((cls) => {

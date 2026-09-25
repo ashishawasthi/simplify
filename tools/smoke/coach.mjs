@@ -816,7 +816,7 @@ export default [
       coachesOf: { K7M3RQP9T: ["coach-2"] } }`),
     setup: run(async () => {
       await waitFor(() => byText("h2", "Coaches waiting for approval (3)"));
-      const card = (name) => byText("#adm-wait-h + .admin-list .admin-card", name);
+      const card = (name) => byText("#adm-wait-h ~ .admin-list .admin-card", name);
       if (!byText(".admin-card", "Form teacher of 5 Joy, call the office") || !card("Mr Lim").textContent.includes("AWWA School @ Bedok")) throw new Error("no way to check the coach");
       if (!card("Mr Ong")?.textContent.includes("Organisation")) throw new Error("a coach from before institutions is not waiting, or has no organisation shown");
       [...card("Mr Lim").querySelectorAll("button")].find((b) => b.textContent === "Approve").click();
@@ -836,7 +836,7 @@ export default [
     }),
     expect: inPage(() => __fake.profiles["coach-2"].status === "approved" && __fake.profiles["coach-3"].status === "declined" &&
       __fake.calls.filter((c) => c.name === "decideCoach").length === 2 && __fake.coachesOf.K7M3RQP9T.includes("coach-1") &&
-      !byText("#adm-wait-h + .admin-list", "Mr Lim") && byText(".admin-card h3", "Ms Wong") && byText(".admin-card .chip", "Not approved") &&
+      !byText("#adm-wait-h ~ .admin-list", "Mr Lim") && byText(".admin-card h3", "Ms Wong") && byText(".admin-card .chip", "Not approved") &&
       !$("#nav a[data-route=admin]").hidden),
   }),
   scene({
@@ -927,6 +927,37 @@ export default [
     }),
     expect: inPage(() => getComputedStyle($(".progress-calm span")).animationName === "none" && fits() &&
       byText(".working-box", "about 2 minutes")),
+  }),
+  scene({
+    name: "iPad: the QR poster — the header one row, Print beside the heading, the QR in view, the words under the poster",
+    path: "/coach/#poster/K7M3RQP9T",
+    viewport: { width: 820, height: 1180 },
+    setup: run(() => waitFor(() => byText(".poster-class", "3 Kindness"))),
+    expect: inPage(() => {
+      const top = (sel) => $(sel).getBoundingClientRect().top;
+      const header = $(".coach-header").getBoundingClientRect();
+      return header.height < 80 && !$("#account-email").checkVisibility() &&
+        $("#sign-out").title === "Signed in as coach@example.com" &&
+        Math.abs(top(".poster-head h1") - top(".poster-head .btn")) < 20 &&
+        $(".poster svg.qr").getBoundingClientRect().bottom < innerHeight &&
+        top(".poster-note") > $(".poster").getBoundingClientRect().bottom && fits();
+    }),
+  }),
+  scene({
+    name: "admin: what to check sits under each waiting list, not above the screen; the editor's hint under the box",
+    path: "/coach/#admin",
+    init: seed(`{ admins: ["coach-1"], profiles: {
+        "coach-1": { name: "Ms Tan", institutions: ["awwa-school-napiri"], note: "", email: "coach@example.com", status: "approved" },
+        "coach-2": { name: "Mr Lim", institutions: ["awwa-school-napiri"], note: "", email: "lim@example.com", status: "pending", createdAt: new Date() } },
+      requests: [{ id: "r2", uid: "coach-1", kind: "join-class", classCode: "K7M3RQP9T", status: "pending", createdAt: new Date() }] }`),
+    setup: run(async () => {
+      await waitFor(() => byText("h2", "Coaches waiting for approval (1)"));
+      if ($(".admin-screen .lead")) throw new Error("a lead above the screen");
+      if (!byText("#adm-wait-h + p", "who they are and where they work") || !byText("#adm-req-h + p", "really coach that class")) throw new Error("no hints");
+      location.hash = "#class/K7M3RQP9T";
+      await waitFor(() => $(".md-input"));
+    }),
+    expect: inPage(() => $("#page-text-help").getBoundingClientRect().top > $(".md-input").getBoundingClientRect().bottom),
   }),
   scene({
     name: "desktop: editor and preview side by side",

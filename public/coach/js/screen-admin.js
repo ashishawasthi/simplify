@@ -27,7 +27,6 @@ export function adminScreen(root, ctx) {
   const body = h("div", { class: "admin-body" }, h("p", { class: "loading", role: "status" }, "Loading…"));
   root.append(h("section", { class: "screen admin-screen" },
     h("h1", null, "Admin"),
-    h("p", { class: "lead" }, "Approve a coach only after checking who they are and where they work. Let a coach join a class only after checking they really coach it."),
     body));
 
   let data = null; // { requests, coaches, classes, institutions, limits }
@@ -67,10 +66,13 @@ export function adminScreen(root, ctx) {
     body.replaceChildren(
       h("section", { class: "section", "aria-labelledby": "adm-wait-h" },
         h("h2", { id: "adm-wait-h" }, `Coaches waiting for approval (${waiting.length})`),
+        // what to check sits with what it is about, not above the whole screen
+        waiting.length ? h("p", { class: "small" }, "Approve only after checking who they are and where they work.") : null,
         waiting.length ? h("ul", { class: "admin-list" }, waiting.map(waitingCard))
           : h("p", { class: "empty" }, "Nobody is waiting.")),
       h("section", { class: "section", "aria-labelledby": "adm-req-h" },
         h("h2", { id: "adm-req-h" }, `Requests to join a class (${requests.length})`),
+        requests.length ? h("p", { class: "small" }, "Approve only after checking they really coach that class.") : null,
         requests.length ? h("ul", { class: "admin-list" }, requests.map(requestCard))
           : h("p", { class: "empty" }, "Nothing is waiting.")),
       h("section", { class: "section", "aria-labelledby": "adm-coach-h" },

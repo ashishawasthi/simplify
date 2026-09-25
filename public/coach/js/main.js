@@ -69,6 +69,8 @@ function renderHeader() {
   const signedIn = Boolean(user);
   account.hidden = !signedIn;
   accountEmail.textContent = signedIn ? user.email : "";
+  // who is signed in, for the widths that hide the email (css/coach.css)
+  $("sign-out").title = signedIn ? `Signed in as ${user.email}` : "";
   nav.hidden = !(signedIn && ready && profile);
   nav.querySelector('[data-route="admin"]').hidden = !admin;
 }
