@@ -464,7 +464,7 @@ export default [
       byText(".toast", "Sent: join K7M-3RQ-P9T") && fits()),
   }),
   scene({
-    name: "a new class: made at once, for one of my institutions, with a new code",
+    name: "a new class: made at once, for one of my institutions, with a new code, and opened",
     path: "/coach/#classes",
     init: seed(`{ nextCode: "H4W9NEK3R", profiles: { "coach-1": { name: "Ms Tan", institutions: ["awwa-school-napiri", "awwa-eic-hougang", "gone"],
       note: "", email: "coach@example.com", status: "approved" } } }`),
@@ -476,11 +476,11 @@ export default [
       if (!make.disabled) throw new Error("a class with no name");
       type($$("input").find((i) => i.maxLength === 30), "5 Joy");
       if ($("select").value !== "awwa-school-napiri") throw new Error(`the first of mine is not chosen: ${$("select").value}`);
+      if (JSON.stringify($$("select option").map((o) => o.textContent)) !==
+        '["AWWA School @ Napiri (Hougang)","AWWA Early Intervention Centre @ Hougang"]') throw new Error("not my institutions");
       make.click();
-      await waitFor(() => byText(".class-card-name", "5 Joy"));
     }),
-    expect: inPage(() => JSON.stringify($$("select option").map((o) => o.textContent)) ===
-        '["AWWA School @ Napiri (Hougang)","AWWA Early Intervention Centre @ Hougang"]' &&
+    expect: inPage(() => location.hash === "#class/H4W9NEK3R" && $("h1")?.textContent.includes("5 Joy") && $("textarea") &&
       __fake.classes.H4W9NEK3R.institution === "awwa-school-napiri" && __fake.coachesOf.H4W9NEK3R[0] === "coach-1" &&
       byText(".toast", "Made “5 Joy”. Its code is H4W-9NE-K3R.") && !__fake.requests.length),
   }),
