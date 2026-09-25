@@ -106,6 +106,8 @@ The coach app's web config (`public/coach/js/firebase-config.js`) comes from `fi
 
 Six 2nd-gen HTTPS callables, `writePage`, `planVideo`, `startVideo`, `checkVideo`, `approveVideo` and `discardVideo`, in `asia-southeast1`, on Node.js 22 (`runtime` in `firebase.json`), 256 MiB, at most 10 instances each (`maxInstances` in `functions/index.js`), running as `simplify-functions`. Each Cloud Run service grants `roles/run.invoker` to `allUsers`, as callables require; every handler checks the caller itself (`requireClassCoach` in `functions/lib.js`). Environment: `GCLOUD_PROJECT` (set by the platform) and the optional `SIMPLIFY_BUCKET`, defaulting to `simplify-special.firebasestorage.app`. There are no secrets: Gemini is reached through Vertex AI with the service account's own credentials.
 
+A merge to `main` deploys them, after the tests and before the website (see [release and deploy](/operations/release-and-deploy.md#ci-workflows)). By hand, only when CI is unavailable:
+
 ```sh
 firebase deploy --only functions
 ```

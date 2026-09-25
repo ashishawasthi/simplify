@@ -85,13 +85,11 @@ node tools/build-docs-index.mjs --check   # docs frontmatter, generated indexes 
 
 The Firebase project is `simplify-special`, with the custom domain `simplify.whiz.coach` on its Hosting site.
 
-- **Hosting** deploys automatically: every push to `main` publishes to the live channel
-  (`.github/workflows/firebase-hosting-merge.yml`), and each pull request gets a preview channel URL
-  (`firebase-hosting-pull-request.yml`). The deploy does not wait for the Tests workflow, so run the tests before
-  merging. Manually: `firebase deploy --only hosting`.
-- **Rules, indexes and Cloud Functions** are not deployed by CI:
-  `firebase deploy --only firestore:rules,firestore:indexes,storage` and `firebase deploy --only functions` (run
-  `test-rules` / `test-functions` first). Never a bare `firebase deploy`.
+- **A merge to `main` deploys everything** (`.github/workflows/firebase-hosting-merge.yml`): once every test
+  passes, Cloud Functions, Firestore rules and indexes and Storage rules go live, and then the website. Each pull
+  request gets a Hosting preview channel URL (`firebase-hosting-pull-request.yml`). A failed deploy can be run again
+  from GitHub Actions (**Run workflow**). By hand, only if CI is unavailable: `firebase deploy --only
+  functions,firestore:rules,firestore:indexes,storage`, then `firebase deploy --only hosting`.
 - **Before merging any change to `public/`, bump `CACHE` in `public/sw.js`**, and add any new file under `public/`
   to `ASSETS` — otherwise installed apps keep the old version, or the new file won't work offline.
 - **Update the guide and its screenshots only after a change has been tested locally**, never alongside it.
