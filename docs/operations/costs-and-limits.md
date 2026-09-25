@@ -25,7 +25,7 @@ limit is enforced. The resources themselves are in [cloud project](/operations/c
 | Firebase Hosting (storage and transfer) | Every learner and coach page load; the service worker's install on each release | Within the free allowance. A first visit downloads the whole offline copy (about 190 files, ~4 MB, ~3.5 MB of it images); a release costs each device only the changed files, because the worker revalidates with ETags and unchanged images come back as bodiless 304s (see [offline and updates](/platform/offline-and-updates.md)). Firebase's pages disagree on the exact free Hosting allowance, so check the console's usage page rather than a number here. |
 | Cloud Firestore (asia-southeast1) | Learner devices reading their class (one document read per check); the coach app's listeners and writes; the functions' usage counters | Cents a month or less — free tier applies |
 | Cloud Storage (asia-southeast1) | Class pictures (≤ 2 MB each, usually far less) and approved videos (~3 MB for 8 s), downloaded once per device and then kept offline | Cents a month |
-| Cloud Functions (2nd gen, asia-southeast1) | The six callables, only when a coach uses the helper or videos; at most 10 instances | Negligible |
+| Cloud Functions (2nd gen, asia-southeast1) | The six callables, only when a coach uses Write with AI or videos; at most 10 instances | Negligible |
 | Vertex AI — Gemini Flash | `writePage`, `planVideo` | A fraction of a cent per request |
 | Vertex AI — Gemini Omni | `startVideo` | About US$0.10 per second of video: US$0.30–1.00 a clip (3–10 s), about US$0.80 at the usual 8 s |
 

@@ -6,7 +6,7 @@ tags: [coach-app, sign-in, institutions, coach-approval, editor, preview, publis
 status: stable
 ---
 
-This document owns the coach app at `https://simplify.whiz.coach/coach/` (`public/coach/`): who it is for, how it is kept apart from the learner app, and what each screen does. The markdown a page may hold is in [markdown pages](/coach/markdown-pages.md), the AI helper in [the AI helper](/coach/ai-helper.md), videos in [videos](/coach/videos.md), and the admin's screen in [admin and approvals](/coach/admin-and-approvals.md).
+This document owns the coach app at `https://simplify.whiz.coach/coach/` (`public/coach/`): who it is for, how it is kept apart from the learner app, and what each screen does. The markdown a page may hold is in [markdown pages](/coach/markdown-pages.md), the AI helper in [Write with AI](/coach/ai-helper.md), videos in [videos](/coach/videos.md), and the admin's screen in [admin and approvals](/coach/admin-and-approvals.md).
 
 ## Kept apart from the learner app
 
@@ -143,7 +143,7 @@ The rules allow a coach to change only `latest` and `updatedAt` on the class doc
 
 ## Errors and the toast
 
-- Every error from `cloud.js` is a `CloudError` with a `code` and a plain `message` that is shown as it is. Firebase codes map to short sentences in `PLAIN`: offline, "You can't do this. The admin may have paused your account or this class.", "That took too long", popup blocked, and so on. A Cloud Function's own refusal message (for example "You have used all 200 helper requests for this month.") passes through unchanged, less the " [403]" the Functions SDK adds to it. A sign-in popup the coach closed is silent.
+- Every error from `cloud.js` is a `CloudError` with a `code` and a plain `message` that is shown as it is. Firebase codes map to short sentences in `PLAIN`: offline, "You can't do this. The admin may have paused your account or this class.", "That took too long", popup blocked, and so on. A Cloud Function's own refusal message (for example "You have used all 200 AI requests for this month.") passes through unchanged, less the " [403]" the Functions SDK adds to it. A sign-in popup the coach closed is silent.
 - Problems appear next to the button that caused them. A problem away from any button, such as a failed background delete, is said once in the toast.
 - **The toast** (`public/coach/js/toast.js`) shows one line and, where it applies, **Undo**, for 8 seconds; it stays while pointed at or focused. Nothing asks "are you sure?". Deletes are shown as done at once and happen when the toast goes (timeout, the next toast, `pagehide`, sign-out or leaving the screen), so Undo costs no server work. Screen readers hear it from a status line that is always on the page.
 

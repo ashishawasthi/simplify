@@ -107,8 +107,8 @@ decision in the [decision log](/product/decisions.md) first. The research behind
 
 ## Content coaches publish
 
-Coach pages follow the same rules, and the AI helper writes to them: short literal sentences in plain Singapore
+Coach pages follow the same rules, and Write with AI writes to them: short literal sentences in plain Singapore
 English, one idea per screen, pictures only from the class's shelf, no names of learners, sensitive daily-living
 topics written factually and gently. What is published is public to anyone with the class code, so it never holds
-pictures of students or private information. See [the AI helper](/coach/ai-helper.md) and
+pictures of students or private information. See [Write with AI](/coach/ai-helper.md) and
 [markdown pages](/coach/markdown-pages.md).

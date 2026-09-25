@@ -73,7 +73,7 @@ On the learner's screen:
 
 ## Anything else
 
-Anything outside the subset is **shown as the plain text it is**: HTML tags, tables, code fences, `>` quotes, underscores, footnotes. Nothing is ever HTML. `renderScreen` builds elements with `createElement` and sets `textContent`, and runs become text nodes wrapped in `<strong>`/`<em>`. A page cannot run a script, and it loads nothing except what `mediaUrl()` hands it (and YouTube's player after a tap). The helper's pages go through a stricter check before a coach sees them (no HTML, only shelf media, only links the coach gave): see [the AI helper](/coach/ai-helper.md#what-the-function-checks).
+Anything outside the subset is **shown as the plain text it is**: HTML tags, tables, code fences, `>` quotes, underscores, footnotes. Nothing is ever HTML. `renderScreen` builds elements with `createElement` and sets `textContent`, and runs become text nodes wrapped in `<strong>`/`<em>`. A page cannot run a script, and it loads nothing except what `mediaUrl()` hands it (and YouTube's player after a tap). Pages the AI writes go through a stricter check before a coach sees them (no HTML, only shelf media, only links the coach gave): see [Write with AI](/coach/ai-helper.md#what-the-function-checks).
 
 ## Limits
 

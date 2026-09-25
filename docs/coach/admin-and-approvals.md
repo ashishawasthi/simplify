@@ -1,7 +1,7 @@
 ---
 type: Operations Runbook
 title: Admin and Approvals
-description: Who the admin is and how the first one is made (admins/{uid} in the console), and every action on the coach app's Admin screen — approving or declining coaches before they can use the platform, join requests, suspending coaches and classes, taking a page down, the monthly helper and video limits, and the institutions coaches choose from (seeding, adding, retiring) — with the writes and rules behind each, and the one-off switch-on steps.
+description: Who the admin is and how the first one is made (admins/{uid} in the console), and every action on the coach app's Admin screen — approving or declining coaches before they can use the platform, join requests, suspending coaches and classes, taking a page down, the monthly AI and video limits, and the institutions coaches choose from (seeding, adding, retiring) — with the writes and rules behind each, and the one-off switch-on steps.
 tags: [admin, coach-approval, institutions, join-requests, suspend, take-down, monthly-limits, firestore-rules, runbook]
 status: stable
 ---
@@ -69,7 +69,7 @@ There is no action to remove one coach from one class; suspend the coach (all th
 Every coach, with a status chip (**Approved**, **Waiting for approval**, **Not approved**) and **Suspended** when suspended; email, **Works at** — with "Changed …, after approval" when an approved coach changed their institutions after the decision (`institutionsChangedAt` later than `decidedAt`) — the old organisation if any, how to check them, their classes and when they were decided.
 
 - **Approve** (a declined coach): as above — approve later.
-- **Suspend** / **Let back in** (an approved coach) sets `coaches/{uid}.suspended`, at once, with Undo. A suspended coach keeps their sign-in but every rule and callable treats them as no one's coach: they cannot read or write their classes' pages and shelves, publish, upload, make or join classes, or use the helper or videos, and the coach app says "The admin has paused your account".
+- **Suspend** / **Let back in** (an approved coach) sets `coaches/{uid}.suspended`, at once, with Undo. A suspended coach keeps their sign-in but every rule and callable treats them as no one's coach: they cannot read or write their classes' pages and shelves, publish, upload, make or join classes, or use Write with AI or videos, and the coach app says "The admin has paused your account".
 
 ### Classes
 
@@ -85,7 +85,7 @@ Each class with its name, code, **Institution** (or the old **Organisation** of 
 
 | Limit | Default (`DEFAULT_LIMITS` in `functions/lib.js`) | Allowed by the rules | Counts |
 |---|---|---|---|
-| AI requests per coach per month | 200 | 0–5,000 | `writePage` and `planVideo` calls (Gemini Flash) — see [the AI helper](/coach/ai-helper.md#counting) |
+| AI requests per coach per month | 200 | 0–5,000 | `writePage` and `planVideo` calls (Gemini Flash) — see [Write with AI](/coach/ai-helper.md#counting) |
 | Videos per coach per month | 5 | 0–100 | `startVideo` renders (Gemini Omni, about US$0.80 each) — see [videos](/coach/videos.md) |
 
 The form's hint: "The same for every coach, counted in Singapore months." A missing document, or a missing or invalid

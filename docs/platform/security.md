@@ -148,7 +148,7 @@ Then each checks its own input before calling a model or touching Storage:
 | `approveVideo` | the video is `ready` and its draft file exists |
 | `discardVideo` | the video exists and is not still `rendering` |
 
-Any coach of the class may check, approve or discard any of the class's videos. What the model sees, and the prompt-injection guard in its instructions, are in [AI models](/platform/ai-models.md); the checks on the model's page before a coach sees it are in [the AI helper](/coach/ai-helper.md).
+Any coach of the class may check, approve or discard any of the class's videos. What the model sees, and the prompt-injection guard in its instructions, are in [AI models](/platform/ai-models.md); the checks on the model's page before a coach sees it are in [Write with AI](/coach/ai-helper.md).
 
 ## Coach sign-in
 
