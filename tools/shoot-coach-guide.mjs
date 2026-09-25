@@ -229,7 +229,7 @@ export const SCENES = {
     setup: `
       await waitFor(() => $(".phone-empty"));
       type($("#helper-input"), "Write a picture story about washing hands before eating, with my 4 pictures");
-      byText("button", "Ask the helper").click();
+      byText("button", "Ask the AI").click();
       await waitFor(() => $(".understood") && $(".md-input").value.includes("Washing"));
       $("#helper-input").blur();
       scrollToEl($(".ws-helper"), 20);`,
@@ -247,7 +247,7 @@ export const SCENES = {
     setup: `
       await waitFor(() => $(".phone-empty"));
       type($("#helper-input"), "zoo trip next week");
-      byText("button", "Ask the helper").click();
+      byText("button", "Ask the AI").click();
       await waitFor(() => $(".question"));
       byText(".answer-btn", "The learners").click();
       $("#helper-input").blur();`,
@@ -263,7 +263,7 @@ export const SCENES = {
     setup: `
       await waitFor(() => $(".phone-empty"));
       type($("#helper-input"), "Write a speech for my colleague's wedding");
-      byText("button", "Ask the helper").click();
+      byText("button", "Ask the AI").click();
       await waitFor(() => $(".helper-result .notice"));
       $("#helper-input").blur();`,
     expect: `byText(".helper-result", "I can only write pages")`,

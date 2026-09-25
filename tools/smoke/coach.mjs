@@ -592,18 +592,38 @@ export default [
 
   // ---------- the helper ----------
   scene({
-    name: "helper: write — I understood, the draft in the editor, Undo brings my text back",
+    name: "AI: above the editor; open on an empty page, one line on a page with words, open while it writes",
+    path: "/coach/#class/K7M3RQP9T",
+    init: seed(`{ pages: { K7M3RQP9T: [
+      { id: "page1", title: "Mine", markdown: "My own words", createdAt: new Date(0), updatedAt: new Date(0) },
+      { id: "page2", title: "New", markdown: "", createdAt: new Date(1), updatedAt: new Date(1) }] } }`),
+    setup: run(async () => {
+      await waitFor(() => $(".md-input").value === "" && $(".title-input").value === "New");
+      const fold = $("details.helper");
+      if (!fold.open) throw new Error("folded on an empty page");
+      if (!(fold.compareDocumentPosition($(".md-input")) & Node.DOCUMENT_POSITION_FOLLOWING)) throw new Error("not above the editor");
+      byText(".page-tab", "Mine").click();
+      await waitFor(() => $(".md-input").value === "My own words");
+      if (fold.open || $("#helper-input").checkVisibility()) throw new Error("open on a page with words");
+      fold.open = true;
+      type($("#helper-input"), "Make this simpler");
+      byText("button", "Ask the AI").click();
+    }),
+    expect: inPage(() => $("details.helper").open && $(".understood")?.checkVisibility() && $(".md-input").value.startsWith("# Going")),
+  }),
+  scene({
+    name: "AI: write — I understood, the draft in the editor, Undo brings my text back",
     path: "/coach/#class/K7M3RQP9T",
     init: seed(`{ pages: { K7M3RQP9T: [{ id: "page1", title: "Mine", markdown: "My own words", createdAt: new Date(), updatedAt: new Date() }] } }`),
     setup: run(async () => {
       await waitFor(() => $(".md-input").value === "My own words");
       type($("#helper-input"), "Write a story about the dentist");
-      byText("button", "Ask the helper").click();
+      byText("button", "Ask the AI").click();
       await waitFor(() => $(".understood"));
       if (!$(".md-input").value.startsWith("# Going to the dentist")) throw new Error("no draft");
       const call = __fake.calls.find((c) => c.name === "writePage");
       if (call.data.markdown !== "My own words" || call.data.classCode !== "K7M3RQP9T" || call.data.title !== "Mine") throw new Error(JSON.stringify(call));
-      if (!byText(".usage-line", "Helper requests: 4 of 200 this month")) throw new Error("usage");
+      if (!byText(".usage-line", "AI requests: 4 of 200 this month")) throw new Error("usage");
       byText("button", "Undo: bring back my text").click();
     }),
     expect: inPage(() => $(".md-input").value === "My own words" && $(".title-input").value === "Mine" &&
@@ -611,7 +631,7 @@ export default [
       !$(".helper-result").textContent.includes("null")),
   }),
   scene({
-    name: "helper: ask — questions with answers to tap; the answers go back with the instruction",
+    name: "AI: ask — questions with answers to tap; the answers go back with the instruction",
     path: "/coach/#class/K7M3RQP9T",
     init: seed(`{ replies: { writePage: [
       { action: "ask", understood: "I understood: a page about the zoo", questions: [
@@ -622,7 +642,7 @@ export default [
     setup: run(async () => {
       await waitFor(() => $(".phone-empty"));
       type($("#helper-input"), "A page about the zoo?");
-      byText("button", "Ask the helper").click();
+      byText("button", "Ask the AI").click();
       await waitFor(() => $(".question"));
       const send = byText("button", "Send my answers");
       if (!send.disabled) throw new Error("send with nothing answered");
@@ -636,16 +656,16 @@ export default [
       byText(".understood", "a recipe for beer") && !$(".helper-result .is-problem") && byText(".usage-line", "5 of 200")),
   }),
   scene({
-    name: "helper: the function's own message (a limit) is shown as it is",
+    name: "AI: the function's own message (a limit) is shown as it is",
     path: "/coach/#class/K7M3RQP9T",
-    init: seed(`{ replies: { writePage: { error: { code: "resource-exhausted", message: "You have used all 200 helper requests for this month." } } } }`),
+    init: seed(`{ replies: { writePage: { error: { code: "resource-exhausted", message: "You have used all 200 AI requests for this month." } } } }`),
     setup: run(async () => {
       await waitFor(() => $(".phone-empty"));
       type($("#helper-input"), "Make it simpler");
-      byText("button", "Ask the helper").click();
+      byText("button", "Ask the AI").click();
       await waitFor(() => $(".helper-result .notice"));
     }),
-    expect: inPage(() => byText(".helper-result .notice", "You have used all 200 helper requests") && !$("#helper-input").disabled),
+    expect: inPage(() => byText(".helper-result .notice", "You have used all 200 AI requests") && !$("#helper-input").disabled),
   }),
 
   // ---------- pictures ----------
