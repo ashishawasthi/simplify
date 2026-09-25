@@ -5,9 +5,13 @@ rules_version = '2';
 //
 // Learners never sign in: all they may do is GET one active class by its code
 // (never list). Coaches sign in with Google, say who they are and which
-// institutions they work at, and can do nothing more until an admin approves
-// them (coaches/{uid}.status == 'approved'). An approved coach makes their own
-// classes; joining a colleague's class is a request the admin approves. The
+// institutions they work at (or name a place not in the list yet), and can do
+// nothing more until an admin approves them (coaches/{uid}.status ==
+// 'approved'). An approved coach makes their own classes; joining a
+// colleague's class is a request the admin approves. Admins are made in the
+// console only (admins/{uid}) and sign in with Google too; every approval,
+// decline and suspension they make is written together with an adminLog
+// entry saying who did it and — for an approval — how they checked. The
 // Cloud Functions use the Admin SDK, which skips these rules — so videos,
 // video plans and usage are written by the functions only.
 //
@@ -22,10 +26,31 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // admins/{uid} exists — created by the owner in the console, never by a client
-    function isAdmin() {
+    // signed in with a Google account (the only sign-in the apps offer; the
+    // email is the account's own, so the admin log can name it)
+    function withGoogle() {
       return signedIn()
+        && request.auth.token.firebase.sign_in_provider == 'google.com'
+        && request.auth.token.email_verified == true;
+    }
+
+    // admins/{uid} exists — created by the owner in the console, never by a
+    // client — and they signed in with Google
+    function isAdmin() {
+      return withGoogle()
         && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // The adminLog entry written in this same request by this admin, for this
+    // action and target (key == value): an admin's decision on a coach or a
+    // request is allowed only together with it — and the entry only together
+    // with the decision (adminLog below).
+    function loggedNow(logId, action, key, value) {
+      let entry = getAfter(/databases/$(database)/documents/adminLog/$(logId)).data;
+      return entry.action == action
+        && entry.adminUid == request.auth.uid
+        && entry.at == request.time
+        && entry.get(key, '') == value;
     }
 
     // the caller's coach profile (only call after checking it exists)
@@ -89,6 +114,11 @@ service cloud.firestore {
       return value is string && value.matches('^[A-Za-z0-9_-]{1,100}$');
     }
 
+    // a Firebase Authentication uid
+    function isUid(value) {
+      return value is string && value.matches('^[A-Za-z0-9_-]{1,128}$');
+    }
+
     // ---------- admins ----------
 
     // Anyone signed in may look for their OWN admin doc (the coach app shows the
@@ -122,60 +152,89 @@ service cloud.firestore {
     // ---------- coaches: who they are, where they work, and the admin's decision ----------
 
     match /coaches/{uid} {
-      // 1 to 10 different institution ids. The rules can't loop, so the ids are
+      // 0 to 10 different institution ids. The rules can't loop, so the ids are
       // checked as one comma-joined string — and splitting it again must give
       // back the same list, which only a list of strings does (join() would
       // turn a number into digits).
       function validInstitutions(v) {
-        return v is list && v.size() >= 1 && v.size() <= 10
-          && v.toSet().size() == v.size()
-          && v.join(',').matches('^[A-Za-z0-9_-]{1,100}(,[A-Za-z0-9_-]{1,100})*$')
-          && v.join(',').split(',') == v;
+        return v is list && v.size() <= 10
+          && (v.size() == 0
+              || (v.toSet().size() == v.size()
+                  && v.join(',').matches('^[A-Za-z0-9_-]{1,100}(,[A-Za-z0-9_-]{1,100})*$')
+                  && v.join(',').split(',') == v));
       }
 
+      // Where they work: institutions from the admin's list, and/or one place
+      // not in the list yet (otherPlace, in their own words) — at least one.
       function validProfile(d) {
         return filledText(d.name, 60)
           && text(d.get('note', ''), 300)
-          && validInstitutions(d.get('institutions', null));
+          && validInstitutions(d.get('institutions', null))
+          && text(d.get('otherPlace', ''), 120)
+          && (d.institutions.size() > 0 || d.get('otherPlace', '').trim().size() > 0);
       }
 
-      // a coach who changes their institutions stamps when (the admin's list
-      // says so if it was after approval); otherwise the stamp stays as it was
-      function institutionsStamped() {
-        return (incoming().institutions == resource.data.get('institutions', null)
+      // a coach who changes where they work stamps when (the admin's list says
+      // so if it was after approval); otherwise the stamp stays as it was
+      function placesStamped() {
+        let changed = incoming().institutions != resource.data.get('institutions', null)
+          || incoming().get('otherPlace', '') != resource.data.get('otherPlace', '');
+        return (!changed
                  && incoming().get('institutionsChangedAt', null) == resource.data.get('institutionsChangedAt', null))
-          || (incoming().institutions != resource.data.get('institutions', null)
-                 && incoming().get('institutionsChangedAt', null) == request.time);
+          || (changed && incoming().get('institutionsChangedAt', null) == request.time);
       }
 
       allow get: if (signedIn() && request.auth.uid == uid) || isAdmin();
       allow list: if isAdmin();
 
       // a coach writes their own profile, waiting for the admin: status 'pending',
-      // and the email must be the one they signed in with
-      allow create: if signedIn() && request.auth.uid == uid
-        && incoming().keys().hasOnly(['name', 'note', 'institutions', 'email', 'status', 'createdAt'])
+      // signed in with Google, and the email must be the one they signed in with
+      allow create: if withGoogle() && request.auth.uid == uid
+        && incoming().keys().hasOnly(['name', 'note', 'institutions', 'otherPlace', 'email', 'status', 'createdAt'])
         && incoming().keys().hasAll(['name', 'institutions', 'email', 'status', 'createdAt'])
         && validProfile(incoming())
         && incoming().status == 'pending'
         && incoming().email == request.auth.token.email
         && incoming().createdAt == request.time;
 
-      // the coach changes name / note / institutions only (any time, whatever the
-      // admin decided); an admin decides (status, stamped) or suspends — never both
-      // at once, and never the coach's own words
+      // The coach changes name / note / where they work (any time, whatever the
+      // admin decided), or — once declined — asks again (back to waiting).
+      // An admin decides (status, stamped, with its adminLog entry; a decline
+      // may carry a message the coach sees), suspends or lets back in (with
+      // its entry), or puts one more listed place on the profile in place of
+      // the coach's own words for it — never two of these at once, and never
+      // the coach's name or note.
       allow update: if (signedIn() && request.auth.uid == uid
-                         && onlyChanged(['name', 'note', 'institutions', 'institutionsChangedAt'])
+                         && onlyChanged(['name', 'note', 'institutions', 'otherPlace', 'institutionsChangedAt'])
                          && validProfile(incoming())
-                         && institutionsStamped())
+                         && placesStamped())
+                    || (signedIn() && request.auth.uid == uid
+                         && resource.data.get('status', '') == 'declined'
+                         && onlyChanged(['status', 'reappliedAt'])
+                         && incoming().status == 'pending'
+                         && incoming().reappliedAt == request.time)
                     || (isAdmin()
-                         && onlyChanged(['status', 'decidedAt', 'decidedBy'])
+                         && onlyChanged(['status', 'decidedAt', 'decidedBy', 'decisionLog', 'decisionMessage'])
                          && incoming().status in ['pending', 'approved', 'declined']
                          && incoming().decidedAt == request.time
-                         && incoming().decidedBy == request.auth.uid)
+                         && incoming().decidedBy == request.auth.uid
+                         && isId(incoming().get('decisionLog', ''))
+                         && loggedNow(incoming().decisionLog, 'coach-' + incoming().status, 'coach', uid)
+                         && (incoming().status == 'declined'
+                             ? text(incoming().get('decisionMessage', ''), 300)
+                             : !('decisionMessage' in incoming())))
                     || (isAdmin()
-                         && onlyChanged(['suspended'])
-                         && incoming().suspended is bool);
+                         && onlyChanged(['suspended', 'suspendLog'])
+                         && incoming().suspended is bool
+                         && isId(incoming().get('suspendLog', ''))
+                         && loggedNow(incoming().suspendLog,
+                              incoming().suspended ? 'coach-suspended' : 'coach-unsuspended', 'coach', uid))
+                    || (isAdmin()
+                         && onlyChanged(['institutions', 'otherPlace'])
+                         && !('otherPlace' in incoming())
+                         && validInstitutions(incoming().institutions)
+                         && incoming().institutions.size() == resource.data.get('institutions', []).size() + 1
+                         && incoming().institutions.hasAll(resource.data.get('institutions', [])));
     }
 
     // ---------- requests: joining a colleague's class (the admin approves) ----------
@@ -197,14 +256,17 @@ service cloud.firestore {
       allow create: if isApprovedCoach() && validRequest(incoming());
       // a coach reads (and lists, with where("uid", "==", uid)) only their own
       allow get, list: if (signedIn() && resource.data.uid == request.auth.uid) || isAdmin();
-      // the admin decides once: only status, decidedAt, decidedBy and resultCode change
+      // the admin decides once, with its adminLog entry: only status,
+      // decidedAt, decidedBy, decisionLog and resultCode change
       allow update: if isAdmin()
         && resource.data.status == 'pending'
-        && onlyChanged(['status', 'decidedAt', 'decidedBy', 'resultCode'])
+        && onlyChanged(['status', 'decidedAt', 'decidedBy', 'decisionLog', 'resultCode'])
         && incoming().status in ['approved', 'declined']
         && incoming().decidedAt == request.time
         && incoming().decidedBy == request.auth.uid
-        && (!('resultCode' in incoming()) || isCode(incoming().resultCode));
+        && (!('resultCode' in incoming()) || isCode(incoming().resultCode))
+        && isId(incoming().get('decisionLog', ''))
+        && loggedNow(incoming().decisionLog, 'join-' + incoming().status, 'request', requestId);
     }
 
     // ---------- classes: the public part (name + the latest published page) ----------
@@ -348,6 +410,54 @@ service cloud.firestore {
         && incoming().uids is list
         && incoming().uids.size() <= 50;
       allow delete: if isAdmin();
+    }
+
+    // ---------- adminLog: what each admin did, when, and why (append-only) ----------
+
+    // One entry per admin action, written in the same commit as the action.
+    // The admin is the one signed in (uid and Google email from the sign-in
+    // itself); names are copied in so the history still reads right after a
+    // rename. Approving a coach or a join request needs a note of at least 10
+    // characters: how the admin checked them. Nobody changes or deletes an
+    // entry — not even an admin (the owner can, in the console).
+    match /adminLog/{logId} {
+      function validEntry(d) {
+        return d.keys().hasOnly(['action', 'adminUid', 'adminEmail', 'at', 'note', 'coach', 'coachName', 'coachEmail',
+                                 'request', 'classCode', 'className', 'institution', 'institutionName', 'detail'])
+          && d.keys().hasAll(['action', 'adminUid', 'adminEmail', 'at', 'note'])
+          && d.action in ['coach-approved', 'coach-declined', 'coach-pending', 'coach-suspended', 'coach-unsuspended',
+                          'join-approved', 'join-declined', 'coach-removed', 'coach-added', 'coach-place-added',
+                          'institution-added', 'institution-edited', 'institution-retired', 'institution-restored',
+                          'class-suspended', 'class-restored', 'page-taken-down', 'page-put-back', 'limits-changed']
+          && d.adminUid == request.auth.uid
+          && d.adminEmail == request.auth.token.email
+          && d.at == request.time
+          && text(d.note, 500)
+          && (!(d.action in ['coach-approved', 'join-approved']) || d.note.trim().size() >= 10)
+          && (!('coach' in d) || isUid(d.coach))
+          && text(d.get('coachName', ''), 60)
+          && text(d.get('coachEmail', ''), 200)
+          && (!('request' in d) || isId(d.request))
+          && (!('classCode' in d) || isCode(d.classCode))
+          && text(d.get('className', ''), 30)
+          && (!('institution' in d) || isInstitutionId(d.institution))
+          && text(d.get('institutionName', ''), 80)
+          && text(d.get('detail', ''), 200);
+      }
+
+      // a decision's entry only together with the decision it records
+      function withItsDecision(d) {
+        return d.action in ['coach-approved', 'coach-declined', 'coach-pending']
+            ? getAfter(/databases/$(database)/documents/coaches/$(d.coach)).data.get('decisionLog', '') == logId
+          : d.action in ['coach-suspended', 'coach-unsuspended']
+            ? getAfter(/databases/$(database)/documents/coaches/$(d.coach)).data.get('suspendLog', '') == logId
+          : d.action in ['join-approved', 'join-declined']
+            ? getAfter(/databases/$(database)/documents/requests/$(d.request)).data.get('decisionLog', '') == logId
+          : true;
+      }
+
+      allow get, list: if isAdmin();
+      allow create: if isAdmin() && isId(logId) && validEntry(incoming()) && withItsDecision(incoming());
     }
 
     // ---------- usage/{uid}_{YYYY-MM}: written only by the Cloud Functions ----------

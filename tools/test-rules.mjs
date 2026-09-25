@@ -67,13 +67,13 @@ async function runInside() {
   const NOW = Symbol("server time");
 
   // an unsigned ID token, as the Auth emulator would issue for a Google sign-in
-  function token(uid, email = `${uid}@example.com`) {
+  function token(uid, email = `${uid}@example.com`, provider = "google.com") {
     const b64 = (o) => Buffer.from(JSON.stringify(o)).toString("base64url");
     const t = Math.floor(Date.now() / 1000);
     return `${b64({ alg: "none", typ: "JWT" })}.${b64({
       iss: `https://securetoken.google.com/${PROJECT}`, aud: PROJECT, sub: uid, user_id: uid,
       auth_time: t, iat: t, exp: t + 3600, email, email_verified: true,
-      firebase: { identities: { "google.com": [uid], email: [email] }, sign_in_provider: "google.com" },
+      firebase: { identities: { [provider]: [uid], email: [email] }, sign_in_provider: provider },
     })}.`;
   }
 
@@ -82,12 +82,15 @@ async function runInside() {
     learner: null,
     owner: "owner",
     admin: token("admin1"),
+    adminPw: token("admin2", "admin2@example.com", "password"), // an admin doc, but signed in with a password
     coachA: token("coachA"), // approved; coach of the active class and of the paused class
     coachB: token("coachB"), // approved, but a coach of neither class
     coachS: token("coachS"), // approved and listed for the active class, but suspended
     coachP: token("coachP"), // listed for the active class, but still waiting for the admin
     coachD: token("coachD"), // the admin declined them
     newbie: token("newbie"), // signed in, no coach profile yet
+    newbie2: token("newbie2"), // signed in, no profile yet; their school isn't in the list
+    pwUser: token("pwUser", "pw@example.com", "password"), // signed in with a password, not Google
   };
 
   // ---- Firestore REST ----
@@ -133,16 +136,18 @@ async function runInside() {
       update: { name: docName(path), fields: fields(data) }, currentDocument: { exists: false }, updateTransforms: transforms(data),
     }),
     set: (path, data) => ({ update: { name: docName(path), fields: fields(data) }, updateTransforms: transforms(data) }),
+    // merge the given fields (a path in mask but not in data is deleted)
+    update: (path, data, mask = Object.keys(data)) => ({
+      update: { name: docName(path), fields: fields(data) },
+      updateMask: { fieldPaths: mask.filter((p) => !nowPaths(data).includes(p)) },
+      currentDocument: { exists: true }, updateTransforms: transforms(data),
+    }),
   };
   const batch = lazy((who, writes) => commit(who, writes));
   // create (fails if it exists), set (replace), update (merge the given fields; mask = their paths)
   const create = lazy((who, path, data) => commit(who, [W.create(path, data)]));
   const set = lazy((who, path, data) => commit(who, [W.set(path, data)]));
-  const update = lazy((who, path, data, mask = Object.keys(data)) => commit(who, [{
-    update: { name: docName(path), fields: fields(data) },
-    updateMask: { fieldPaths: mask.filter((p) => !nowPaths(data).includes(p)) },
-    currentDocument: { exists: true }, updateTransforms: transforms(data),
-  }]));
+  const update = lazy((who, path, data, mask) => commit(who, [W.update(path, data, mask)]));
   const remove = lazy((who, path) => commit(who, [{ delete: docName(path) }]));
   const get = lazy(async (who, path) => (await fetch(`${FS}/${path}`, { headers: headers(who) })).status);
   const list = get; // a GET of a collection path is a list
@@ -191,6 +196,9 @@ async function runInside() {
   const approved = { status: "approved", decidedAt: past, decidedBy: "admin1" };
   const seeds = {
     "admins/admin1": {},
+    "admins/admin2": {},
+    // an entry from an earlier decision (it can't be used for a new one)
+    "adminLog/old1": { action: "coach-approved", adminUid: "admin1", adminEmail: "admin1@example.com", at: past, note: "Seen taking classes at AWWA School @ Napiri", coach: "coachA" },
     "institutions/awwa-school-napiri": { name: "AWWA School @ Napiri", org: "AWWA", type: "SPED school", area: "Hougang", active: true, updatedAt: past },
     "institutions/awwa-school-bedok": { name: "AWWA School @ Bedok", org: "AWWA", type: "SPED school", area: "Bedok", active: true, updatedAt: past },
     // retired by the admin (for the tests; the real one is not)
@@ -250,6 +258,24 @@ async function runInside() {
   ]);
   const profile = (uid, extra = {}) => ({ name: "New Coach", note: "Ask Ms Tan", institutions: ["awwa-school-napiri"], email: `${uid}@example.com`, status: "pending", createdAt: NOW, ...extra });
   const joinRequest = (uid, extra = {}) => ({ uid, kind: "join-class", classCode: A, note: "", status: "pending", createdAt: NOW, ...extra });
+  // the admin's log entry, as the coach app writes it
+  const CHECKED = "Seen taking classes at AWWA School @ Napiri";
+  const entry = (action, extra = {}) => ({ action, adminUid: "admin1", adminEmail: "admin1@example.com", at: NOW, note: "", ...extra });
+  let logs = 0;
+  // an admin's decision on a coach and its log entry, in one commit
+  // (only: "coach" or "log" sends just that half; mask: see W.update)
+  const decide = (who, coach, status, { note = status === "approved" ? CHECKED : "", log = {}, fields = {}, mask, only, logId = `log${++logs}` } = {}) => batch(who, [
+    ...(only === "coach" ? [] : [W.create(`adminLog/${logId}`, entry(`coach-${status}`, { coach, coachName: "A coach", note, ...log }))]),
+    ...(only === "log" ? [] : [W.update(`coaches/${coach}`, { status, decidedAt: NOW, decidedBy: "admin1", decisionLog: logId, ...fields }, mask)]),
+  ]);
+  const suspend = (who, coach, suspended, { only, logId = `log${++logs}` } = {}) => batch(who, [
+    ...(only === "coach" ? [] : [W.create(`adminLog/${logId}`, entry(suspended ? "coach-suspended" : "coach-unsuspended", { coach }))]),
+    ...(only === "log" ? [] : [W.update(`coaches/${coach}`, { suspended, suspendLog: logId })]),
+  ]);
+  const decideRequest = (who, request, status, { note = status === "approved" ? "Seen teaching 3 Kindness with Coach A" : "", fields = {}, log = {}, only, logId = `log${++logs}` } = {}) => batch(who, [
+    ...(only === "request" ? [] : [W.create(`adminLog/${logId}`, entry(`join-${status}`, { request, note, ...log }))]),
+    ...(only === "log" ? [] : [W.update(`requests/${request}`, { status, decidedAt: NOW, decidedBy: "admin1", decisionLog: logId, ...fields })]),
+  ]);
 
   const cases = [
     "— learner (not signed in)",
@@ -416,6 +442,11 @@ async function runInside() {
     ["cannot ask to join a class", create("coachD", "requests/rD", joinRequest("coachD")), NO],
     ["cannot undo the decision", update("coachD", "coaches/coachD", { status: "pending", decidedAt: NOW, decidedBy: "coachD" }), NO],
     ["may still change its profile", update("coachD", "coaches/coachD", { note: "I teach at Centre North, call Ms Tan" }), OK],
+    ["cannot approve itself by asking again", update("coachD", "coaches/coachD", { status: "approved", reappliedAt: NOW }), NO],
+    ["cannot ask again without stamping when", update("coachD", "coaches/coachD", { status: "pending" }), NO],
+    ["asks the admin again (back to waiting)", update("coachD", "coaches/coachD", { status: "pending", reappliedAt: NOW }), OK],
+    ["cannot ask again while waiting", update("coachD", "coaches/coachD", { status: "pending", reappliedAt: NOW }), NO],
+    ["an approved coach cannot 'ask again'", update("coachA", "coaches/coachA", { status: "pending", reappliedAt: NOW }), NO],
 
     "— a suspended coach (coachS, approved, still listed)",
     ["cannot read the class's pages", list("coachS", `classes/${A}/pages`), NO],
@@ -436,6 +467,15 @@ async function runInside() {
     ["cannot write a profile with an empty name", create("newbie", "coaches/newbie", profile("newbie", { name: " " })), NO],
     ["cannot write a profile with a note over 300", create("newbie", "coaches/newbie", profile("newbie", { note: long(301) })), NO],
     ["cannot write a profile with no institution", create("newbie", "coaches/newbie", profile("newbie", { institutions: [] })), NO],
+    ["cannot write a profile with a blank place not in the list", create("newbie", "coaches/newbie", profile("newbie", { institutions: [], otherPlace: "  " })), NO],
+    ["cannot write a place not in the list over 120", create("newbie", "coaches/newbie", profile("newbie", { institutions: [], otherPlace: long(121) })), NO],
+    ["cannot sign up without Google", create("pwUser", "coaches/pwUser", profile("pwUser", { email: "pw@example.com" })), NO],
+    ["writes a profile naming a school not in the list", create("newbie2", "coaches/newbie2", profile("newbie2", { institutions: [], otherPlace: "Rainbow Centre Yishun Park" })), OK],
+    ["changes that place, stamped", update("newbie2", "coaches/newbie2", { otherPlace: "Rainbow Centre – Yishun Park", institutionsChangedAt: NOW }), OK],
+    ["cannot change it without stamping when", update("newbie2", "coaches/newbie2", { otherPlace: "Rainbow Centre" }), NO],
+    ["cannot take away its only place", update("newbie2", "coaches/newbie2", { institutionsChangedAt: NOW }, ["otherPlace", "institutionsChangedAt"]), NO],
+    ["cannot read the admin log", list("newbie2", "adminLog"), NO],
+    ["cannot write the admin log", create("newbie2", "adminLog/n1", entry("institution-added", { adminUid: "newbie2", adminEmail: "newbie2@example.com" })), NO],
     ["cannot write a profile with an organisation", create("newbie", "coaches/newbie", profile("newbie", { org: "Centre" })), NO],
     ["cannot write someone else's profile", create("newbie", "coaches/other", profile("newbie")), NO],
     ["writes its profile, waiting for the admin", create("newbie", "coaches/newbie", profile("newbie")), OK],
@@ -445,17 +485,44 @@ async function runInside() {
 
     "— admin",
     ["lists coaches waiting (status == pending)", query("admin", "", where("coaches", "status", "EQUAL", "pending")), OK],
-    ["cannot approve a coach in someone else's name", update("admin", "coaches/newbie", { status: "approved", decidedAt: NOW, decidedBy: "coachA" }), NO],
-    ["cannot approve a coach without stamping when", update("admin", "coaches/newbie", { status: "approved", decidedBy: "admin1" }), NO],
-    ["cannot give a coach a made-up status", update("admin", "coaches/newbie", { status: "boss", decidedAt: NOW, decidedBy: "admin1" }), NO],
-    ["cannot approve and suspend in one go", update("admin", "coaches/newbie", { status: "approved", decidedAt: NOW, decidedBy: "admin1", suspended: false }), NO],
+    ["cannot approve a coach in someone else's name", decide("admin", "newbie", "approved", { fields: { decidedBy: "coachA" } }), NO],
+    ["cannot approve a coach without stamping when", decide("admin", "newbie", "approved", { fields: { decidedAt: past } }), NO],
+    ["cannot give a coach a made-up status", decide("admin", "newbie", "boss"), NO],
+    ["cannot approve and suspend in one go", decide("admin", "newbie", "approved", { fields: { suspended: false } }), NO],
     ["cannot change a coach's institutions", update("admin", "coaches/newbie", { institutions: ["awwa-school-bedok"], institutionsChangedAt: NOW }), NO],
-    ["approves a coach", update("admin", "coaches/newbie", { status: "approved", decidedAt: NOW, decidedBy: "admin1" }), OK],
+    ["cannot approve a coach with no log entry", decide("admin", "newbie", "approved", { only: "coach" }), NO],
+    ["cannot approve with an earlier decision's entry", decide("admin", "newbie", "approved", { only: "coach", logId: "old1" }), NO],
+    ["cannot log an approval that isn't made", decide("admin", "newbie", "approved", { only: "log" }), NO],
+    ["cannot approve without saying how they checked", decide("admin", "newbie", "approved", { note: "" }), NO],
+    ["cannot approve with a note under 10 characters", decide("admin", "newbie", "approved", { note: "  ok, seen " }), NO],
+    ["cannot approve with a note over 500", decide("admin", "newbie", "approved", { note: long(501) }), NO],
+    ["cannot log another admin's name", decide("admin", "newbie", "approved", { log: { adminUid: "admin2" } }), NO],
+    ["cannot log another email", decide("admin", "newbie", "approved", { log: { adminEmail: "boss@example.com" } }), NO],
+    ["cannot log an approval of another coach", decide("admin", "newbie", "approved", { log: { coach: "coachB" } }), NO],
+    ["cannot log a decline for an approval", decide("admin", "newbie", "approved", { log: { action: "coach-declined" } }), NO],
+    ["cannot log with an extra field", decide("admin", "newbie", "approved", { log: { ip: "1.2.3.4" } }), NO],
+    ["an admin signed in without Google cannot approve", decide("adminPw", "newbie", "approved", { log: { adminUid: "admin2", adminEmail: "admin2@example.com" }, fields: { decidedBy: "admin2" } }), NO],
+    ["an admin signed in without Google cannot list coaches", list("adminPw", "coaches"), NO],
+    ["approves a coach, saying how they checked (logged)", decide("admin", "newbie", "approved", { logId: "logNewbie" }), OK],
+    ["reads the log entry", get("admin", "adminLog/logNewbie"), OK],
+    ["cannot change a log entry", update("admin", "adminLog/logNewbie", { note: "Something else entirely" }), NO],
+    ["cannot delete a log entry", remove("admin", "adminLog/logNewbie"), NO],
+    ["cannot write over a log entry", set("admin", "adminLog/logNewbie", entry("institution-added")), NO],
+    ["the coach cannot read the admin log", get("newbie", "adminLog/logNewbie"), NO],
     ["... who then makes a class", makeClass("newbie", "Q2W3E4R5T"), OK],
-    ["declines a coach", update("admin", "coaches/coachP", { status: "declined", decidedAt: NOW, decidedBy: "admin1" }), OK],
-    ["puts a decision back to waiting (Undo)", update("admin", "coaches/coachP", { status: "pending", decidedAt: NOW, decidedBy: "admin1" }), OK],
-    ["approves a declined coach later", update("admin", "coaches/coachD", { status: "approved", decidedAt: NOW, decidedBy: "admin1" }), OK],
-    ["approves a coach made before approvals (no status)", update("admin", "coaches/legacy", { status: "approved", decidedAt: NOW, decidedBy: "admin1" }), OK],
+    ["cannot decline with a message over 300", decide("admin", "coachP", "declined", { fields: { decisionMessage: long(301) } }), NO],
+    ["declines a coach, with a message they see (logged)", decide("admin", "coachP", "declined", { note: "Choose your school, please", fields: { decisionMessage: "Choose your school, please" } }), OK],
+    ["cannot approve and keep the decline's message", decide("admin", "coachP", "approved"), NO],
+    ["cannot put a message on an approval", decide("admin", "coachP", "approved", { fields: { decisionMessage: "Welcome" } }), NO],
+    ["puts a decision back to waiting (the message goes)", decide("admin", "coachP", "pending", { mask: ["status", "decidedAt", "decidedBy", "decisionLog", "decisionMessage"] }), OK],
+    ["approves a coach who asked again", decide("admin", "coachD", "approved"), OK],
+    ["approves a coach made before approvals (no status)", decide("admin", "legacy", "approved"), OK],
+    ["puts a listed place on a coach's profile in place of their words",
+      update("admin", "coaches/newbie2", { institutions: ["awwa-school-bedok"] }, ["institutions", "otherPlace"]), OK],
+    ["cannot swap a coach's places", update("admin", "coaches/coachB", { institutions: ["awwa-school-napiri"] }), NO],
+    ["cannot put a place on a profile and rename the coach", update("admin", "coaches/coachB", { institutions: ["awwa-school-bedok", "awwa-school-napiri"], name: "B" }), NO],
+    ["logs an admin action that needs no decision (an institution)", create("admin", "adminLog/logInst", entry("institution-added", { institution: "awwa-eic-fernvale-link", institutionName: "AWWA Early Intervention Centre @ Fernvale Link" })), OK],
+    ["lists the admin log", list("admin", "adminLog"), OK],
     ["adds an institution", create("admin", "institutions/awwa-eic-fernvale-link", { name: "AWWA Early Intervention Centre @ Fernvale Link", org: "AWWA", type: "Early intervention", area: "Sengkang", active: true, updatedAt: NOW }), OK],
     ["cannot add one with a name over 80", create("admin", "institutions/x1", { name: long(81), org: "A", type: "", area: "", active: true, updatedAt: NOW }), NO],
     ["cannot add one with no organisation", create("admin", "institutions/x2", { name: "X", org: " ", type: "", area: "", active: true, updatedAt: NOW }), NO],
@@ -467,10 +534,13 @@ async function runInside() {
     ["cannot delete an institution", remove("admin", "institutions/awwa-eic-fernvale-link"), NO],
     ["cannot make a class through the back door (no approved profile)", makeClass("admin", "Q2W3E4R5W", { uids: ["admin1"] }), NO],
     ["lists pending requests", query("admin", "", where("requests", "status", "EQUAL", "pending")), OK],
-    ["approves a request", update("admin", "requests/reqA", { status: "approved", decidedAt: NOW, decidedBy: "admin1", resultCode: "Q2W3E4R5T" }), OK],
-    ["cannot decide a request twice", update("admin", "requests/reqA", { status: "declined", decidedAt: NOW, decidedBy: "admin1" }), NO],
-    ["cannot change who asked", update("admin", "requests/reqB", { uid: "coachA", status: "declined", decidedAt: NOW, decidedBy: "admin1" }), NO],
-    ["declines a request", update("admin", "requests/reqB", { status: "declined", decidedAt: NOW, decidedBy: "admin1" }), OK],
+    ["cannot approve a request with no log entry", decideRequest("admin", "reqA", "approved", { only: "request", fields: { resultCode: "Q2W3E4R5T" } }), NO],
+    ["cannot approve a request without saying how they checked", decideRequest("admin", "reqA", "approved", { note: "fine", fields: { resultCode: "Q2W3E4R5T" } }), NO],
+    ["cannot log it against another request", decideRequest("admin", "reqA", "approved", { log: { request: "reqB" }, fields: { resultCode: "Q2W3E4R5T" } }), NO],
+    ["approves a request (logged)", decideRequest("admin", "reqA", "approved", { fields: { resultCode: "Q2W3E4R5T" } }), OK],
+    ["cannot decide a request twice", decideRequest("admin", "reqA", "declined"), NO],
+    ["cannot change who asked", decideRequest("admin", "reqB", "declined", { fields: { uid: "coachA" } }), NO],
+    ["declines a request (logged)", decideRequest("admin", "reqB", "declined"), OK],
     ["adds a coach to a class (approving a join request)", update("admin", "classCoaches/Q2W3E4R5T", { uids: ["newbie", "coachA"] }), OK],
     ["cannot list 51 coaches for a class", update("admin", "classCoaches/Q2W3E4R5T", { uids: Array.from({ length: 51 }, (_, i) => `c${i}`) }), NO],
     ["lists all classes", list("admin", "classes"), OK],
@@ -481,7 +551,10 @@ async function runInside() {
     ["un-pauses a class made before institutions (org)", update("admin", `classes/${P}`, { status: "active", updatedAt: NOW }), OK],
     ["cannot give a class a bad institution id", update("admin", `classes/${A}`, { institution: "a/b", updatedAt: NOW }), NO],
     ["cannot give a class a made-up status", update("admin", `classes/${A}`, { status: "deleted", updatedAt: NOW }), NO],
-    ["suspends a coach", update("admin", "coaches/coachB", { suspended: true }), OK],
+    ["cannot suspend a coach with no log entry", suspend("admin", "coachB", true, { only: "coach" }), NO],
+    ["cannot log a suspension that isn't made", suspend("admin", "coachB", true, { only: "log" }), NO],
+    ["suspends a coach (logged)", suspend("admin", "coachB", true), OK],
+    ["lets a coach back in (logged)", suspend("admin", "coachB", false), OK],
     ["cannot rename a coach", update("admin", "coaches/coachA", { name: "Someone" }), NO],
     ["lists coaches", list("admin", "coaches"), OK],
     ["reads any class's pages", list("admin", `classes/${A}/pages`), OK],
