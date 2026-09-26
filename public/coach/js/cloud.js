@@ -254,6 +254,13 @@ export async function askToJoinClass(uid, { classCode, note }) {
   }));
 }
 
+// More videos a month than everyone gets: a request the admin decides.
+export async function askForMoreVideos(uid, { note }) {
+  await attempt(() => addDoc(collection(db, "requests"), {
+    uid, kind: "more-videos", note, status: "pending", createdAt: serverTimestamp(),
+  }), "The request could not be sent. Try again.");
+}
+
 // ---------- one class ----------
 
 export async function getClass(code) {
@@ -377,10 +384,9 @@ export async function draftVideoUrl(code, id) {
 
 // ---- the Cloud Functions ----
 
-// startVideo can take two minutes or more before Gemini accepts the job
 const TIMEOUTS = {
-  writePage: 120_000, planVideo: 120_000, startVideo: 540_000,
-  checkVideo: 120_000, approveVideo: 180_000, discardVideo: 60_000,
+  writePage: 120_000, planOverlay: 120_000, makeVideo: 70_000,
+  checkVideo: 70_000, approveVideo: 180_000, discardVideo: 60_000,
 };
 export async function callFunction(name, data) {
   return attempt(async () => {
@@ -391,19 +397,20 @@ export async function callFunction(name, data) {
 
 // ---- monthly use ----
 
-export const DEFAULT_LIMITS = Object.freeze({ flashPerMonth: 200, videosPerMonth: 5 });
+export const DEFAULT_LIMITS = Object.freeze({ flashPerMonth: 200, videosPerMonth: 20 });
 
-export async function getLimits() {
-  try {
-    const snap = await getDoc(doc(db, "config", "limits"));
-    const data = snap.exists() ? snap.data() : {};
-    return {
-      flashPerMonth: Number.isInteger(data.flashPerMonth) ? data.flashPerMonth : DEFAULT_LIMITS.flashPerMonth,
-      videosPerMonth: Number.isInteger(data.videosPerMonth) ? data.videosPerMonth : DEFAULT_LIMITS.videosPerMonth,
-    };
-  } catch {
-    return { ...DEFAULT_LIMITS };
-  }
+// Everyone's monthly limits — and, given a coach's uid, theirs: an admin may
+// have given them more videos a month (coaches/{uid}.limits), as the
+// functions count them (functions/lib.js limitsFrom).
+export async function getLimits(uid = null) {
+  const all = await getDoc(doc(db, "config", "limits")).then((snap) => (snap.exists() ? snap.data() : {}), () => ({}));
+  const own = uid ? await getDoc(doc(db, "coaches", uid)).then((snap) => snap.data()?.limits ?? {}, () => ({})) : {};
+  const count = (...values) => values.find((v) => Number.isInteger(v) && v >= 0);
+  return {
+    flashPerMonth: count(own.flashPerMonth, all.flashPerMonth, DEFAULT_LIMITS.flashPerMonth),
+    videosPerMonth: count(own.videosPerMonth, all.videosPerMonth, DEFAULT_LIMITS.videosPerMonth),
+    ownVideos: Number.isInteger(own.videosPerMonth), // this coach's own limit, not everyone's
+  };
 }
 
 // this coach's use this month (Singapore time): { flash, video }
@@ -616,9 +623,24 @@ export async function approveRequest(request, admin, { note, coach, cls }) {
   return code;
 }
 
+// More videos a month for one coach: their own limit, the request decided,
+// and the log entry — all or nothing.
+export async function approveMoreVideos(request, admin, { videosPerMonth, note, coach }) {
+  await attempt(() => runTransaction(db, async (tx) => {
+    const requestDoc = doc(db, "requests", request.id);
+    stillPending(await tx.get(requestDoc));
+    const [logRef, entry] = logEntry(admin, "more-videos-approved", {
+      request: request.id, ...(coach ? coachFacts(coach) : { coach: request.uid }), note, detail: `${videosPerMonth} videos a month`,
+    });
+    tx.set(logRef, entry);
+    tx.update(doc(db, "coaches", request.uid), { limits: { videosPerMonth }, limitsLog: logRef.id });
+    tx.update(requestDoc, { status: "approved", decidedAt: serverTimestamp(), decidedBy: admin.uid, decisionLog: logRef.id, videosPerMonth });
+  }));
+}
+
 export async function declineRequest(request, admin, { note = "", coach, cls } = {}) {
   const code = request.classCode;
-  await logged(admin, "join-declined", {
+  await logged(admin, request.kind === "more-videos" ? "more-videos-declined" : "join-declined", {
     request: request.id, ...(coach ? coachFacts(coach) : { coach: request.uid }),
     ...(cls ? classFacts(cls) : code ? { classCode: code } : {}), note,
   }, (batch, id) => {

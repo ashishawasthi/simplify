@@ -1,8 +1,8 @@
 ---
 type: Operations Runbook
 title: Cloud Project
-description: What exists in the Firebase / Google Cloud project simplify-special (billing, APIs, Firestore, the Realtime Database for the push signal, the Storage bucket and its CORS, the functions' service account and IAM, the Storage service agent, the budget, Authentication, Cloud Functions and the classSignal trigger, Hosting and the custom domain, the first admin), how each was set up (2026-09-23; the Realtime Database 2026-09-26) and how to recreate it, and the hosts a school network must allow.
-tags: [firebase, google-cloud, iam, firestore, realtime-database, cloud-storage, cloud-functions, eventarc, authentication, hosting, runbook]
+description: What exists in the Firebase / Google Cloud project simplify-special (billing, APIs, Firestore, the Realtime Database for the push signal, the Storage bucket and its CORS, the functions' service account and IAM, the Storage service agent, the budget, Authentication, Cloud Functions and the classSignal trigger, the video renderer — Cloud Run job simplify-video, its service account and roles, the Artifact Registry repository, the public guide-videos bucket — Hosting and the custom domain, the first admin), how each was set up (2026-09-23; the Realtime Database and the video renderer 2026-09-26) and how to recreate it, and the hosts a school network must allow.
+tags: [firebase, google-cloud, iam, firestore, realtime-database, cloud-storage, cloud-functions, cloud-run, artifact-registry, eventarc, authentication, hosting, runbook]
 status: stable
 ---
 
@@ -20,13 +20,15 @@ Everything Simplify runs on lives in one Firebase / Google Cloud project, `simpl
 | Storage rules → Firestore | Firebase Storage service agent holds `roles/firebaserules.firestoreServiceAgent` |
 | Budget | "simplify-special monthly (S$50)": S$50 a month, this project only, alerts at 50%, 90% and 100% of actual spend |
 | Authentication | Google provider on; authorized domains `simplify.whiz.coach`, `simplify-special.web.app`, `simplify-special.firebaseapp.com`, `localhost` |
-| Cloud Functions | six 2nd-gen callables in `asia-southeast1`, Node.js 22, 256 MiB, max 10 instances, running as `simplify-functions`, invokable by `allUsers`; one Firestore trigger, `classSignal`, through Eventarc |
+| Cloud Functions | six 2nd-gen callables in `asia-southeast1`, Node.js 22, 256 MiB, max 10 instances, running as `simplify-functions`, invokable by `allUsers`; one Firestore trigger, `classSignal`, through Eventarc; `simplify-functions` holds `roles/run.developer` on the job `simplify-video` and `roles/iam.serviceAccountUser` on `simplify-video@` |
+| Video renderer | Cloud Run job `simplify-video`, `asia-southeast1`, 2 CPU, 4 GiB, 30-minute task timeout, no retries, running as `simplify-video@simplify-special.iam.gserviceaccount.com`; image in the Artifact Registry repository `simplify` (Docker, `asia-southeast1`) |
+| Guide videos | `gs://simplify-guide-videos`, `asia-southeast1`, uniform access, public to read |
 | Hosting | default site `simplify-special` (`simplify-special.web.app`), custom domain `simplify.whiz.coach` active with its certificate |
-| AI | Vertex AI API on; Gemini called on the `global` endpoint (see [AI models](/platform/ai-models.md)) |
+| AI and voice | Vertex AI API on; Gemini called on the `global` endpoint (see [AI models](/platform/ai-models.md)); Cloud Text-to-Speech for the recorded voice and the videos |
 
 ## Billing and APIs
 
-The project is on the **Blaze** plan: Cloud Storage for Firebase needs it for a bucket since 3 February 2026, and so do Cloud Functions. The APIs the app depends on are enabled: `firestore`, `firebasestorage`, `storage`, `firebaserules`, `identitytoolkit`, `securetoken`, `firebasehosting`, `cloudfunctions`, `run`, `cloudbuild`, `artifactregistry`, `eventarc`, `aiplatform`, `billingbudgets` and `firebasedatabase` (all `.googleapis.com`).
+The project is on the **Blaze** plan: Cloud Storage for Firebase needs it for a bucket since 3 February 2026, and so do Cloud Functions. The APIs the app depends on are enabled: `firestore`, `firebasestorage`, `storage`, `firebaserules`, `identitytoolkit`, `securetoken`, `firebasehosting`, `cloudfunctions`, `run`, `cloudbuild`, `artifactregistry`, `eventarc`, `aiplatform`, `billingbudgets`, `firebasedatabase` and `texttospeech` (all `.googleapis.com`).
 
 ```sh
 gcloud billing projects link simplify-special --billing-account=<BILLING_ACCOUNT_ID>
@@ -34,7 +36,7 @@ gcloud services enable firestore.googleapis.com firebasestorage.googleapis.com s
   firebaserules.googleapis.com identitytoolkit.googleapis.com securetoken.googleapis.com \
   firebasehosting.googleapis.com cloudfunctions.googleapis.com run.googleapis.com cloudbuild.googleapis.com \
   artifactregistry.googleapis.com eventarc.googleapis.com aiplatform.googleapis.com \
-  billingbudgets.googleapis.com firebasedatabase.googleapis.com --project simplify-special
+  billingbudgets.googleapis.com firebasedatabase.googleapis.com texttospeech.googleapis.com --project simplify-special
 ```
 
 ## Firestore
@@ -95,7 +97,7 @@ gcloud storage buckets add-iam-policy-binding gs://simplify-special.firebasestor
 
 Whoever deploys the functions must be allowed to act as this account (`roles/iam.serviceAccountUser` on it; project owners already are). The Firebase CLI also checks, before any functions deploy, that the deployer may act as the App Engine default account `simplify-special@appspot.gserviceaccount.com`, although nothing runs as it (there is no App Engine app, scheduled job or extension). That account held the project-wide Editor role by Google's default; the owner removed it (2026-09-25), so it holds no roles, and the CI deploy account may act as it without gaining anything. If a Google service ever needs it again, it will fail with a permission error naming that account.
 
-Function builds (Cloud Build) run as the default compute account `908084220716-compute@developer.gserviceaccount.com`, so a deployer must be allowed to act as it too. It also held Editor by default; the owner replaced that (2026-09-25) with **Cloud Build Builder** alone — read the uploaded source, write build logs, push the image to `gcf-artifacts` — which is all a build uses (nothing else runs as it: no VMs, no Cloud Run jobs). A build failing for a missing permission would name this account; put the permission (not Editor) back.
+Function builds (Cloud Build) run as the default compute account `908084220716-compute@developer.gserviceaccount.com`, so a deployer must be allowed to act as it too. It also held Editor by default; the owner replaced that (2026-09-25) with **Cloud Build Builder** alone — read the uploaded source, write build logs, push the image to `gcf-artifacts` — which is all a build uses (nothing else runs as it: no VMs, and the Cloud Run job runs as its own account). The video renderer's image is built by Cloud Build as this account too. A build failing for a missing permission would name this account; put the permission (not Editor) back.
 
 ## Storage rules can read Firestore
 
@@ -126,7 +128,7 @@ The coach app's web config (`public/coach/js/firebase-config.js`) comes from `fi
 
 ## Cloud Functions
 
-Six 2nd-gen HTTPS callables, `writePage`, `planVideo`, `startVideo`, `checkVideo`, `approveVideo` and `discardVideo`, in `asia-southeast1`, on Node.js 22 (`runtime` in `firebase.json`), 256 MiB, at most 10 instances each (`maxInstances` in `functions/index.js`), running as `simplify-functions`. Each Cloud Run service grants `roles/run.invoker` to `allUsers`, as callables require; every handler checks the caller itself (`requireClassCoach` in `functions/lib.js`). Environment: `GCLOUD_PROJECT` (set by the platform) and the optional `SIMPLIFY_BUCKET`, defaulting to `simplify-special.firebasestorage.app`. There are no secrets: Gemini is reached through Vertex AI with the service account's own credentials.
+Six 2nd-gen HTTPS callables, `writePage`, `planOverlay`, `makeVideo`, `checkVideo`, `approveVideo` and `discardVideo`, in `asia-southeast1`, on Node.js 22 (`runtime` in `firebase.json`), 256 MiB, at most 10 instances each (`maxInstances` in `functions/index.js`), running as `simplify-functions`. Each Cloud Run service grants `roles/run.invoker` to `allUsers`, as callables require; every handler checks the caller itself (`requireClassCoach` in `functions/lib.js`). Environment: `GCLOUD_PROJECT` (set by the platform) and the optional `SIMPLIFY_BUCKET`, defaulting to `simplify-special.firebasestorage.app`, and `SIMPLIFY_RENDER_JOB`, defaulting to `simplify-video`. There are no secrets: Gemini is reached through Vertex AI, and the video job through the Cloud Run Admin API, with the service account's own credentials.
 
 One Firestore trigger, `classSignal` (`onDocumentWritten("classes/{code}")`, same region, same identity), writes the push signal to the Realtime Database whenever a class's page changes (`functions/signal.js`). It is delivered through Eventarc: the Eventarc service agent (`service-908084220716@gcp-sa-eventarc.iam.gserviceaccount.com`, `roles/eventarc.serviceAgent`) and `simplify-functions`' `roles/eventarc.eventReceiver`. The very first deploy of a trigger in a project can fail with "Permission denied while using the Eventarc Service Agent" while those permissions spread; deploying again a few minutes later works. Eventarc delivers each event through a Pub/Sub push subscription that calls the function's Cloud Run service as `simplify-functions`, so that account needs `roles/run.invoker` on the `classsignal` service — granted on that one service only (2026-09-26), since the CLI did not grant it. Without it the logs show 403 "lacks run.routes.invoke" and no signal is written. A function deleted and made again needs it again:
 
@@ -142,6 +144,62 @@ firebase deploy --only functions
 ```
 
 The coach app's CSP names the functions' origin, `https://asia-southeast1-simplify-special.cloudfunctions.net`: moving region means changing `functions/index.js`, `FUNCTIONS_REGION` in `public/coach/js/firebase-config.js` and `firebase.json` together.
+
+## The video renderer
+
+Set up on 2026-09-26. The renderer in `video/` films the real app into videos: the coaches' page videos and the three guide videos ([guide videos](/operations/guide-videos.md), [videos](/coach/videos.md)). In the cloud it is one Cloud Run job, with its own account, image repository and a public bucket for the guide videos.
+
+**The image.** An Artifact Registry Docker repository `simplify` in `asia-southeast1` holds `asia-southeast1-docker.pkg.dev/simplify-special/simplify/video:latest`, built by Cloud Build from `video/Dockerfile` (the upload is limited by `.gcloudignore`). No workflow builds it; rebuild it by hand when `video/` or the learner reader changes ([guide videos](/operations/guide-videos.md#the-cloud-run-job)).
+
+```sh
+gcloud artifacts repositories create simplify --repository-format=docker --location=asia-southeast1 \
+  --project simplify-special
+gcloud builds submit --config video/cloudbuild.yaml --project simplify-special --region asia-southeast1 .
+```
+
+**The renderer's account**, `simplify-video@simplify-special.iam.gserviceaccount.com`, holds only what the renderer uses: `roles/storage.objectAdmin` on `gs://simplify-guide-videos` (the guide videos) and on `gs://simplify-special.firebasestorage.app` (a page video's draft), `roles/datastore.user` (reading the video document and marking it ready) and `roles/serviceusage.serviceUsageConsumer` (Text-to-Speech, billed to the project).
+
+```sh
+gcloud iam service-accounts create simplify-video --display-name="Simplify video renderer" \
+  --project simplify-special
+V=serviceAccount:simplify-video@simplify-special.iam.gserviceaccount.com
+gcloud storage buckets add-iam-policy-binding gs://simplify-guide-videos --member=$V --role=roles/storage.objectAdmin
+gcloud storage buckets add-iam-policy-binding gs://simplify-special.firebasestorage.app \
+  --member=$V --role=roles/storage.objectAdmin
+gcloud projects add-iam-policy-binding simplify-special --member=$V --role=roles/datastore.user
+gcloud projects add-iam-policy-binding simplify-special --member=$V --role=roles/serviceusage.serviceUsageConsumer
+```
+
+**The job**, `simplify-video` in `asia-southeast1`: 2 CPU, 4 GiB, one task, a 30-minute task timeout, no retries, running as that account. Its default arguments (`all --upload`) remake the guide videos; `makeVideo` runs it with `page <code> <videoId>`.
+
+```sh
+gcloud run jobs deploy simplify-video --region asia-southeast1 --project simplify-special \
+  --image asia-southeast1-docker.pkg.dev/simplify-special/simplify/video:latest \
+  --service-account simplify-video@simplify-special.iam.gserviceaccount.com \
+  --cpu 2 --memory 4Gi --task-timeout 30m --max-retries 0 \
+  --set-env-vars GOOGLE_CLOUD_PROJECT=simplify-special,GUIDE_VIDEO_BUCKET=simplify-guide-videos
+```
+
+**The functions may run it, and nothing else may.** `makeVideo` starts a run with its own arguments through the Cloud Run Admin API, which needs `roles/run.developer` on the job (running with overrides is not in `roles/run.invoker`), and acting as the job's account needs `roles/iam.serviceAccountUser` on it:
+
+```sh
+F=serviceAccount:simplify-functions@simplify-special.iam.gserviceaccount.com
+gcloud run jobs add-iam-policy-binding simplify-video --region asia-southeast1 --project simplify-special \
+  --member=$F --role=roles/run.developer
+gcloud iam service-accounts add-iam-policy-binding simplify-video@simplify-special.iam.gserviceaccount.com \
+  --member=$F --role=roles/iam.serviceAccountUser --project simplify-special
+```
+
+A job deleted and made again needs its grant again.
+
+**The guide-videos bucket**, `gs://simplify-guide-videos`: `asia-southeast1`, uniform bucket-level access, and public to read, since the guides play from it. It holds only the three guide videos and their posters, never a class's file ([guide videos](/operations/guide-videos.md#the-guide-videos-bucket)).
+
+```sh
+gcloud storage buckets create gs://simplify-guide-videos --location=asia-southeast1 \
+  --uniform-bucket-level-access --project simplify-special
+gcloud storage buckets add-iam-policy-binding gs://simplify-guide-videos \
+  --member=allUsers --role=roles/storage.objectViewer
+```
 
 ## Hosting and the custom domain
 
@@ -163,10 +221,10 @@ A school's filtered network must allow these hosts over HTTPS:
 
 | For | Hosts |
 |---|---|
-| The learner app, including My class | `simplify.whiz.coach`, `firestore.googleapis.com`, `firebasestorage.googleapis.com`, `simplify-special-default-rtdb.asia-southeast1.firebasedatabase.app` (the push stream; without it a new page still arrives when My class opens); `www.youtube-nocookie.com` if pages embed YouTube |
+| The learner app, including My class | `simplify.whiz.coach`, `firestore.googleapis.com`, `firebasestorage.googleapis.com`, `simplify-special-default-rtdb.asia-southeast1.firebasedatabase.app` (the push stream; without it a new page still arrives when My class opens); `www.youtube-nocookie.com` if pages embed YouTube; `storage.googleapis.com` for the guide's videos |
 | The coach app, in addition | `apis.google.com`, `accounts.google.com`, `identitytoolkit.googleapis.com`, `securetoken.googleapis.com`, `simplify-special.firebaseapp.com`, `asia-southeast1-simplify-special.cloudfunctions.net`, `lh3.googleusercontent.com` |
 
-The learner list is the learner CSP's `connect-src` and `frame-src`; the coach list follows the `/coach` CSP plus Google's sign-in page (see [security](/platform/security.md)).
+The learner list is the learner CSP's `connect-src`, `frame-src` and (for the guide videos) `media-src`; the coach list follows the `/coach` CSP plus Google's sign-in page (see [security](/platform/security.md)).
 
 ## Checking it
 
@@ -181,5 +239,9 @@ gcloud storage buckets get-iam-policy gs://simplify-special.firebasestorage.app
 gcloud projects get-iam-policy simplify-special --format=json
 gcloud functions list --project simplify-special
 firebase database:instances:list --project simplify-special
+gcloud run jobs describe simplify-video --region asia-southeast1 --project simplify-special
+gcloud run jobs get-iam-policy simplify-video --region asia-southeast1 --project simplify-special
+gcloud artifacts repositories list --location=asia-southeast1 --project simplify-special
+gcloud storage buckets get-iam-policy gs://simplify-guide-videos
 gcloud billing budgets list --billing-account=<BILLING_ACCOUNT_ID> --billing-project=simplify-special
 ```

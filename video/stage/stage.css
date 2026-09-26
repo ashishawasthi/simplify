@@ -1,0 +1,70 @@
+/* The video's canvas: 720x1280, drawn by stage.js one frame at a time. Every
+   position and opacity is set from script for the frame's time, so nothing
+   here animates by itself (no transitions) — each frame is exact. */
+* { box-sizing: border-box; margin: 0; }
+html, body { width: 720px; height: 1280px; overflow: hidden; background: #0d47a1; }
+body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif; color: #fff; }
+
+#stage {
+  position: relative; width: 720px; height: 1280px; overflow: hidden;
+  background: linear-gradient(170deg, #1976d2 0%, #1565c0 45%, #0d47a1 100%);
+}
+
+/* the feature's name and its one line, above the phone */
+#caption-band {
+  position: absolute; left: 0; right: 0; top: 0; height: 244px; z-index: 2;
+  background: linear-gradient(180deg, #1976d2 0%, #1873cf 80%, rgb(24 115 207 / 0) 100%);
+}
+#caption {
+  position: absolute; left: 36px; right: 36px; top: 28px; height: 190px;
+  display: flex; align-items: center; gap: 22px; z-index: 3;
+}
+#cap-icon {
+  width: 104px; height: 104px; flex: none; padding: 12px; font-size: 64px;
+  background: #fff; border-radius: 26px; box-shadow: 0 6px 18px rgb(0 0 0 / 0.25);
+}
+#cap-title { font-size: 50px; font-weight: 800; line-height: 1.08; letter-spacing: -0.5px; }
+#cap-line { font-size: 32px; line-height: 1.25; margin-top: 8px; opacity: 0.95; }
+
+/* an icon is a picture (/img/pic/…) or an emoji, as on the app's menu */
+.icon { display: flex; align-items: center; justify-content: center; line-height: 1; color: #000; }
+.icon img { width: 100%; height: 100%; object-fit: contain; }
+
+/* the phone: a dark frame around the recorded screen; stage.js moves and
+   scales it like a camera following the finger */
+.phone {
+  position: absolute; left: 0; top: 0; transform-origin: 0 0; z-index: 1;
+  padding: 14px; border-radius: 58px; background: #111;
+  box-shadow: 0 30px 60px rgb(0 0 0 / 0.45), inset 0 0 0 2px #333;
+}
+.screen { position: relative; width: 375px; height: 812px; border-radius: 44px; overflow: hidden; background: #fff; }
+.shot { display: block; width: 375px; height: 812px; }
+.fx { position: absolute; inset: 0; pointer-events: none; }
+.tap {
+  position: absolute; border-radius: 50%; transform: translate(-50%, -50%);
+  background: rgb(21 101 192 / 0.16); border: 3px solid rgb(21 101 192 / 0.85);
+  box-shadow: 0 0 0 2px rgb(255 255 255 / 0.9);
+}
+.hold-ring { position: absolute; transform: translate(-50%, -50%); }
+
+/* intro, chapter and end cards: full screen, over everything */
+#card {
+  position: absolute; inset: 0; z-index: 5; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 26px;
+  text-align: center; padding: 60px;
+}
+#card-logo { width: 220px; height: 220px; border-radius: 48px; box-shadow: 0 16px 40px rgb(0 0 0 / 0.35); }
+#card-icon {
+  width: 260px; height: 260px; padding: 34px; font-size: 170px; background: #fff; border-radius: 60px;
+  box-shadow: 0 16px 40px rgb(0 0 0 / 0.3);
+}
+#card-title { font-size: 84px; font-weight: 800; line-height: 1.05; letter-spacing: -1px; }
+#card-line { font-size: 36px; line-height: 1.3; max-width: 600px; }
+#card-icons { display: flex; gap: 18px; flex-wrap: wrap; justify-content: center; max-width: 620px; }
+#card-icons img {
+  width: 92px; height: 92px; padding: 12px; background: #fff; border-radius: 24px;
+  box-shadow: 0 6px 16px rgb(0 0 0 / 0.25);
+}
+
+#progress { position: absolute; left: 0; right: 0; bottom: 0; height: 10px; background: rgb(255 255 255 / 0.25); z-index: 6; }
+#progress-fill { height: 100%; width: 0; background: #ffca28; }

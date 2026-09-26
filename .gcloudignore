@@ -1,0 +1,16 @@
+# What `gcloud builds submit --config video/cloudbuild.yaml .` uploads: only
+# what the video renderer's image needs (see video/Dockerfile).
+/*
+!/public/
+!/tools/
+!/video/
+# the coach app's stand-in (tools/smoke/coach.mjs) plays this sample clip
+!/functions/
+/functions/*
+!/functions/test/
+/functions/test/*
+!/functions/test/sample.mp4
+/video/out/
+/video/.cache/
+node_modules/
+.DS_Store

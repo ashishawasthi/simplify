@@ -2,11 +2,13 @@
 // docs/platform/ai-models.md). Six callables and one trigger, all in asia-southeast1:
 //
 //   writePage    the page helper: one Gemini Flash call → write / ask / decline
-//   planVideo    the video planner: one Flash call → an exact video request (a plan)
-//   startVideo   spends one video credit and starts Gemini Omni on a stored plan
-//   checkVideo   finished? → the draft clip in Storage; failed or too slow → refund
+//   planOverlay  marks over a picture (an arrow, a ring, a label): one Flash call
+//                looks at the picture → the shapes for a page video
+//   makeVideo    uses one of the coach's videos this month and starts the video
+//                renderer (a Cloud Run job) on one of the class's pages
+//   checkVideo   is the render still going? failed, or too slow → the video back
 //   approveVideo a finished draft becomes placeable in pages (public path)
-//   discardVideo removes the clip (the credit is not given back: it was paid for)
+//   discardVideo removes the clip (the video is not given back: it was made)
 //   classSignal  on every change to classes/{code}: the push signal learners'
 //                devices listen to (signal.js)
 //
@@ -20,18 +22,18 @@
 import { setGlobalOptions } from "firebase-functions/v2";
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
 import { onCall } from "firebase-functions/v2/https";
-import { askFlash, fakePlanVideo, fakeWritePage, readOmni, startOmni } from "./ai.js";
+import { askFlash, fakeOverlay, fakeWritePage } from "./ai.js";
 import { cleanPage, cleanTitle, linksIn } from "./check.js";
+import { parseClassMarkdown } from "./class-markdown.js";
 import {
   bucket, cleanAnswers, cleanId, cleanText, countDecline, db, fail, FieldValue, LIMIT_REACHED,
-  limitsFrom, meaningfulLength, monthKey, peekUsage, refund, requireClassCoach, reserve, usageRef,
+  limitDocs, limitsFrom, meaningfulLength, monthKey, peekUsage, refund, requireClassCoach, reserve, usageRef,
 } from "./lib.js";
 import { THINKING } from "./models.js";
+import { cleanShapes } from "./overlay.js";
+import { OVERLAY_SCHEMA, OVERLAY_SYSTEM, overlayInput, EMPTY_WRITE_ANSWER, WRITE_PAGE_SCHEMA, WRITE_PAGE_SYSTEM, writePageInput } from "./prompts.js";
+import { fakeRenderClip, readRender, startRender } from "./render.js";
 import { classSignalHandler } from "./signal.js";
-import {
-  EMPTY_PLAN_ANSWER, EMPTY_WRITE_ANSWER, PLAN_VIDEO_SCHEMA, PLAN_VIDEO_SYSTEM, planVideoInput,
-  WRITE_PAGE_SCHEMA, WRITE_PAGE_SYSTEM, writePageInput,
-} from "./prompts.js";
 
 setGlobalOptions({
   region: "asia-southeast1",
@@ -162,145 +164,169 @@ export async function writePageHandler(request) {
   return { ...out, used: ticket.used, limit: ticket.limit };
 }
 
-// ---------- planVideo ----------
+// ---------- planOverlay ----------
 
-export async function planVideoHandler(request) {
+// A mark from the model is about a box round the thing ([ymin, xmin, ymax,
+// xmax], 0–1000, the way Gemini finds things); here it becomes a shape the
+// renderer draws (public/coach/js/overlay.js), placed by code, not guessed.
+export function markToShape(mark) {
+  const t = Array.isArray(mark?.target) ? mark.target.map(Number) : [];
+  if (t.length !== 4 || t.some((v) => !Number.isFinite(v))) return null;
+  const [y1, x1, y2, x2] = [Math.min(t[0], t[2]), Math.min(t[1], t[3]), Math.max(t[0], t[2]), Math.max(t[1], t[3])]
+    .map((v) => Math.min(1000, Math.max(0, Math.round(v))));
+  const cx = Math.round((x1 + x2) / 2);
+  const cy = Math.round((y1 + y2) / 2);
+  const pad = 20;
+  if (mark.kind === "circle") return { type: "circle", at: [cx, cy], r: Math.max(40, Math.round(Math.max(x2 - x1, y2 - y1) / 2 * 1.15)) };
+  if (mark.kind === "box") return { type: "box", from: [Math.max(0, x1 - pad), Math.max(0, y1 - pad)], to: [Math.min(1000, x2 + pad), Math.min(1000, y2 + pad)] };
+  if (mark.kind === "label") {
+    // above the thing, or below it when there is no room above
+    const y = y1 > 120 ? y1 - 60 : Math.min(960, y2 + 60);
+    return { type: "label", at: [Math.min(880, Math.max(120, cx)), y], text: mark.text };
+  }
+  // an arrow from the side with the most room, ending just outside the thing
+  const room = [[x1, [-1, 0]], [1000 - x2, [1, 0]], [y1, [0, -1]], [1000 - y2, [0, 1]]].sort((a, b) => b[0] - a[0])[0][1];
+  const edge = [room[0] < 0 ? x1 - pad : room[0] > 0 ? x2 + pad : cx, room[1] < 0 ? y1 - pad : room[1] > 0 ? y2 + pad : cy];
+  const len = 260;
+  const from = [edge[0] + room[0] * len + (room[1] ? 90 : 0), edge[1] + room[1] * len + (room[0] ? -90 : 0)];
+  return { type: "arrow", from: from.map((v) => Math.min(980, Math.max(20, Math.round(v)))), to: edge.map((v) => Math.min(1000, Math.max(0, Math.round(v)))) };
+}
+
+export async function planOverlayHandler(request) {
   const data = request.data ?? {};
   const { uid, code } = await requireClassCoach(request, data.classCode);
-  const requestText = cleanText(data.request, 1000, "The request is too long. Use at most 1,000 characters.");
-  const answers = cleanAnswers(data.answers);
+  const pictureId = cleanId(data.pictureId, "picture");
+  const requestText = cleanText(data.request, 300, "Say it in at most 300 characters.");
+  const picture = await db.doc(`classes/${code}/pictures/${pictureId}`).get();
+  if (!picture.exists) fail("not-found", "That picture is not on the class's shelf.");
 
-  if (meaningfulLength([requestText, ...answers.map((a) => a.answer)].join(" ")) < SHORTEST) {
+  if (meaningfulLength(requestText) < SHORTEST) {
     const { used, limit } = await peekUsage(uid, "flash");
-    return { action: "ask", ...EMPTY_PLAN_ANSWER, planId: "", prompt: "", seconds: 0, words: "", note: "", used, limit };
+    return { action: "none", understood: "I understood: nothing yet.", shapes: [],
+      note: "Say what to point out, for example: an arrow to the tap.", used, limit };
   }
 
-  const material = { request: requestText, answers };
   const ticket = await reserve(uid, "flash");
   let reply;
   try {
+    const [bytes] = await bucket().file(`classes/${code}/pictures/${pictureId}.jpg`).download();
     reply = await askFlash({
-      system: PLAN_VIDEO_SYSTEM,
-      schema: PLAN_VIDEO_SCHEMA,
-      input: planVideoInput(material),
-      thinking: THINKING.planVideo,
-      feature: "plan-video",
-      fake: () => fakePlanVideo(material),
+      system: OVERLAY_SYSTEM,
+      schema: OVERLAY_SCHEMA,
+      input: overlayInput({ request: requestText, words: String(picture.get("words") ?? "") }),
+      image: { data: bytes.toString("base64"), mimeType: "image/jpeg" },
+      thinking: THINKING.planOverlay,
+      feature: "plan-overlay",
+      fake: () => fakeOverlay({ request: requestText }),
     });
-    if (!reply.blocked && !["write", "ask", "decline"].includes(reply.answer?.action)) throw new Error("no action");
+    if (!reply.blocked && !["draw", "none", "decline"].includes(reply.answer?.action)) throw new Error("no action");
   } catch (err) {
-    console.error(JSON.stringify({ event: "planVideo failed", code, error: String(err?.message ?? err) }));
+    console.error(JSON.stringify({ event: "planOverlay failed", code, error: String(err?.message ?? err) }));
     await refund(ticket);
     fail("unavailable", BUSY);
   }
 
-  const answer = reply.blocked
-    ? { action: "decline", understood: "", note: "The planner cannot plan this video. Try asking in a different way." }
-    : reply.answer;
+  const answer = reply.blocked ? { action: "decline", note: "The AI cannot mark this. Try asking in a different way." } : reply.answer;
+  const shapes = answer.action === "draw"
+    ? cleanShapes((Array.isArray(answer.marks) ? answer.marks : []).map(markToShape).filter(Boolean))
+    : [];
+  const action = answer.action === "draw" && !shapes.length ? "none" : answer.action;
+  if (action === "decline") await countDecline(ticket);
   const out = {
-    action: answer.action,
-    understood: understoodLine(answer.understood, `you asked for a video of: ${oneLine(requestText, 200)}`),
-    questions: [],
-    planId: "",
-    prompt: "",
-    seconds: 0,
-    words: "",
-    note: oneLine(answer.note, 300),
+    action,
+    understood: understoodLine(answer.understood, `you asked me to mark: ${oneLine(requestText, 200)}`),
+    shapes,
+    note: oneLine(answer.note, 300) || (action === "none" ? "I could not find that in the picture. Try other words." : ""),
   };
-
-  if (out.action === "write") {
-    const prompt = String(answer.prompt ?? "").replace(/\s+/g, " ").trim().slice(0, 2000);
-    if (!prompt) {
-      await refund(ticket);
-      fail("unavailable", "The planner's answer came back empty. Try again. This request was not counted.");
-    }
-    const seconds = Math.min(10, Math.max(3, Math.round(Number(answer.seconds)) || 8));
-    const words = oneLine(answer.words, 80) || oneLine(requestText, 80);
-    const plan = db.collection(`classes/${code}/videoPlans`).doc();
-    await plan.set({ request: requestText, prompt, words, seconds, createdBy: uid, createdAt: FieldValue.serverTimestamp() });
-    Object.assign(out, { planId: plan.id, prompt, seconds, words });
-  } else if (out.action === "ask") {
-    out.questions = cleanQuestions(answer.questions);
-    if (!out.questions.length) out.questions = EMPTY_PLAN_ANSWER.questions;
-  } else {
-    out.note ||= "The planner can only plan short videos about school, learning and daily life.";
-    await countDecline(ticket);
-  }
-  console.log(JSON.stringify({ event: "planVideo", code, uid, action: out.action, planId: out.planId }));
+  console.log(JSON.stringify({ event: "planOverlay", code, uid, action, shapes: shapes.length }));
   return { ...out, used: ticket.used, limit: ticket.limit };
 }
 
-// ---------- startVideo ----------
+// ---------- makeVideo ----------
 
 const videoRef = (code, id) => db.doc(`classes/${code}/videos/${id}`);
 const draftPath = (code, id) => `classes/${code}/video-drafts/${id}.mp4`;
 const publicPath = (code, id) => `classes/${code}/videos/${id}.mp4`;
+const MAX_MARKED_PICTURES = 20;
 
-export async function startVideoHandler(request) {
+// the coach's marks, only for pictures the page shows, each list checked
+function cleanOverlays(raw, pictureIds) {
+  const out = {};
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
+  for (const [id, shapes] of Object.entries(raw)) {
+    if (!pictureIds.has(id) || Object.keys(out).length >= MAX_MARKED_PICTURES) continue;
+    const clean = cleanShapes(shapes);
+    if (clean.length) out[id] = clean;
+  }
+  return out;
+}
+
+export async function makeVideoHandler(request) {
   const data = request.data ?? {};
   const { uid, code } = await requireClassCoach(request, data.classCode);
-  const planId = cleanId(data.planId, "video plan");
-  const planRef = db.doc(`classes/${code}/videoPlans/${planId}`);
+  const pageId = cleanId(data.pageId, "page");
+  const [page, klass] = await db.getAll(db.doc(`classes/${code}/pages/${pageId}`), db.doc(`classes/${code}`));
+  if (!page.exists) fail("not-found", "That page was not found.");
+  const markdown = String(page.get("markdown") ?? "");
+  const screens = parseClassMarkdown(markdown).screens;
+  if (!screens.length || !markdown.trim()) fail("failed-precondition", "The page is empty. Write it first, then make its video.");
+  const pictureIds = new Set(screens.flat().filter((b) => b.type === "picture").map((b) => b.id));
+  const title = cleanTitle(page.get("title")) || "Our class page";
   const month = monthKey();
   const video = db.collection(`classes/${code}/videos`).doc();
 
-  // In one transaction: the plan is this coach's and not already in use, a credit
-  // is left this month, and then the credit, the video and the plan's link to it.
-  const started = await db.runTransaction(async (tx) => {
-    const [plan, usage, limits] = await tx.getAll(planRef, usageRef(uid, month), db.doc("config/limits"));
-    if (!plan.exists || plan.get("createdBy") !== uid) fail("not-found", "That video plan was not found. Plan the video again.");
-    const limit = limitsFrom(limits).videosPerMonth;
+  // In one transaction: a video is left this month (the coach's own limit, if
+  // the admin gave them one), then the count and the video to be made.
+  const made = await db.runTransaction(async (tx) => {
+    const [usage, limits, coach] = await tx.getAll(...limitDocs(uid, month));
+    const limit = limitsFrom(limits, coach).videosPerMonth;
     const used = usage.get("video") ?? 0;
-    const earlier = plan.get("videoId");
-    if (earlier) {
-      // pressed twice: the same video, and no second credit (unless that one failed)
-      const previous = await tx.get(videoRef(code, earlier));
-      if (previous.exists && previous.get("status") !== "failed") return { videoId: earlier, used, limit, again: true };
-    }
     if (used >= limit) fail("resource-exhausted", LIMIT_REACHED.video(limit));
     const now = FieldValue.serverTimestamp();
     tx.set(usageRef(uid, month), { video: used + 1, uid, month }, { merge: true });
     tx.set(video, {
+      kind: "page",
       status: "rendering",
-      prompt: plan.get("prompt"),
-      words: plan.get("words"),
-      seconds: plan.get("seconds"),
-      planId,
-      interactionId: null,
-      usageMonth: month, // a refund goes back to the month the credit came from
+      words: `Video of the page: ${title}`.slice(0, 80),
+      title,
+      className: String(klass.get("name") ?? ""),
+      pageId,
+      markdown, // the page as it was when the coach pressed Make: later edits don't change it
+      readAloud: data.readAloud !== false,
+      music: data.music !== false,
+      overlays: cleanOverlays(data.overlays, pictureIds),
+      execution: null,
+      usageMonth: month, // a video given back goes to the month it came from
       createdBy: uid,
       createdAt: now,
       updatedAt: now,
     });
-    tx.update(planRef, { videoId: video.id });
-    return { videoId: video.id, used: used + 1, limit, prompt: plan.get("prompt"), seconds: plan.get("seconds") };
+    return { used: used + 1, limit };
   });
-  if (started.again) return { videoId: started.videoId, used: started.used, limit: started.limit };
 
-  let interactionId;
+  let execution;
   try {
-    ({ id: interactionId } = await startOmni({ prompt: started.prompt, seconds: started.seconds }));
+    execution = await startRender({ code, videoId: video.id, markdown });
   } catch (err) {
-    console.error(JSON.stringify({ event: "startVideo failed", code, videoId: video.id, error: String(err?.message ?? err) }));
+    console.error(JSON.stringify({ event: "makeVideo failed", code, videoId: video.id, error: String(err?.message ?? err) }));
     const refunded = await failVideo(code, video.id, "The video could not be started.");
-    fail("unavailable", `The video could not be started. ${refunded ? "Your video credit was given back. " : ""}Try again later.`);
+    fail("unavailable", `The video could not be started. ${refunded ? "It was not counted. " : ""}Try again later.`);
   }
-  // The render is running (and paid for): keep its id. Should that write never
-  // land, checkVideo gives the credit back after 10 minutes.
+  // Should this write never land, checkVideo gives the video back after 10 minutes.
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
-      await video.update({ interactionId, updatedAt: FieldValue.serverTimestamp() });
+      await video.update({ execution, updatedAt: FieldValue.serverTimestamp() });
       break;
     } catch (err) {
-      console.error(JSON.stringify({ event: "startVideo save id failed", code, videoId: video.id, attempt, error: String(err?.message ?? err) }));
+      console.error(JSON.stringify({ event: "makeVideo save execution failed", code, videoId: video.id, attempt, error: String(err?.message ?? err) }));
     }
   }
-  console.log(JSON.stringify({ event: "startVideo", code, uid, videoId: video.id, seconds: started.seconds }));
-  return { videoId: video.id, used: started.used, limit: started.limit };
+  console.log(JSON.stringify({ event: "makeVideo", code, uid, videoId: video.id, screens: screens.length }));
+  return { videoId: video.id, used: made.used, limit: made.limit };
 }
 
-// "rendering" → "failed", and the credit back to the month it came from. Only
-// the first caller does it (a transaction), so a credit is never refunded twice.
+// "rendering" → "failed", and the video back to the month it came from. Only
+// the first caller does it (a transaction), so a video is never given back twice.
 async function failVideo(code, videoId, message) {
   return db.runTransaction(async (tx) => {
     const snap = await tx.get(videoRef(code, videoId));
@@ -313,10 +339,8 @@ async function failVideo(code, videoId, message) {
 
 // ---------- checkVideo ----------
 
-const PENDING = new Set(["in_progress", "queued"]);
-const GIVE_UP_AFTER = 30 * MINUTE; // still not finished (or unreadable) → failed, credit back
-const NEVER_STARTED_AFTER = 10 * MINUTE; // startVideo died before storing the render's id
-const MAX_VIDEO_BYTES = 100 * 1024 * 1024;
+const GIVE_UP_AFTER = 30 * MINUTE; // still not finished → failed, the video back
+const NEVER_STARTED_AFTER = 10 * MINUTE; // makeVideo died before storing the run's name
 
 export async function checkVideoHandler(request) {
   const data = request.data ?? {};
@@ -327,77 +351,39 @@ export async function checkVideoHandler(request) {
   const status = snap.get("status");
   if (status !== "rendering") return { videoId, status };
 
-  const age = Date.now() - (snap.get("createdAt")?.toMillis?.() ?? Date.now());
-  const interactionId = snap.get("interactionId");
-  if (!interactionId) {
-    if (age < NEVER_STARTED_AFTER) return { videoId, status: "rendering" };
-    return { videoId, status: await failVideo(code, videoId, "The video could not be started.") ? "failed" : (await snap.ref.get()).get("status") };
-  }
-  const giveUp = async (message) =>
+  const now = async (message) =>
     ({ videoId, status: await failVideo(code, videoId, message) ? "failed" : (await snap.ref.get()).get("status") });
+  const age = Date.now() - (snap.get("createdAt")?.toMillis?.() ?? Date.now());
+  // the renderer said why it could not finish
+  if (snap.get("renderError")) return now("The video could not be made.");
+  const execution = snap.get("execution");
+  if (!execution) return age < NEVER_STARTED_AFTER ? { videoId, status: "rendering" } : now("The video could not be started.");
 
-  // Always look first: a clip that finished while nobody had the class open is
-  // still saved, however late the check comes.
-  let render;
+  let run;
   try {
-    render = await readOmni(interactionId);
+    run = await readRender(execution);
   } catch (err) {
-    // a blip reading the render is not a failed render: ask again next time
+    // a blip reading the run is not a failed run: ask again next time
     console.warn(JSON.stringify({ event: "checkVideo read failed", code, videoId, error: String(err?.message ?? err) }));
-    return age > GIVE_UP_AFTER ? giveUp("The video could not be made.") : { videoId, status: "rendering" };
+    return age > GIVE_UP_AFTER ? now("The video could not be made.") : { videoId, status: "rendering" };
   }
-  if (PENDING.has(render.status)) {
-    return age > GIVE_UP_AFTER ? giveUp("The video took too long to make.") : { videoId, status: "rendering" };
-  }
+  if (run === "running") return age > GIVE_UP_AFTER ? now("The video took too long to make.") : { videoId, status: "rendering" };
+  if (run === "failed") return now("The video could not be made.");
 
-  if (render.status === "completed" && render.video) {
-    try {
-      const clip = await clipBytes(render.video);
-      await bucket().file(draftPath(code, videoId)).save(clip, {
-        resumable: false,
-        contentType: "video/mp4",
-        metadata: { cacheControl: "private, max-age=0" },
-      });
-      const ready = await db.runTransaction(async (tx) => {
-        const now = await tx.get(snap.ref);
-        if (now.get("status") !== "rendering") return now.get("status");
-        tx.update(snap.ref, { status: "ready", bytes: clip.length, updatedAt: FieldValue.serverTimestamp() });
-        return "ready";
-      });
-      console.log(JSON.stringify({ event: "checkVideo", code, videoId, status: ready, bytes: clip.length }));
-      return { videoId, status: ready };
-    } catch (err) {
-      console.error(JSON.stringify({ event: "checkVideo save failed", code, videoId, error: String(err?.message ?? err) }));
-      if (err?.badClip) {
-        return { videoId, status: await failVideo(code, videoId, "The video came back broken.") ? "failed" : "rendering" };
-      }
-      return { videoId, status: "rendering" }; // Storage blip: the render is still there next time
-    }
+  // succeeded: the renderer marks the video ready itself. The stand-in for it
+  // (emulator, tests) does what it would: the draft, then "ready".
+  if (execution.startsWith("fake-")) {
+    const clip = fakeRenderClip();
+    await bucket().file(draftPath(code, videoId)).save(clip, { resumable: false, contentType: "video/mp4", metadata: { cacheControl: "private, max-age=0" } });
+    await db.runTransaction(async (tx) => {
+      const fresh = await tx.get(snap.ref);
+      if (fresh.get("status") === "rendering") tx.update(snap.ref, { status: "ready", bytes: clip.length, updatedAt: FieldValue.serverTimestamp() });
+    });
   }
-
-  // failed, cancelled, incomplete, over budget, or finished without a clip
-  console.warn(JSON.stringify({ event: "checkVideo render failed", code, videoId, status: render.status }));
-  return { videoId, status: await failVideo(code, videoId, "The video could not be made.") ? "failed" : (await snap.ref.get()).get("status") };
-}
-
-// The finished clip as bytes: inline base64 (the verified delivery), or a copy of
-// its URI. It must look like an MP4 (an ISO "ftyp" box) before it is stored.
-async function clipBytes({ data, uri }) {
-  let bytes;
-  if (data) {
-    bytes = Buffer.from(data, "base64");
-  } else if (uri?.startsWith("gs://")) {
-    const [, bucketName, path] = /^gs:\/\/([^/]+)\/(.+)$/.exec(uri) ?? [];
-    [bytes] = await bucket().storage.bucket(bucketName).file(path).download();
-  } else if (uri?.startsWith("https://")) {
-    const res = await fetch(uri, { signal: AbortSignal.timeout(60_000) });
-    if (!res.ok) throw new Error(`clip download HTTP ${res.status}`);
-    bytes = Buffer.from(await res.arrayBuffer());
-  }
-  if (!bytes?.length || bytes.length > MAX_VIDEO_BYTES || bytes.subarray(4, 8).toString("latin1") !== "ftyp") {
-    throw Object.assign(new Error(`not an MP4 (${bytes?.length ?? 0} bytes)`), { badClip: true });
-  }
-  return bytes;
+  const after = (await snap.ref.get()).get("status");
+  // a run that ended without marking the video (it changed meanwhile, or the
+  // write was lost): nothing more will come
+  return after === "rendering" ? now("The video could not be made.") : { videoId, status: after };
 }
 
 // ---------- approveVideo ----------
@@ -458,10 +444,9 @@ export async function discardVideoHandler(request) {
 // ---------- the callables ----------
 
 export const writePage = callable(120, writePageHandler);
-export const planVideo = callable(120, planVideoHandler);
-// the Omni call alone took ~2 minutes to return: the coach app waits patiently
-export const startVideo = callable(540, startVideoHandler);
-export const checkVideo = callable(180, checkVideoHandler);
+export const planOverlay = callable(120, planOverlayHandler);
+export const makeVideo = callable(60, makeVideoHandler);
+export const checkVideo = callable(60, checkVideoHandler);
 export const approveVideo = callable(120, approveVideoHandler);
 export const discardVideo = callable(60, discardVideoHandler);
 

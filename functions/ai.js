@@ -2,10 +2,8 @@
 // used by the emulator and the tests (SIMPLIFY_AI_FAKE=1), so the whole coach
 // flow runs offline and costs nothing.
 
-import { readFileSync } from "node:fs";
-import { randomUUID } from "node:crypto";
 import { GoogleGenAI, ThinkingLevel } from "@google/genai";
-import { FLASH, OMNI, VERTEX_LOCATION } from "./models.js";
+import { FLASH, VERTEX_LOCATION } from "./models.js";
 import { PROJECT_ID } from "./lib.js";
 
 // The fakes answer only where they cannot reach learners' coaches by mistake:
@@ -27,12 +25,14 @@ const BLOCKED = new Set(["SAFETY", "PROHIBITED_CONTENT", "BLOCKLIST", "SPII", "R
 
 // Returns { answer } (the parsed JSON), or { blocked: true } when the model's
 // safety filters withheld it. Throws when the call fails or the answer is unusable.
-export async function askFlash({ system, schema, input, thinking, feature, fake }) {
+// image: { data (base64), mimeType } — a picture the model looks at with the words.
+export async function askFlash({ system, schema, input, image, thinking, feature, fake }) {
   if (aiIsFake()) return { answer: fake() };
   const started = Date.now();
+  const parts = image ? [{ inlineData: { data: image.data, mimeType: image.mimeType } }, { text: input }] : [{ text: input }];
   const response = await genai().models.generateContent({
     model: FLASH,
-    contents: [{ role: "user", parts: [{ text: input }] }],
+    contents: [{ role: "user", parts }],
     config: {
       systemInstruction: system,
       responseMimeType: "application/json",
@@ -58,54 +58,16 @@ export async function askFlash({ system, schema, input, thinking, feature, fake 
   return { answer: JSON.parse(text) };
 }
 
-// ---------- Omni: text to video ----------
-
-// Start one render. The request shape is the one verified on this project on
-// 2026-09-23; the call itself took about 2 minutes to return. It costs money and
-// is not idempotent, so the SDK must never retry it (its default is 4 retries).
-export async function startOmni({ prompt, seconds }) {
-  if (aiIsFake()) return fakeOmniStart(prompt);
-  const interaction = await genai().interactions.create({
-    model: OMNI,
-    input: [{ type: "text", text: prompt }],
-    response_format: {
-      type: "video",
-      aspect_ratio: "16:9",
-      delivery: "inline",
-      duration: `${seconds}s`,
-      resolution: "720p",
-    },
-    generation_config: { video_config: { task: "text_to_video" } },
-    background: true,
-    store: true,
-  }, { maxRetries: 0, timeout: 480_000 });
-  if (!interaction?.id) throw new Error(`no interaction id (status ${interaction?.status})`);
-  return { id: interaction.id, status: interaction.status };
-}
-
-// Where a render is: { status, video: { data?, uri?, mimeType } | null }
-export async function readOmni(id) {
-  if (aiIsFake()) return fakeOmniRead(id);
-  const interaction = await genai().interactions.get(id, null, { timeout: 120_000 });
-  const video = interaction.output_video;
-  return {
-    status: interaction.status,
-    video: video?.data || video?.uri
-      ? { data: video.data, uri: video.uri, mimeType: video.mime_type || "video/mp4" }
-      : null,
-  };
-}
-
 // ---------- the fakes ----------
 //
-// Flash (writePage / planVideo), by keyword in the coach's text:
+// Flash (writePage), by keyword in the coach's text:
 //   "beer"                  → decline
 //   "?" with no answers yet → ask
 //   "[fail]"                → the model call fails (the request is given back)
-//   anything else           → write (a small page using the shelf; a video plan)
-// Omni, by marker in the plan's prompt:
-//   "[fail-start]"  → the render cannot start   "[fail-render]" → it fails later
-//   "[slow]"        → it never finishes          anything else   → a 3-second sample MP4
+//   anything else           → write (a small page using the shelf)
+// Flash (planOverlay), by keyword in the coach's words:
+//   "[fail]" → the call fails     "beer" → decline     "nothing" → nothing found
+//   anything else → a ring round the middle of the picture, and an arrow to it
 
 export function fakeWritePage({ instruction, answers, title, pictures }) {
   const said = [instruction, ...answers.map((a) => a.answer)].join(" ");
@@ -130,40 +92,18 @@ export function fakeWritePage({ instruction, answers, title, pictures }) {
   };
 }
 
-export function fakePlanVideo({ request, answers }) {
-  const said = [request, ...answers.map((a) => a.answer)].join(" ");
-  if (said.includes("[fail]")) throw new Error("fake Flash failure");
-  const understood = `I understood: a short video of ${request.replace(/\s+/g, " ").slice(0, 200)}`;
-  if (/beer/i.test(said)) {
-    return { understood, action: "decline", questions: [], prompt: "", seconds: 8, words: "",
-      note: "I can only plan videos about school, learning and daily life." };
-  }
-  if (request.includes("?") && answers.length === 0) {
-    return { understood, action: "ask", prompt: "", seconds: 8, words: "", note: "",
-      questions: [{ question: "Where does it happen?", answers: ["At home", "At school", "At a hawker centre"] }] };
-  }
+export function fakeOverlay({ request }) {
+  if (request.includes("[fail]")) throw new Error("fake Flash failure");
+  const understood = `I understood: ${request.replace(/\s+/g, " ").slice(0, 200)}`;
+  if (/beer/i.test(request)) return { understood, action: "decline", marks: [], note: "I can only mark things for a class page." };
+  if (/nothing/i.test(request)) return { understood, action: "none", marks: [], note: "" };
   return {
     understood,
-    action: "write",
-    questions: [],
-    prompt: `One calm, continuous shot at hand level with a steady camera: ${request}. Realistic, soft natural light, no text, no logos, no music.`,
-    seconds: 8,
-    words: request.slice(0, 80),
+    action: "draw",
+    marks: [
+      { kind: "circle", target: [350, 350, 650, 650], text: "" },
+      { kind: "arrow", target: [350, 350, 650, 650], text: "" },
+    ],
     note: "",
   };
-}
-
-function fakeOmniStart(prompt) {
-  if (prompt.includes("[fail-start]")) throw new Error("fake Omni failure");
-  const kind = prompt.includes("[fail-render]") ? "fail" : prompt.includes("[slow]") ? "slow" : "ok";
-  return { id: `fake-${kind}-${randomUUID()}`, status: "in_progress" };
-}
-
-let sample;
-function fakeOmniRead(id) {
-  if (id.startsWith("fake-slow-")) return { status: "in_progress", video: null };
-  if (id.startsWith("fake-fail-")) return { status: "failed", video: null };
-  if (!id.startsWith("fake-ok-")) return { status: "failed", video: null };
-  sample ??= readFileSync(new URL("./test/sample.mp4", import.meta.url)).toString("base64");
-  return { status: "completed", video: { data: sample, mimeType: "video/mp4" } };
 }

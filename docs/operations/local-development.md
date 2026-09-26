@@ -1,8 +1,8 @@
 ---
 type: Operations Runbook
 title: Local Development
-description: Which local server to use for what (plain static, Hosting headers, Firebase emulators) and why the CSP and clean URLs decide it, pointing the learner and coach apps at the emulators, fake AI models, every unit test and smoke test with what it needs, the docs check, guide screenshots and the helper scripts.
-tags: [local-development, emulators, csp, testing, smoke-tests, screenshots, service-worker, tooling]
+description: Which local server to use for what (plain static, Hosting headers, Firebase emulators) and why the CSP and clean URLs decide it, pointing the learner and coach apps at the emulators, fake AI models, every unit test and smoke test with what it needs, the docs check, guide screenshots, guide videos and trying a page video, and the helper scripts.
+tags: [local-development, emulators, csp, testing, smoke-tests, screenshots, videos, service-worker, tooling]
 status: stable
 ---
 
@@ -13,7 +13,9 @@ How to run Simplify on your own machine, which server suits which job, how to re
 | Tool | For |
 |---|---|
 | Node 22 | every `tools/*.mjs` script: built-in `WebSocket` and `fetch`, no `npm install` in the repo root |
-| Google Chrome | the smoke tests and the guide screenshots (`CHROME=<path>` to use another binary; the default is the macOS app path) |
+| Google Chrome | the smoke tests, the guide screenshots and the videos (`CHROME=<path>` to use another binary; the default is the macOS app path) |
+| ffmpeg | the videos (`video/render.mjs`) and `tools/make-voice.mjs` |
+| `gcloud`, signed in (`gcloud auth login`) | the spoken words in videos and the recorded voice (Cloud Text-to-Speech) |
 | Firebase CLI (`npm i -g firebase-tools`; CI pins `firebase-tools@15`) | the emulators, `firebase serve`, deploys |
 | Java (CI uses Temurin 21) | the Firestore and Storage emulators |
 | `npm ci --prefix functions` | the Functions emulator and `tools/test-functions.mjs` |
@@ -76,7 +78,7 @@ The push stream opens only while the page is on screen (`document.hidden` is fal
 
 ### Fake AI models
 
-`functions/.env.local` (committed; read only by the Functions emulator, and never deployed because the functions' `ignore` in `firebase.json` includes `*.local`) sets `SIMPLIFY_AI_FAKE=1`. `functions/ai.js` `aiIsFake()` then answers `writePage`, `planVideo` and the video render with deterministic fakes, so nothing goes to Gemini and nothing costs money. The fakes are honoured only inside the emulator (`FUNCTIONS_EMULATOR=true`) or a plain Node process (no `K_SERVICE`): a deployed function always calls the real models. To call the real models from the emulator, remove that line and have application-default credentials (`gcloud auth application-default login`) for an account with Vertex AI access; every request is then billed (see [costs and limits](/operations/costs-and-limits.md)). The models themselves are in [AI models](/platform/ai-models.md).
+`functions/.env.local` (committed; read only by the Functions emulator, and never deployed because the functions' `ignore` in `firebase.json` includes `*.local`) sets `SIMPLIFY_AI_FAKE=1`. `functions/ai.js` `aiIsFake()` then answers `writePage` and `planOverlay` with deterministic fakes, and `functions/render.js` stands in for the video job (a page with `[fail-start]`, `[fail-render]` or `[slow]` fails that way; any other succeeds, and `checkVideo` saves `functions/test/sample.mp4` as its draft), so nothing goes to Gemini or Cloud Run and nothing costs money. The fakes are honoured only inside the emulator (`FUNCTIONS_EMULATOR=true`) or a plain Node process (no `K_SERVICE`): a deployed function always calls the real models. To call the real model and job from the emulator, remove that line and have application-default credentials (`gcloud auth application-default login`) for an account with Vertex AI access (and permission to run the job); every request is then billed (see [costs and limits](/operations/costs-and-limits.md)). The models themselves are in [AI models](/platform/ai-models.md).
 
 ## Unit tests
 
@@ -87,7 +89,7 @@ Each is one Node file with no runner and no dependencies unless the table says s
 | `test-assets.mjs` | every file under `public/` (bar the coach app and the few it names, such as `og-card.png`) is in `ASSETS` in `public/sw.js`, every `ASSETS` entry exists, pages by clean URL | Node |
 | `test-class.mjs` | the class markdown parser (`public/js/class-markdown.js`), class codes and the Firestore reading in `public/js/class-data.js` (stand-in `fetch` and localStorage), the push signal's pure parts in `public/js/class-live.js` (when a page is forced), and `sw.js` leaving class files, `/coach/` and `/__/` alone | Node |
 | `test-coach.mjs` | the coach app's pure parts: class codes, the editor toolbar, dates and the Singapore month, picture sizes, spotting an in-app browser, institutions (search, grouping, which screen a coach gets) | Node |
-| `test-functions.mjs` | the six callables in `functions/index.js` with fake models: who may call, write / ask / decline, the free answer for an empty instruction, monthly limits (also under parallel calls), refunds, the Singapore month, the page check, plan → start → check → approve / discard; the `classSignal` trigger, directly and as a real Firestore trigger writing the Realtime Database; first runs `copy-class-markdown.mjs --check` | Firebase CLI, Java, `npm ci --prefix functions`; starts Auth, Firestore, Storage, Realtime Database and Functions emulators itself |
+| `test-functions.mjs` | the six callables in `functions/index.js` with fake models: who may call, write / ask / decline, the free answer for an empty instruction, monthly limits (also under parallel calls, and a coach's own limit), refunds, the Singapore month, the page check, the overlay planner (marks → shapes), make → check → approve / discard with the video job stood in for; the `classSignal` trigger, directly and as a real Firestore trigger writing the Realtime Database; first runs `copy-class-markdown.mjs --check` | Firebase CLI, Java, `npm ci --prefix functions`; starts Auth, Firestore, Storage, Realtime Database and Functions emulators itself |
 | `test-i-need.mjs` | I need's cards, settings, sentences and body map, pinned word for word | Node |
 | `test-money.mjs` | the money maths (`money.js`) and every money tool's wording (`answers.js`), including the original change requests' own examples | Node |
 | `test-now-next.mjs` | Now and next's list rules (`now-next-list.js`) | Node |
@@ -123,7 +125,7 @@ It needs Node 22 and Chrome and nothing else. It serves `public/` itself (or `SM
 | Scene file | Covers |
 |---|---|
 | `app.mjs` | the menu, routing, the money tools, the set-up page and device settings, the update reload, and every guide scene in `tools/guide-scenes.mjs` still reaching its state |
-| `coach.mjs` | the coach app's screens and flows with `public/coach/js/cloud.js` swapped for an in-memory stand-in: sign-in, About you and its institution picker, waiting for approval (and approval arriving live), not approved, making a class, editor and preview, Publish, Write with AI, picture and video shelves, YouTube, the QR poster, the admin screen (coach approvals, join requests, institutions) |
+| `coach.mjs` | the coach app's screens and flows with `public/coach/js/cloud.js` swapped for an in-memory stand-in: sign-in, About you and its institution picker, waiting for approval (and approval arriving live), not approved, making a class, editor and preview, Publish, Write with AI, picture and video shelves (a video of a page, marks on its pictures, asking for more videos), YouTube, the QR poster, the admin screen (coach approvals, join requests, more videos a month, institutions) |
 | `i-need.mjs` | I need |
 | `my-class.mjs` | the My class tile, the reader and the set-up page's class section |
 | `now-next.mjs` | Now and next and My day |
@@ -163,12 +165,26 @@ The coach guide's pictures (`public/coach/img/guide/`) come from `node tools/sho
 
 A new or changed image under `public/` needs a `CACHE` bump in `public/sw.js`, and a new one also an `ASSETS` entry.
 
+## Guide videos
+
+The guides' three short videos come from the running app too, filmed by `video/render.mjs` from the storyboards in `video/storyboards/`, which reuse the screenshots' scenes and the coach app's stand-in. Make them after the screenshots, for the same reason.
+
+```sh
+node video/render.mjs learner-basics          # or learner-more, coach, all → video/out/<name>.mp4 and .jpg
+VIDEO_SHOTS=3 node video/render.mjs coach     # only the first three shots, for a quick look
+node video/render.mjs all --upload            # also to the public simplify-guide-videos bucket
+```
+
+It needs Node 22, Chrome, ffmpeg and `gcloud auth login` (for the spoken lines, cached in `video/.cache/`). `video/out/` and `video/.cache/` are ignored by git. A local render draws with the machine's own fonts; the published ones are made on the Cloud Run job, whose fonts match Android. How it works, the job and troubleshooting are in [guide videos](/operations/guide-videos.md).
+
+**Trying a page video.** `node video/render.mjs page --local spec.json` makes a coach's page video from a file — the page's markdown, its pictures as local files, read aloud or not, music or not, and marks — with no Firestore, Storage or emulator, into `video/out/page-local.mp4`. The spec's shape is in [guide videos](/operations/guide-videos.md#trying-a-page-video). In the emulators, a page video never renders: the job is stood in for (above).
+
 ## Helper scripts
 
 | Script | What it does |
 |---|---|
 | `node tools/vendor-firebase.mjs` | Downloads the pinned Firebase JS SDK modules (`FIREBASE`, currently 12.19.0: app, auth, firestore, storage, functions) from gstatic and `uqr` (`UQR`, 0.1.3) from jsdelivr into `public/coach/vendor/`, rewriting the SDK's absolute imports to relative ones, with licences and a README of source URLs and SHA-256 sums. The coach CSP is `script-src 'self'` (plus `apis.google.com`), so nothing else loads them. To upgrade: change the version, run it, update the import paths in `public/coach/js/cloud.js` or `public/coach/js/qr.js`, delete the old folder. |
-| `node tools/copy-class-markdown.mjs [--check]` | Copies `public/js/class-markdown.js` byte for byte to `functions/class-markdown.js` (functions deploy from `functions/` alone). `--check` exits 1 if the copy differs. `firebase.json` runs the copy as the functions' `predeploy`; `test-functions.mjs` runs the check. |
+| `node tools/copy-class-markdown.mjs [--check]` | Copies `public/js/class-markdown.js` and `public/coach/js/overlay.js` byte for byte to `functions/class-markdown.js` and `functions/overlay.js` (functions deploy from `functions/` alone). `--check` exits 1 if either copy differs. `firebase.json` runs the copy as the functions' `predeploy`; `test-functions.mjs` runs the check. |
 | `node tools/make-voice.mjs [--check]` | Records the clips Speak plays (Cloud Text-to-Speech, Chirp 3 HD) for every fixed sentence the cards can say — only the missing ones — deletes orphans, and writes `public/js/voice-clips.js` and the clip list in `sw.js`. Needs ffmpeg and `gcloud auth login`. See [the recorded voice](/platform/voice.md). Run `test-voice.mjs` after it and bump `CACHE`. |
 | `node tools/make-pictures.mjs [names…]` | Builds `public/img/pic/` from `public/js/pictures.js`: pinned Noto Emoji SVGs plus our own drawings, with the licence file. See [pictures](/learner/pictures.md). Run `test-pictures.mjs` after it. |
 | `python3 tools/make-qr.py` | Draws `public/img/og-card.png` and `public/img/qr-poster.png`. See [share card](/operations/share-card.md). |

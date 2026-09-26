@@ -155,3 +155,22 @@ footer.guide-end {
   figure { break-inside: avoid; }
   a { color: inherit; }
 }
+
+/* the short video under the title: a fold, phone-shaped when open */
+.tour { margin: 0 0 24px; }
+.tour summary {
+  display: inline-flex; align-items: center; gap: 10px; min-height: 48px;
+  padding: 6px 16px; border-radius: var(--c-radius); cursor: pointer; list-style: none;
+  background: var(--c-accent); color: #fff; font-weight: 700;
+}
+.tour summary::-webkit-details-marker { display: none; }
+.tour summary:focus-visible { outline: 3px solid var(--c-focus); outline-offset: 3px; }
+.tour-play {
+  display: inline-grid; place-items: center; width: 30px; height: 30px;
+  border-radius: 50%; background: #fff; color: var(--c-accent); font-size: 13px;
+}
+.tour-len { font-weight: 400; opacity: 0.9; }
+.tour video {
+  display: block; width: 100%; max-width: 360px; height: auto; margin: 12px 0 0;
+  border-radius: var(--c-radius); background: #0d47a1;
+}

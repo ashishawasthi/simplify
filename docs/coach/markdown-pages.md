@@ -1,7 +1,7 @@
 ---
 type: Product Contract
 title: Markdown Pages
-description: The exact markdown subset a class page may use (headings, lines, bold and italic, lists, shelf pictures and videos, YouTube cards, link buttons, --- screens), what happens to anything else, the limits, and how public/js/class-markdown.js is the one parser shared by the learner reader, the coach preview and the Cloud Functions.
+description: The exact markdown subset a class page may use (headings, lines, bold and italic, lists, shelf pictures and videos, YouTube cards, link buttons, --- screens), what happens to anything else, the limits, and how public/js/class-markdown.js is the one parser shared by the learner reader, the coach preview, the Cloud Functions and the video renderer.
 tags: [markdown, class-page, youtube, link-buttons, parser, screens, text-nodes]
 status: stable
 ---
@@ -10,17 +10,18 @@ A class has one published page at a time, written in a small markdown subset and
 
 ## One parser for everyone
 
-`public/js/class-markdown.js` is the only definition of the subset. It has no imports and touches no DOM until `renderScreen()` is called, so the same file runs in the browser and in Node. It has three users:
+`public/js/class-markdown.js` is the only definition of the subset. It has no imports and touches no DOM until `renderScreen()` is called, so the same file runs in the browser and in Node. It has four users:
 
 | User | How it gets the file |
 |---|---|
 | The learner reader, `public/js/tools/my-class.js` (and `public/js/class-data.js`, which uses `pageMedia` to know which files to cache) | a normal import |
 | The coach preview, `public/coach/js/preview.js` | `import("/js/class-markdown.js")` from the same origin, styled by `/css/tools/my-class.css` |
-| The Cloud Functions, `functions/check.js` | `functions/class-markdown.js`, a **byte-identical copy** |
+| The Cloud Functions, `functions/check.js` (and `makeVideo`, which finds a page's screens and pictures) | `functions/class-markdown.js`, a **byte-identical copy** |
+| The video renderer, `video/page.mjs` (a page video's screens and spoken words; it then films the learner reader itself) | a normal import from `public/`, in the renderer's own image ([guide videos](/operations/guide-videos.md#the-cloud-run-job)) |
 
 Functions deploy from `functions/` alone, so the copy is kept by `tools/copy-class-markdown.mjs`:
 
-- `node tools/copy-class-markdown.mjs` copies the file. `firebase.json` runs it as the functions `predeploy` step, so a deploy always ships the current parser.
+- `node tools/copy-class-markdown.mjs` copies the file (and `public/coach/js/overlay.js` to `functions/overlay.js`, the marks over a picture in a page video). `firebase.json` runs it as the functions `predeploy` step, so a deploy always ships the current parser.
 - `node tools/copy-class-markdown.mjs --check` exits 1 if the copy is missing or differs by one byte. `tools/test-functions.mjs` runs it first.
 
 Never edit `functions/class-markdown.js` by hand. Edit the public file and copy it.
@@ -35,7 +36,7 @@ Never edit `functions/class-markdown.js` by hand. Edit the public file and copy 
 | `**bold**`, `*italic*`, `***both***` | the same, inside any line |
 | `- item` (also `*`, `+`, `•`) or `1. item` (also `1)`) | a list with big bullets or numbers, one level, keeping its starting number |
 | `![words](pictures/<id>.jpg)` | a picture from the class's shelf, full width; the words are its alt text |
-| `![words](videos/<id>.mp4)` | an approved video from the class's shelf, never autoplaying (see [videos](/coach/videos.md#what-learners-get)) |
+| `![words](videos/<id>.mp4)` | an approved video from the class's shelf — a video of one of the class's pages, made by the renderer — in its own shape, never autoplaying (see [videos](/coach/videos.md#what-learners-get)) |
 | a YouTube link alone on its line, `[words](URL)` or just the URL | a YouTube card (see below) |
 | `[words](https://…)` | one big button naming the site |
 | `---` (also `***`, `___`, `- - -`) | the next screen |

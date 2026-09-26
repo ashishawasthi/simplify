@@ -79,6 +79,28 @@ main > h1:first-child {
   font-size: 20px;
 }
 
+/* the short videos, folded under the title: a big button each, and the
+   video opens under it (js/guide-video.js fetches it only then). Phone-shaped,
+   so no wider than a phone's screen, even on an iPad. */
+.tours { display: grid; gap: 10px; margin: 12px 0 4px; }
+.tour summary {
+  display: flex; align-items: center; gap: 12px; min-height: 56px;
+  padding: 8px 16px; border-radius: var(--radius); cursor: pointer; list-style: none;
+  background: var(--color-primary); color: #fff; font-size: 22px; font-weight: 700;
+}
+.tour summary::-webkit-details-marker { display: none; }
+.tour summary:focus-visible { outline: 3px solid var(--color-primary-dark); outline-offset: 3px; }
+.tour-play {
+  display: inline-grid; place-items: center; width: 36px; height: 36px; flex: none;
+  border-radius: 50%; background: #fff; color: var(--color-primary); font-size: 16px;
+}
+.tour[open] .tour-play { transform: rotate(90deg); }
+.tour-len { margin-left: auto; font-size: 17px; font-weight: 400; opacity: 0.9; white-space: nowrap; }
+.tour video {
+  display: block; width: 100%; max-width: 360px; height: auto; margin: 12px auto 4px;
+  border-radius: var(--radius); background: #0d47a1;
+}
+
 h2 {
   font-size: 26px;
   margin: 40px 0 12px;

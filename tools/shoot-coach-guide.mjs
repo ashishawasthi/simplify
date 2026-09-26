@@ -272,44 +272,42 @@ export const SCENES = {
     expect: `byText(".helper-result", "I can only write pages")`,
     clip: { selectors: [".ws-helper"], pad: 12 },
   },
-  "video-plan": {
+  "video-maker": {
     ...DESKTOP, path: "/coach/#class/K7M3RQP9T",
-    seed: `{ classes: ${klass("null")}, pages: { K7M3RQP9T: [] }, usage: { flash: 14, video: 1 },
-      replies: { planVideo: { action: "write",
-        understood: "I understood: a short clip of hands being washed with soap at a sink, step by step.",
-        questions: [], planId: "plan1",
-        prompt: "One calm, continuous shot at hand level of a pair of hands at a white sink in a tidy HDB flat kitchen. The tap turns on, the hands are wet, pump soap is pressed once, the hands rub palms, backs and between the fingers, then rinse under the water. Soft natural light, steady camera, no faces. No text, captions, logos or brands. No music or voice, only the soft sound of running water.",
-        seconds: 8, words: "Hands washing with soap at a sink", note: "", used: 15, limit: 200 } } }`,
+    seed: `{ ${CLASS}, classes: ${klass("null")}, usage: { flash: 14, video: 1 },
+      replies: { planOverlay: { action: "draw", understood: "I understood: an arrow pointing at the tap.", note: "",
+        shapes: [{ type: "arrow", from: [900, 120], to: [560, 330] }, { type: "label", at: [780, 80], text: "The tap" }], used: 15, limit: 200 } } }`,
     setup: `
-      await waitFor(() => $(".phone-empty"));
-      byText("summary", "Make a short video").click();
-      type($("#video-request"), "hands washing with soap at a sink, step by step");
-      byText("button", "Plan the video").click();
-      await waitFor(() => $(".plan-card"));
-      $("#video-request").blur();
+      await waitFor(() => $(".md-input").value.includes("Washing") && $(".phone-screen .cm-h1"));
+      byText("summary", "Make a video of this page").click();
+      await waitFor(() => $('.mark-row[data-picture="pic-tap"]'));
+      const row = $('.mark-row[data-picture="pic-tap"]');
+      type(row.querySelector(".mark-input"), "an arrow to the tap");
+      byText('.mark-row[data-picture="pic-tap"] button', "Draw it").click();
+      await waitFor(() => !row.querySelector(".mark-layer").hidden && row.querySelector(".mark-layer").complete);
+      row.querySelector(".mark-input").blur();
       scrollToEl($(".ws-videos"), 20);`,
-    expect: `byText(".plan-cost", "You have 4 left")`,
-    clip: { selectors: [".ws-videos"], pad: 12 },
+    expect: `byText(".plan-cost", "You have 19 left") && byText(".mark-said", "I understood: an arrow pointing at the tap")`,
+    clip: { selectors: [".ws-videos .usage-line", "#video-maker > summary", "#video-maker .field-hint", ".check-line", ".marks-h", '.mark-row[data-picture="pic-tap"]', ".plan-cost", "#video-maker .actions"], pad: 12 },
   },
   "video-shelf": {
     ...DESKTOP, path: "/coach/#class/K7M3RQP9T",
     seed: `{ classes: ${klass("null")}, pages: { K7M3RQP9T: [] }, usage: { flash: 15, video: 3 }, slowVideos: true,
       videos: { K7M3RQP9T: [
-        { id: "vid-bus", status: "rendering", words: "Tapping a card at a bus reader", prompt: "One calm shot of a hand tapping a travel card on a bus card reader.", seconds: 6, createdAt: ${at(0, 9, 12)} },
-        { id: "vid-hands", status: "ready", words: "Hands washing with soap at a sink", prompt: "One calm, continuous shot at hand level of a pair of hands at a white sink.", seconds: 8, createdAt: ${at(0, 8, 40)} },
-        { id: "vid-tray", status: "approved", words: "Returning a tray at a hawker centre", prompt: "One calm shot of hands placing a tray on a tray-return rack.", seconds: 7, createdAt: ${at(2, 15, 5)} }] } }`,
+        { id: "vid-bus", kind: "page", status: "rendering", words: "Video of the page: Taking the bus", createdAt: ${at(0, 9, 12)} },
+        { id: "vid-hands", kind: "page", status: "ready", words: "Video of the page: Washing my hands", createdAt: ${at(0, 8, 40)} },
+        { id: "vid-tray", kind: "page", status: "approved", words: "Video of the page: Returning my tray", createdAt: ${at(2, 15, 5)} }] } }`,
     setup: `
       await waitFor(() => byText(".video-item .chip", "Ready to check"));
       byText(".video-item button", "Watch it").click();
       await waitFor(() => $$(".video-item video").length === 2);
       await waitFor(() => $$(".video-item video").every((v) => v.readyState >= 1), 4000);
-      // a frame from the middle of each clip, not a black box
       await Promise.all($$(".video-item video").map((v) => new Promise((r) => { v.addEventListener("seeked", r, { once: true }); v.currentTime = 1.5; })));
       await waitFor(() => $$(".video-item video").every((v) => v.readyState >= 3), 4000).catch(() => {});
       await pause(800);
       scrollToEl($(".ws-videos"), 20);`,
     expect: `byText(".video-item .chip", "Being made") && byText(".video-item .chip", "On the shelf")`,
-    clip: { selectors: [".ws-videos"], pad: 12 },
+    clip: { selectors: [".ws-videos .usage-line", ".video-list"], pad: 12 },
   },
   "admin-requests": {
     ...DESKTOP, path: "/coach/#admin",
@@ -326,7 +324,7 @@ export const SCENES = {
       await waitFor(() => lim().querySelector("textarea"));
       type(lim().querySelector("textarea"), "Seen taking classes at AWWA School @ Napiri on Monday");
       lim().querySelector("textarea").blur();`,
-    expect: `byText("h2", "Coaches waiting for approval (1)") && byText("h2", "Requests to join a class (1)") && !byText(".decision-form button", "Approve").disabled`,
+    expect: `byText("h2", "Coaches waiting for approval (1)") && byText("h2", "Requests from coaches (1)") && !byText(".decision-form button", "Approve").disabled`,
     clip: { selectors: [".coach-header .brand", ".header-nav", "main h1", ".admin-tabs", "#adm-wait-h", "#adm-wait-h ~ .admin-list .admin-card",
       "#adm-req-h", "#adm-req-h ~ .admin-list .admin-card"], pad: 16, maxWidth: 880 },
   },
@@ -605,3 +603,7 @@ async function main() {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) await main();
+
+// the sample class and the page helpers, for video/storyboards/coach.mjs,
+// which films the same app with the same stand-in
+export { at, CLASS as SAMPLE_CLASS, HANDS, HELPERS as COACH_HELPERS, klass, LIVE, pictureFiles, pictures };

@@ -1,4 +1,4 @@
-// The class's picture shelf: photos a coach uploads, each with a few words
+// The class's picture shelf: photos a coach takes or uploads, each with a few words
 // saying what it shows (learners' screen readers read them). A photo is made
 // small in the coach's own browser first (image.js: at most 1600 px, JPEG,
 // no location or camera details), then uploaded; "Put in page" places
@@ -28,7 +28,7 @@ export function mountPictures(ws) {
     h("p", { class: "field-hint" },
       "Photos for this class's pages. Each is made smaller on this device before it uploads, " +
       "and the photo's location and camera details are left out."),
-    fileButton("Add pictures"),
+    h("div", { class: "actions" }, cameraButton(), fileButton("Add pictures")),
     grid,
     empty);
 
@@ -42,6 +42,18 @@ export function mountPictures(ws) {
       for (const file of files) upload(file);
     });
     return h("label", { class: "btn btn-secondary file-btn" }, words, input);
+  }
+
+  // "Take a photo": the same, but a phone opens its camera straight away
+  // (capture); a computer shows its usual file picker
+  function cameraButton() {
+    const input = h("input", { type: "file", accept: "image/*", capture: "environment", class: "visually-hidden" });
+    input.addEventListener("change", () => {
+      const [file] = input.files;
+      input.value = "";
+      if (file) upload(file);
+    });
+    return h("label", { class: "btn btn-secondary file-btn" }, "📷 Take a photo", input);
   }
 
   async function upload(file) {

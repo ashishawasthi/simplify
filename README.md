@@ -33,16 +33,18 @@ coach or admin can see who had the app open. The choices behind this, and the ot
 down, are in [security](docs/platform/security.md#pushing-a-page-to-open-screens-the-privacy-analysis).
 
 The **coach platform** behind My class lets coaches the admin has approved — each choosing the institutions they
-work at — make classes and write one simple markdown page per class, with pictures, YouTube videos, short AI-made
-videos and an AI helper, backed by Firestore, Cloud Storage, Cloud Functions and a Realtime Database (the push
-signal) in Singapore.
+work at — make classes and write one simple markdown page per class, with pictures, YouTube videos, an AI helper,
+and short videos of their own pages (the real learner reader filmed by code, read aloud — no AI-made pictures),
+backed by Firestore, Cloud Storage, Cloud Functions, a Cloud Run job (the video renderer) and a Realtime Database
+(the push signal) in Singapore.
 
 ## Live
 
 - **Learner app:** <https://simplify.whiz.coach/> — the only address to share or link to (every absolute URL in the
   app, guide and QR codes uses it; links between pages stay relative, so they work offline and in PR previews).
   `simplify-special.web.app` serves the same files but is a separate origin, so numbers saved there don't carry over.
-- **User guide:** <https://simplify.whiz.coach/guide>
+- **User guide:** <https://simplify.whiz.coach/guide>, with two short "Watch" videos, loaded only when someone opens
+  one; the coach guide has one too
 - **For coaches:** the coach app is at `/coach/` on the same site, with its own guide at `/coach/guide.html`. Nothing
   a learner sees links to it — give coaches the address directly.
 
@@ -65,6 +67,11 @@ To get the real `firebase.json` headers (CSP, caching, clean URLs — needed to 
 CLI instead: `firebase serve --only hosting --port 5050`. The coach app and My class run against the Firebase
 emulators (`firebase emulators:start`, with fake AI models) from the plain Python server, because the site's CSP
 blocks the emulators' ports — see [local development](docs/operations/local-development.md) for the details.
+
+The guide videos and coaches' page videos come from the video renderer in `video/`, which films the real app in
+headless Chrome (Node 22, Chrome and ffmpeg; nothing to install): `node video/render.mjs learner-basics` writes
+`video/out/learner-basics.mp4`. It also runs as the Cloud Run job `simplify-video` — see
+[guide videos](docs/operations/guide-videos.md).
 
 The service worker serves the app from its cache, so a reload may not show an edit; while developing, tick "Update
 on reload" under DevTools → Application → Service workers.
@@ -110,7 +117,10 @@ The Firebase project is `simplify-special`, with the custom domain `simplify.whi
   functions,firestore:rules,firestore:indexes,storage,database`, then `firebase deploy --only hosting`.
 - **Before merging any change to `public/`, bump `CACHE` in `public/sw.js`**, and add any new file under `public/`
   to `ASSETS` — otherwise installed apps keep the old version, or the new file won't work offline.
-- **Update the guide and its screenshots only after a change has been tested locally**, never alongside it.
+- **Update the guide, its screenshots and its videos only after a change has been tested locally**, never
+  alongside it.
+- **The video renderer's image is not deployed by CI**: rebuild it when `video/` or the learner reader changes
+  (`gcloud builds submit --config video/cloudbuild.yaml .`, then update the job).
 
 The full checklist, the commands and the cloud set-up are in
 [release and deploy](docs/operations/release-and-deploy.md) and [cloud project](docs/operations/cloud-project.md).

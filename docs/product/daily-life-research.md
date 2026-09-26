@@ -306,6 +306,10 @@ that isn't on the class's shelf is simply not shown.
 
 ### Short educational videos with Gemini Omni
 
+*Superseded on 2026-09-26: Omni is no longer used, and the limits below changed. A coach's video is now the class page
+filmed in code from the real learner reader — see [videos](/coach/videos.md) and the
+[decision log](/product/decisions.md). This section is kept as the design of the time.*
+
 A coach asks for a short clip ("hands being washed at a sink, step by step") and places it in a page like a picture,
 `![words](videos/<id>.mp4)`.
 

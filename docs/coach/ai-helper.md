@@ -117,6 +117,11 @@ what was asked.
 | too short to act on | no |
 | model failure, empty page | no (refunded) |
 
+The same monthly allowance pays for the other Flash call, **Draw it** in a page video's "Point things out"
+(`planOverlay`, one request each time, counted the same way — see
+[videos](/coach/videos.md#marks-over-a-picture-planoverlay)), so the line "AI requests: 12 of 200 this month" counts
+both.
+
 Months are Singapore months (UTC+8). The limits and their defaults are in
 [admin and approvals](/coach/admin-and-approvals.md#monthly-limits); costs in
 [costs and limits](/operations/costs-and-limits.md).

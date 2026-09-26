@@ -132,7 +132,7 @@ export const SCENES = {
 // scene below as well.
 
 // page helpers, for the setups below
-const HELPERS = `
+export const HELPERS = `
   const pause = (ms) => new Promise((r) => setTimeout(r, ms));
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => [...document.querySelectorAll(sel)];
@@ -162,7 +162,7 @@ const HELPERS = `
 `;
 // Now and next, filled in the way an adult does it: ＋ Add and a picture,
 // then more in My day; then Done on the first card.
-const MORNING = `
+export const MORNING = `
   $("#tool-now-next .nn-add-first").click();
   await pickPicture("brush-teeth");
   $$("#tool-now-next .nn-view")[1].click();
@@ -179,8 +179,8 @@ const MORNING = `
 `;
 
 // My class: this device follows 3 Kindness, and has its latest page saved
-const CODE = "K7M3RQP9T";
-const CLASS_PAGE = `# Washing hands
+export const CODE = "K7M3RQP9T";
+export const CLASS_PAGE = `# Washing hands
 We wash our hands before we eat.
 
 [How to wash hands](https://youtu.be/dQw4w9WgXcQ)
@@ -191,7 +191,7 @@ We wash our hands before we eat.
 3. Rub and rinse
 ---
 All done. Now we can eat.`;
-const CLASS = `
+export const CLASS = `
   localStorage.setItem("simplify-class-v1", JSON.stringify({
     code: "${CODE}", name: "3 Kindness", checkedAt: Date.now(),
     latest: { pageId: "p1", title: "Washing hands", markdown: ${JSON.stringify(CLASS_PAGE)},

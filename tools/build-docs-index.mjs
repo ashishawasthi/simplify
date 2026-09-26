@@ -58,7 +58,7 @@ const AREAS = [
     summary:
       "The coach app at /coach/ — classes, the markdown page, pictures, YouTube, Write with AI, videos, and the admin's approvals.",
     purpose:
-      "Everything a coach or the admin does at /coach/, and the Cloud Functions behind it: asking for a class and being approved, writing the one markdown page learners see, the picture and video shelves, YouTube videos, Write with AI (it writes, asks or declines), short videos with Gemini Omni, and the monthly limits. Learners never see these screens.",
+      "Everything a coach or the admin does at /coach/, and the Cloud Functions behind it: asking for a class and being approved, writing the one markdown page learners see, the picture and video shelves, YouTube videos, Write with AI (it writes, asks or declines), videos of a page made by the video renderer (with marks the AI places on pictures), and the monthly limits. Learners never see these screens.",
     lead: ["coach-app.md"],
   },
   {

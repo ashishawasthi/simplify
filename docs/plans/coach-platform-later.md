@@ -1,7 +1,7 @@
 ---
 type: Plan
 title: Coach Platform — Put Off
-description: Coach-platform features deliberately left out of the first build — Microsoft sign-in, App Check, several classes per device, per-learner content, read receipts, replies, push, a parent view, a class-wide tool list, video edits, longer and portrait videos — with what each would need.
+description: Coach-platform features deliberately left out of the first build — Microsoft sign-in, App Check, several classes per device, per-learner content, read receipts, replies, push, a parent view, a class-wide tool list — with what each would need.
 tags: [plan, coach-platform, roadmap, put-off]
 status: draft
 ---
@@ -21,8 +21,10 @@ built is described in the [coach area](/coach/index.md). Each item notes why it 
 | **Push notifications** (a notice while the app is closed) | Web Push needs a subscription per device — a lasting device ID and a token stored against the class — and a permission prompt the audience may not manage. An **open** app already hears about a new page at once through a Realtime Database stream that needs neither ([my class](/learner/my-class.md#hearing-about-a-new-page)) | A push service, subscriptions stored per device, the prompt, and a privacy review for minors |
 | **A parent view** | The pilot is for coaches and their classes | A third role in the rules and the coach app |
 | **A class-wide tool list** that sets each device's menu | Each device is set up by an adult on `#setup` | A field on the class document read by the learner app, and a rule for how it combines with the device's own hidden tools |
-| **Video edits and longer videos (Veo)** | Clips are 3–10 seconds of text-to-video with Gemini Omni; longer or edited video costs more and needs more review | New request shapes, credits priced per second, and the review gate reused |
-| **Portrait (9:16) videos** | All clips are 16:9 | An aspect choice in the video plan and the learner player |
+
+Two items once listed here are gone (2026-09-26): longer or edited AI video (Veo) and portrait videos. Videos are no
+longer made by a model at all — a coach's video is the class page filmed in code, upright (9:16) — see
+[videos](/coach/videos.md) and the [decision log](/product/decisions.md).
 
 Before building any of these, add the decision to the [decision log](/product/decisions.md) and check the
 [costs and limits](/operations/costs-and-limits.md) it would change.

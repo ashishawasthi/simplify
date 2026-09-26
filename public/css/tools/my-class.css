@@ -220,8 +220,10 @@ html[data-pictures-only] #tool-my-class .mc-screen { min-height: calc(100dvh - 2
 .class-page .cm-video video {
   display: block;
   width: 100%;
-  aspect-ratio: 16 / 9;
-  max-height: 55vh;
+  /* the video's own shape: a page video is upright (9:16), older ones wide */
+  height: auto;
+  max-height: 65vh;
+  object-fit: contain;
   background: #000;
 }
 /* the big ▶ over the middle, until the video has played */

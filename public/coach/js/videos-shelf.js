@@ -1,23 +1,25 @@
-// The class's video shelf: short videos made with AI (Gemini Omni), in three
-// steps, each the coach's own decision:
-//   1. Plan (free of video credits): the coach describes the video; one
-//      Flash request turns it into the exact request (planVideo) — or asks,
-//      or declines. The coach sees that request and what it will cost.
-//   2. Make (one of the month's videos): startVideo. Gemini takes about two
-//      minutes to accept it, and a few more to finish; the shelf asks
-//      checkVideo every 10 seconds meanwhile (and when the class opens).
+// The class's video shelf: videos of the class's own pages, made by the
+// video renderer (a Cloud Run job that films the page in the real learner
+// reader — docs/coach/videos.md), in steps that are each the coach's own:
+//   1. Choose: the page open in the editor, read aloud or not, quiet music or
+//      not, and marks over its pictures — an arrow, a ring, a label — which the
+//      AI places from the coach's words (planOverlay: one AI request each) and
+//      the coach sees before anything is made.
+//   2. Make (one of the month's videos): makeVideo. It takes a minute or two;
+//      the shelf asks checkVideo every 10 seconds meanwhile.
 //   3. Check, then Approve (it can go in pages) or Discard. A finished video
 //      is private to the class's coaches until approved.
 // "Put in page" places ![words](videos/<id>.mp4) where the editor's cursor is.
+// When the month's videos are used up, the coach can ask the admin for more.
 //
 // mountVideos(ws) → { element, choose() } — choose() is the editor's Video
 // button: the approved videos in a dialog.
 
 import { h, fill } from "./dom.js";
 import { openDialog } from "./dialog.js";
-import { questionsForm } from "./questions.js";
 import { videoMarkdown } from "./edit.js";
-import { plural, whenText } from "./format.js";
+import { whenText } from "./format.js";
+import { overlaySvg } from "./overlay.js";
 
 const CHECK_EVERY = 10_000; // ms
 
@@ -31,26 +33,30 @@ export function mountVideos(ws) {
   let alive = true;
   const checkSoon = new Set(); // just started: checked as soon as the shelf lists it
 
-  // ---------- making one ----------
+  // ---------- making one: a video of the page open in the editor ----------
 
-  const request = h("textarea", { id: "video-request", class: "helper-input", rows: 3, maxLength: 1000, "aria-describedby": "video-request-hint" });
-  const plan = h("button", { class: "btn btn-primary", type: "button" }, "Plan the video");
+  const overlays = new Map(); // picture id → shapes, for the page being made
+  const readAloud = h("input", { type: "checkbox", checked: true, id: "video-read" });
+  const withMusic = h("input", { type: "checkbox", checked: true, id: "video-music" });
+  const marks = h("div", { class: "video-marks" });
+  const make = h("button", { class: "btn btn-primary", type: "button" }, "Make the video");
+  const cost = h("p", { class: "plan-cost" });
+  const more = h("div", { class: "more-videos" });
   const maker = h("div", { class: "maker-result", "aria-live": "polite" });
   const makeBox = h("details", { class: "fold", id: "video-maker" },
-    h("summary", null, "Make a short video"),
+    h("summary", null, "Make a video of this page"),
     h("div", { class: "stack" },
-      h("div", { class: "field" },
-        h("label", { for: "video-request" }, "Describe the video"),
-        h("p", { class: "field-hint", id: "video-request-hint" },
-          "One calm scene, up to 10 seconds. For example: “hands washing with soap at a sink”. " +
-          "Planning it is free; making it uses one of your videos this month."),
-        request),
-      h("div", { class: "actions" }, plan),
+      h("p", { class: "field-hint" },
+        "The page as learners see it in My class, one screen at a time. It takes a minute or two, " +
+        "and uses one of your videos this month."),
+      h("label", { class: "check-line", for: "video-read" }, readAloud, " Read the words aloud"),
+      h("label", { class: "check-line", for: "video-music" }, withMusic, " Quiet music"),
+      marks,
+      cost,
+      h("div", { class: "actions" }, make),
+      more,
       maker));
   let busy = false;
-  const sync = () => { plan.disabled = busy || !request.value.trim(); };
-  request.addEventListener("input", sync);
-  sync();
 
   const usage = h("p", { class: "usage-line" });
   const list = h("ul", { class: "video-list", "aria-label": "Videos on the shelf" });
@@ -59,94 +65,184 @@ export function mountVideos(ws) {
     h("h2", { id: "videos-h" }, "Videos"),
     usage, makeBox, list, empty);
 
+  const left = () => Math.max(0, ws.limits.videosPerMonth - ws.usage.video);
+
   function renderUsage() {
     usage.textContent = `Videos: ${ws.usage.video} of ${ws.limits.videosPerMonth} this month`;
+    cost.textContent = left() === 0
+      ? `You have made all ${ws.limits.videosPerMonth} videos for this month.`
+      : `Making it uses 1 of your ${ws.limits.videosPerMonth} videos this month. You have ${left()} left.`;
+    renderMore();
+    syncMake();
   }
 
-  async function planIt(answers = []) {
-    const text = request.value.trim();
-    if (busy || (!text && !answers.length)) return;
+  // the pictures of the page open now, each with its marks and a box to ask for them
+  // (the parser is loaded when the maker is first opened, as the preview
+  // loads it: a class screen opens no faster or slower for this panel)
+  let pictureKey = "";
+  let parser = null;
+  async function renderMarks() {
+    if (!ws.editor) return; // the editor is made after this panel
+    parser ??= await import("/js/class-markdown.js");
+    const blocks = parser.parseClassMarkdown(ws.editor.getText().markdown).screens.flat();
+    const pictures = [...new Map(blocks.filter((b) => b.type === "picture" && ws.pictures.some((p) => p.id === b.id))
+      .map((b) => [b.id, b])).values()];
+    const key = pictures.map((p) => p.id).join(",");
+    for (const id of [...overlays.keys()]) if (!pictures.some((p) => p.id === id)) overlays.delete(id);
+    if (key === pictureKey) return;
+    pictureKey = key;
+    if (!pictures.length) {
+      marks.replaceChildren();
+      return;
+    }
+    marks.replaceChildren(
+      h("h3", { class: "marks-h" }, "Point things out"),
+      h("p", { class: "field-hint" }, "Optional. Say what to point out in a picture, and the AI draws an arrow, a ring or a label on it. Each uses one AI request."),
+      ...pictures.map(markRow));
+  }
+
+  function markRow(picture) {
+    const img = h("img", { src: cloud.mediaUrl(code, "picture", picture.id), alt: picture.words || "" });
+    // the marks as a picture of their own over the photo (never markup in the page), from a blob: URL
+    const layer = h("img", { class: "mark-layer", alt: "", hidden: true });
+    const draw = () => {
+      const shapes = overlays.get(picture.id) ?? [];
+      const show = shapes.length > 0 && img.naturalWidth > 0;
+      layer.hidden = !show;
+      if (layer.src) URL.revokeObjectURL(layer.src);
+      if (show) layer.src = URL.createObjectURL(new Blob([overlaySvg(shapes, img.naturalWidth, img.naturalHeight)], { type: "image/svg+xml" }));
+      else layer.removeAttribute("src");
+      clear.hidden = !shapes.length;
+    };
+    img.addEventListener("load", () => draw());
+    const inputId = `mark-${picture.id}`;
+    const words = h("input", { id: inputId, class: "mark-input", maxLength: 300, placeholder: "For example: an arrow to the tap" });
+    const ask = h("button", { class: "btn btn-secondary btn-small", type: "button" }, "Draw it");
+    const clear = h("button", { class: "btn btn-quiet btn-small", type: "button", hidden: true }, "Remove the marks");
+    const said = h("div", { class: "mark-said", "aria-live": "polite" });
+    ask.addEventListener("click", async () => {
+      const text = words.value.trim();
+      if (!text || ask.disabled) return;
+      ask.disabled = true;
+      fill(said, h("p", { class: "working" }, "The AI is looking at the picture."));
+      try {
+        const reply = await cloud.callFunction("planOverlay", { classCode: code, pictureId: picture.id, request: text });
+        if (Number.isInteger(reply.used) && Number.isInteger(reply.limit)) ws.setUsage({ flash: reply.used }, { flashPerMonth: reply.limit });
+        if (reply.action === "draw" && reply.shapes?.length) {
+          overlays.set(picture.id, reply.shapes);
+          fill(said, h("p", { class: "understood" }, reply.understood), reply.note ? h("p", { class: "helper-note" }, reply.note) : null);
+        } else {
+          fill(said, h("p", { class: "understood" }, reply.understood),
+            h("div", { class: "notice is-info" }, h("p", null, reply.note || "The AI could not mark this.")));
+        }
+      } catch (err) {
+        fill(said, h("p", { class: "notice is-problem" }, err.message));
+      } finally {
+        ask.disabled = false;
+        draw();
+      }
+    });
+    clear.addEventListener("click", () => {
+      overlays.delete(picture.id);
+      fill(said);
+      draw();
+    });
+    return h("div", { class: "mark-row", dataset: { picture: picture.id } },
+      h("div", { class: "mark-picture" }, img, layer),
+      h("div", { class: "stack" },
+        h("label", { for: inputId }, picture.words || "A picture"),
+        words,
+        h("div", { class: "actions" }, ask, clear),
+        said));
+  }
+
+  function syncMake() {
+    const page = ws.editor?.getText();
+    make.disabled = busy || left() === 0 || !ws.editor?.pageId || !page?.markdown.trim();
+  }
+
+  async function start() {
+    if (make.disabled) return;
     busy = true;
-    sync();
-    fill(maker, h("p", { class: "working" }, "Planning the video. This can take up to a minute."));
+    syncMake();
+    const waiting = h("div", { class: "working-box", role: "status" },
+      h("div", { class: "progress-calm", "aria-hidden": "true" }, h("span")),
+      h("p", null, "Starting the video. It shows below when it is ready to check, in a minute or two."));
+    fill(maker, waiting);
     let reply;
     try {
-      reply = await cloud.callFunction("planVideo", { classCode: code, request: text, answers });
+      await ws.editor.flush(); // the video is made from the page as saved
+      reply = await cloud.callFunction("makeVideo", {
+        classCode: code, pageId: ws.editor.pageId, readAloud: readAloud.checked, music: withMusic.checked,
+        overlays: Object.fromEntries(overlays),
+      });
     } catch (err) {
       fill(maker, h("p", { class: "notice is-problem" }, err.message));
       return;
     } finally {
       busy = false;
-      sync();
-    }
-    if (Number.isInteger(reply.used) && Number.isInteger(reply.limit)) {
-      ws.setUsage({ flash: reply.used }, { flashPerMonth: reply.limit });
-    }
-    const understood = h("p", { class: "understood" }, reply.understood || `I understood: ${text}`);
-    const note = reply.note ? h("p", { class: "helper-note" }, reply.note) : null;
-    if (reply.action === "ask") {
-      fill(maker, understood, h("p", { class: "helper-done" }, "The planner needs to know a little more:"),
-        note, questionsForm(reply.questions, (a) => planIt(a)));
-    } else if (reply.action === "write" && reply.planId) {
-      showPlan(reply, understood, note);
-    } else {
-      fill(maker, understood, h("div", { class: "notice is-info" }, h("p", null, reply.note || "The planner can't plan this video.")));
-    }
-  }
-
-  function showPlan(reply, understood, note) {
-    const left = Math.max(0, ws.limits.videosPerMonth - ws.usage.video);
-    const make = h("button", { class: "btn btn-primary", type: "button", disabled: left === 0 }, "Make the video");
-    const change = h("button", { class: "btn btn-secondary", type: "button" }, "Change the description");
-    change.addEventListener("click", () => {
-      fill(maker, );
-      request.focus();
-    });
-    make.addEventListener("click", () => start(reply.planId, make, change));
-    fill(maker, understood, note,
-      h("div", { class: "plan-card" },
-        h("p", { class: "plan-label" }, "The video request"),
-        h("blockquote", { class: "plan-prompt" }, reply.prompt),
-        h("dl", { class: "plan-facts" },
-          h("dt", null, "Length"), h("dd", null, plural(reply.seconds, "second")),
-          h("dt", null, "Words for learners"), h("dd", null, reply.words))),
-      h("p", { class: "plan-cost" }, left === 0
-        ? `You have made all ${ws.limits.videosPerMonth} videos for this month.`
-        : `Making it uses 1 of your ${ws.limits.videosPerMonth} videos this month. You have ${left} left.`),
-      h("div", { class: "actions" }, make, change));
-  }
-
-  async function start(planId, make, change) {
-    make.disabled = true;
-    change.disabled = true;
-    plan.disabled = true;
-    const waiting = h("div", { class: "working-box", role: "status" },
-      h("div", { class: "progress-calm", "aria-hidden": "true" }, h("span")),
-      h("p", null, "Starting the video. This takes about 2 minutes, and then a few more to finish. " +
-        "You can keep working on the page meanwhile."));
-    maker.append(waiting);
-    let reply;
-    try {
-      reply = await cloud.callFunction("startVideo", { classCode: code, planId });
-    } catch (err) {
-      waiting.replaceWith(h("p", { class: "notice is-problem" }, err.message));
-      change.disabled = false;
-      sync();
-      return;
+      syncMake();
     }
     if (!alive) return;
     if (Number.isInteger(reply.used) && Number.isInteger(reply.limit)) {
       ws.setUsage({ video: reply.used }, { videosPerMonth: reply.limit });
     }
-    request.value = "";
-    sync();
     checkSoon.add(reply.videoId);
-    fill(maker, h("p", { class: "helper-done" },
-      "The video is being made. It shows below when it is ready to check."));
+    fill(maker, h("p", { class: "helper-done" }, "The video is being made. It shows below when it is ready to check."));
     schedule(true);
   }
+  make.addEventListener("click", start);
 
-  plan.addEventListener("click", () => planIt());
+  // ---------- asking the admin for more ----------
+
+  let asked = null; // this coach's waiting request for more videos, once known
+  cloud.myRequests(ws.uid).then((mine) => {
+    asked = mine.find((r) => r.kind === "more-videos" && r.status === "pending") ?? null;
+    renderMore();
+  }).catch(() => {});
+
+  function renderMore() {
+    if (asked) {
+      fill(more, h("p", { class: "field-hint" }, "You asked the admin for more videos. They will decide soon."));
+      return;
+    }
+    if (left() > 3) return fill(more);
+    const note = h("textarea", { id: "more-videos-note", rows: 2, maxLength: 300 });
+    const send = h("button", { class: "btn btn-secondary btn-small", type: "button" }, "Ask the admin for more videos");
+    send.addEventListener("click", async () => {
+      send.disabled = true;
+      try {
+        await cloud.askForMoreVideos(ws.uid, { note: note.value.trim() });
+        asked = { kind: "more-videos", status: "pending" };
+        toast.show("Asked. The admin will decide.");
+        renderMore();
+      } catch (err) {
+        send.disabled = false;
+        ws.problem(err);
+      }
+    });
+    fill(more, h("div", { class: "field" },
+      h("label", { for: "more-videos-note" }, "Need more videos this month? Say why (if you like)"),
+      note),
+      h("div", { class: "actions" }, send));
+  }
+
+  makeBox.addEventListener("toggle", () => {
+    if (makeBox.open) renderMarks();
+  });
+  let marksTimer = null;
+  const pageChanged = () => {
+    syncMake();
+    clearTimeout(marksTimer);
+    marksTimer = setTimeout(() => makeBox.open && renderMarks(), 400);
+  };
+  ws.on("text", pageChanged);
+  ws.on("page", () => {
+    overlays.clear();
+    pictureKey = "";
+    fill(maker);
+    pageChanged();
+  });
 
   // ---------- the shelf ----------
 
@@ -166,11 +262,10 @@ export function mountVideos(ws) {
         h("span", { class: `chip ${tone}` }, words),
         h("span", { class: "video-words" }, video.words || "A video"),
         h("span", { class: "video-when" }, whenText(video.createdAt))),
-      media, actions,
-      h("details", { class: "video-request" }, h("summary", null, "The request"), h("p", null, video.prompt ?? "")));
+      media, actions);
 
     if (video.status === "rendering") {
-      media.append(h("p", { class: "shelf-state" }, "It usually takes a few minutes. This updates by itself."));
+      media.append(h("p", { class: "shelf-state" }, "It usually takes a minute or two. This updates by itself."));
     } else if (video.status === "ready") {
       const watch = h("button", { class: "btn btn-secondary btn-small", type: "button" }, "Watch it");
       const showDraft = (url) => media.replaceChildren(h("video", {
@@ -212,7 +307,7 @@ export function mountVideos(ws) {
       actions.append(place, discardButton(video, "Delete"));
     } else if (video.status === "failed") {
       media.append(h("p", { class: "shelf-state" },
-        `${video.error || "The video could not be made."} Your video credit was given back.`));
+        `${video.error || "The video could not be made."} It was not counted.`));
       actions.append(discardButton(video, "Remove"));
     }
     return item;
@@ -298,14 +393,14 @@ export function mountVideos(ws) {
   // ---- the editor's Video button ----
   function choose() {
     const listEl = h("ul", { class: "chooser-list" });
-    const makeLink = h("button", { class: "btn btn-secondary", type: "button" }, "Make a short video");
+    const makeLink = h("button", { class: "btn btn-secondary", type: "button" }, "Make a video of this page");
     const body = h("div", { class: "chooser" }, listEl, h("div", { class: "actions" }, makeLink));
     const dialog = openDialog({ title: "Put a video in the page", body });
     makeLink.addEventListener("click", () => {
       dialog.close();
       makeBox.open = true;
       makeBox.scrollIntoView({ block: "start", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
-      request.focus({ preventScroll: true });
+      renderMarks();
     });
     const draw = () => {
       const approved = ws.videos.filter((v) => v.status === "approved");
@@ -317,7 +412,7 @@ export function mountVideos(ws) {
             dialog.close();
           },
         }, h("span", { class: "chooser-icon", "aria-hidden": "true" }, "▶"), h("span", null, video.words || "A video"))))
-        : [h("li", { class: "empty" }, "No approved videos yet. Make one, check it, then approve it.")]));
+        : [h("li", { class: "empty" }, "No approved videos yet. Make one of a page, check it, then approve it.")]));
     };
     redrawers.add(draw);
     dialog.closed.then(() => redrawers.delete(draw));
@@ -326,6 +421,7 @@ export function mountVideos(ws) {
 
   ws.on("videos", render);
   ws.on("usage", renderUsage);
+  ws.on("pictures", () => makeBox.open && renderMarks());
   renderUsage();
   render();
 
@@ -335,6 +431,7 @@ export function mountVideos(ws) {
     leave() {
       alive = false;
       clearTimeout(pollTimer);
+      clearTimeout(marksTimer);
       document.removeEventListener("visibilitychange", onVisible);
       for (const url of drafts.values()) URL.revokeObjectURL(url);
     },

@@ -136,7 +136,7 @@ export function classScreen(root, ctx, code) {
     }, listProblem),
   ];
 
-  Promise.all([cloud.getUsage(user.uid), cloud.getLimits()]).then(([usage, limits]) => {
+  Promise.all([cloud.getUsage(user.uid), cloud.getLimits(user.uid)]).then(([usage, limits]) => {
     if (!stopped) ws.setUsage(usage, limits);
   });
 

@@ -1,8 +1,8 @@
 ---
 type: Operations Runbook
 title: Admin and Approvals
-description: Who the admin is and how one is made (admins/{uid} in the console, Google sign-in only), and every action on the coach app's Admin screen and its tabs — approving or declining coaches with a note of how they were checked, the admin log (who approved which coach, when, and how), places coaches type that are not in the list, join requests, suspending coaches and classes, taking a coach off a class, taking a page down, the monthly AI and video limits, and the institutions coaches choose from (seeding, adding, retiring) — with the writes and rules behind each, and the one-off switch-on steps.
-tags: [admin, coach-approval, audit-log, admin-log, institutions, join-requests, suspend, take-down, monthly-limits, firestore-rules, runbook]
+description: Who the admin is and how one is made (admins/{uid} in the console, Google sign-in only), and every action on the coach app's Admin screen and its tabs — approving or declining coaches with a note of how they were checked, the admin log (who approved which coach, when, and how), places coaches type that are not in the list, join requests, requests for more videos a month, suspending coaches and classes, taking a coach off a class, taking a page down, the monthly AI and video limits (and one coach's own video limit), and the institutions coaches choose from (seeding, adding, retiring) — with the writes and rules behind each, and the one-off switch-on steps.
+tags: [admin, coach-approval, audit-log, admin-log, institutions, join-requests, more-videos, suspend, take-down, monthly-limits, firestore-rules, runbook]
 status: stable
 ---
 
@@ -59,10 +59,13 @@ history still reads right after a rename or a retirement.
 | `institution-added`, `institution-edited`, `institution-retired`, `institution-restored` | the Institutions tab (and "Add it to the list" from a coach's card, with the coach) | |
 | `class-suspended`, `class-restored`, `page-taken-down`, `page-put-back` | the Classes tab | `detail`: the page's title |
 | `limits-changed` | Save the limits | `detail`: the new limits |
+| `more-videos-approved` | Give them more (a request for more videos) | why (optional); `detail`: "*N* videos a month" |
+| `more-videos-declined` | Decline (a request for more videos) | why (optional) |
+| `coach-limits-changed` | an admin setting one coach's videos a month without a request (allowed by the rules; no screen writes it yet) | `detail`: the new number |
 
 **What the rules guarantee** (`firestore.rules`, `adminLog` and `loggedNow`): admins read and create entries;
 nobody updates or deletes one (the owner can, in the console). A decision on a coach (`coaches/{uid}.decisionLog`),
-a suspension (`suspendLog`) and a decision on a request (`requests/{id}.decisionLog`) are refused unless the entry
+a suspension (`suspendLog`), a coach's own limit (`limitsLog`) and a decision on a request (`requests/{id}.decisionLog`) are refused unless the entry
 they name was written in the same commit by the same admin for the same coach or request with the matching action —
 and such an entry is refused unless its decision is in the commit too (`getAfter`). So every approval since
 2026-09-25 has a record of who approved and how, and there is no record of an approval that did not happen. The
@@ -78,7 +81,7 @@ tabs doesn't reload anything; the Admin link in the nav opens **Waiting**):
 
 | Tab | Address | What |
 |---|---|---|
-| **Waiting** (with a count) | `#admin` | coaches waiting for approval, requests to join a class |
+| **Waiting** (with a count) | `#admin` | coaches waiting for approval, requests from coaches (to join a class, or for more videos a month) |
 | **Coaches** | `#admin/coaches` | every coach, who approved them and how; suspend, let back in, approve later |
 | **Classes** | `#admin/classes` | every class: suspend it, take its page down, take a coach off it |
 | **Institutions** | `#admin/places` | the list coaches choose from |
@@ -89,7 +92,7 @@ The screen loads six things: the pending requests, every coach, every class with
 institutions, `config/limits`, and the latest 300 log entries (`orderBy("at", "desc")`; an older decision's entry is
 fetched by id). The **Admin** link in the nav shows a live count of what waits (`cloud.watchWaiting`: coaches and
 requests with `status == "pending"`; a profile from before approvals, with no `status`, shows on the Waiting tab but
-is not in that count). Every action shows a toast; everything but approving a join request has **Undo**.
+is not in that count). Every action shows a toast; everything but approving a request has **Undo**.
 
 A decision's note is typed in a small form that opens **in the card** (only one at a time); what was typed is kept
 while the screen redraws, and an Undo opens the form again with it.
@@ -130,7 +133,12 @@ An approved coach makes their own classes (see [the coach app](/coach/coach-app.
 per-class approval for a new class. The admin sees each new class under **Classes**, with its institution. A coach
 approved with only a typed place can't make a class until the place is in the list and on their profile.
 
-### Waiting: requests to join a class
+### Waiting: requests from coaches
+
+The section is headed "Requests from coaches (*n*)", oldest first. A request is to join a class, or for more videos a
+month.
+
+#### To join a class
 
 A coach who works with a colleague asks to join the colleague's class by its code. Each card shows "Join
 K7M-3RQ-P9T (3 Kindness)" (or "— no class has this code"), the coach's name and email, their status if not approved,
@@ -144,6 +152,18 @@ and when they asked. **Check that they really coach that class** — the admin i
 
 A request decided by another admin meanwhile fails with "This request has already been decided." An older "New
 class" request (from before coaches made their own) can only be declined, with a line saying so.
+
+#### More videos a month
+
+A coach with 3 or fewer videos left this month can ask for more from the video panel, with an optional note
+([videos](/coach/videos.md#asking-the-admin-for-more)). The card is headed "More videos a month" and shows the coach,
+**Works at**, **Videos a month now** (their own number, or everyone's), how to check them, their note and when they
+asked.
+
+| Action | What is written | Rules |
+|---|---|---|
+| **Approve** | Opens **Videos a month for this coach** (0–500, suggested: the current number + 20) and "Why? (if you like)" ("Kept in the admin history with your name. A page video costs a few cents."). **Give them more** then writes, in one transaction (`cloud.approveMoreVideos`): the `more-videos-approved` entry (with the request, the coach and `detail` "*N* videos a month"); `coaches/{uid}.limits = { videosPerMonth: N }` with `limitsLog`; and the request → `approved` with `decidedAt`, `decidedBy`, `decisionLog` and `videosPerMonth`. The toast says "Mr Lim can make 60 videos a month now." No Undo. The number stays for every later month until an admin changes it | an admin changes only a coach's `limits` (just `videosPerMonth`, an integer 0–500) and `limitsLog`, only with an entry for that coach in the same commit; the request as for a join, plus `videosPerMonth` (0–500) |
+| **Decline** | "Why? (if you like)", kept in the history. When the toast's Undo runs out, the `more-videos-declined` entry and the request → `declined`. The coach can ask again | as above |
 
 ### Coaches
 
@@ -192,11 +212,17 @@ The **Limits** tab. `config/limits` = `{ flashPerMonth, videosPerMonth, updatedA
 
 | Limit | Default (`DEFAULT_LIMITS` in `functions/lib.js`) | Allowed by the rules | Counts |
 |---|---|---|---|
-| AI requests per coach per month | 200 | 0–5,000 | `writePage` and `planVideo` calls (Gemini Flash) — see [Write with AI](/coach/ai-helper.md#counting) |
-| Videos per coach per month | 5 | 0–100 | `startVideo` renders (Gemini Omni, about US$0.80 each) — see [videos](/coach/videos.md) |
+| AI requests per coach per month | 200 | 0–5,000 | `writePage` and `planOverlay` calls (Gemini Flash: writing pages and marking pictures) — see [Write with AI](/coach/ai-helper.md#counting) |
+| Videos per coach per month (a coach can ask for more) | 20 | 0–100 | `makeVideo` (a page video, made by the renderer on Cloud Run, a few cents each) — see [videos](/coach/videos.md#videos-this-month) |
 
-The form's hint: "The same for every coach, counted in Singapore months." A missing document, or a missing or invalid
-field, means the default. Months are Singapore months (UTC+8); usage is kept per coach per month in
+The form's hint: "The same for every coach, counted in Singapore months, unless you gave a coach more videos when they
+asked. AI requests are writing pages and marking pictures (Gemini Flash); a page video costs a few cents to make (most of it the voice)." A
+missing document, or a missing or invalid field, means the default.
+
+**One coach's own limit.** A coach the admin gave more videos (above) has `coaches/{uid}.limits.videosPerMonth`,
+which takes the place of everyone's number for that coach only (`limitsFrom(limits, coach)` in `functions/lib.js`;
+the coach app reads the same with `cloud.getLimits(uid)`). A missing or invalid own number means everyone's. The
+Limits tab does not show or change it; the coach's next request does. Months are Singapore months (UTC+8); usage is kept per coach per month in
 `usage/{uid}_{YYYY-MM}` (`flash`, `video`, `declined`), written only by the functions and readable by that coach and
 admins. Lowering a limit below what a coach has already used this month simply stops further use until the next
 month. Any signed-in user may read the limits (the coach app shows "12 of 200 this month").
@@ -242,11 +268,13 @@ Classes made before keep their free-text `org` (the rules still accept it on an 
 `node tools/test-rules.mjs` pins every admin-only write (and that coaches cannot make them), that an admin signed
 in without Google can do nothing, the admin log (an approval without its entry, an entry without its approval, a
 note under 10 characters, another admin's name or email, an old entry reused, changing or deleting an entry — all
-refused), that a coach waiting for approval (or declined, or suspended) can do nothing but edit their own profile
+refused), giving a coach more videos (only with its entry, for the coach who asked, at most 500 — and never by the
+coach), that a coach waiting for approval (or declined, or suspended) can do nothing but edit their own profile
 (and, declined, ask again), a place typed instead of an institution, and that an approved coach can make a class
 only for their own active institution; `node tools/test-functions.mjs` that every callable
 refuses a coach who is not approved; `node tools/test-seed.mjs` the seeding and migration tools;
 `node tools/smoke.mjs coach` drives the Admin screen in Chrome against a stand-in `cloud.js` — the note forms,
-Undo bringing a note back, a place not in the list, taking a coach off a class, the history and its search, and
+Undo bringing a note back, a place not in the list, taking a coach off a class, giving a coach more videos when they
+ask, the history and its search, and
 the tabs at iPad and phone widths. The real `cloud.js` was walked through against the emulators (every write above,
 with the rules) on 2026-09-25; see [local development](/operations/local-development.md) for signing in there.

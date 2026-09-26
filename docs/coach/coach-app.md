@@ -1,7 +1,7 @@
 ---
 type: Product Contract
 title: The Coach App
-description: What the /coach/ app does and promises — how it is kept apart from the learner app, Google sign-in for the tab only, About you with its institution picker, waiting for the admin's approval, My classes (making a class, asking to join one), the class screen (pages, editor, toolbar, live preview, Publish — optionally shown now on learners' open screens — and Unpublish with Undo), the picture shelf, the QR poster, routing and errors.
+description: What the /coach/ app does and promises — how it is kept apart from the learner app, Google sign-in for the tab only, About you with its institution picker, waiting for the admin's approval, My classes (making a class, asking to join one), the class screen (pages, editor, toolbar, live preview, Publish — optionally shown now on learners' open screens — and Unpublish with Undo), the picture shelf (take a photo or add pictures), the QR poster, routing and errors.
 tags: [coach-app, sign-in, institutions, coach-approval, editor, preview, publish, picture-shelf, qr-poster, routing]
 status: stable
 ---
@@ -38,7 +38,7 @@ The Firebase JS SDK **12.19.0** (app, auth, firestore, storage, functions) and *
 
 Rules applied before the hash, from `coachGate()` in `public/coach/js/institutions.js`: signed out, every address shows Sign in; signed in with no `coaches/{uid}` profile, or one from before institutions (no `institutions`), or one with neither an institution nor an `otherPlace`, About you comes first (the admin too). Then `#admin` opens for an admin whatever their own status (an admin may approve themself), and `#about` for anyone. A coach whose `status` is `pending` (or missing) sees **Waiting for approval** at every other address, and one whose status is `declined` sees **Not approved**; only an approved coach reaches My classes, a class or a poster. `<CODE>` is normalised with `normaliseCode` and must pass `isClassCode`, or the route falls through to My classes. Each screen returns a clean-up function that runs before the next one opens (the class screen stops its Firestore listeners there). On every screen change the new `<h1>` receives focus and becomes part of `document.title`. A screen that throws while opening shows "Something went wrong" instead of a blank page.
 
-The header shows the signed-in email and **Sign out** whenever someone is signed in — the email only from 1024 px wide, so an iPad's header stays one row (Sign out's `title` says "Signed in as …", and About you shows it too) — and the nav (My classes, Admin, About you) once the profile is known; Admin appears only when `admins/{uid}` exists, which is read once at sign-in; for an admin it carries a live count of what waits (`cloud.watchWaiting`: coaches and join requests whose `status` is `pending`). The footer links to the coach guide, `/coach/guide.html`.
+The header shows the signed-in email and **Sign out** whenever someone is signed in — the email only from 1024 px wide, so an iPad's header stays one row (Sign out's `title` says "Signed in as …", and About you shows it too) — and the nav (My classes, Admin, About you) once the profile is known; Admin appears only when `admins/{uid}` exists, which is read once at sign-in; for an admin it carries a live count of what waits (`cloud.watchWaiting`: coaches and requests — to join a class, or for more videos — whose `status` is `pending`). The footer links to the coach guide, `/coach/guide.html`.
 
 The profile is **watched live** (`cloud.watchProfile`, an `onSnapshot` of `coaches/{uid}`): when the admin's decision changes what the coach may do, the screen changes as it happens — Waiting for approval becomes My classes without a reload. It never re-routes under someone typing in About you or working on the Admin screen. A profile that is "not found" only in the device's cache is treated as no connection, so nobody is sent to About you by mistake.
 
@@ -79,7 +79,7 @@ What the admin does with a request is in [admin and approvals](/coach/admin-and-
 
 ## The class screen
 
-`screen-class.js` opens four live Firestore listeners: the class document, `pages`, `pictures` and `videos`. That way another coach's upload or publish shows as it happens. The parts share one state object, `ws`, and talk through its events (`class`, `pages`, `pictures`, `videos`, `usage`, `text`, `page`, `cursor`). The top of the screen has the class name, its code and a link to the **QR poster to print**.
+`screen-class.js` opens four live Firestore listeners: the class document, `pages`, `pictures` and `videos`. That way another coach's upload or publish shows as it happens. It also reads this coach's use this month and limits once (`cloud.getUsage(uid)`, `cloud.getLimits(uid)` — the coach's own video limit if the admin gave them one, else everyone's). The parts share one state object, `ws`, and talk through its events (`class`, `pages`, `pictures`, `videos`, `usage`, `text`, `page`, `cursor`). The top of the screen has the class name, its code and a link to the **QR poster to print**.
 
 - If a listener is refused, the workspace is hidden and the screen says the coach may not be one of the class's coaches, or that the class or account is paused.
 - A class the admin has paused shows a warning, and Publish is disabled. The rules let a listed coach read the paused class document itself, but not its pages or shelves (`isClassCoach` requires `status == 'active'`). So those lists stay empty and every write is refused, even though the warning says the class "can be read here".
@@ -105,7 +105,7 @@ A plain `<textarea>` with a toolbar above it and one line of help under it ("Eac
 | Bold (and Ctrl/Cmd+B) | wraps each selected line's words in `**…**`, keeping spaces outside the stars, or unwraps them. With nothing selected it inserts "bold words", selected |
 | List | toggles `- ` on the touched lines (a numbered item becomes `- `) |
 | Picture | opens the picture shelf in a dialog; a tap places `![words](pictures/<id>.jpg)` |
-| Video | lists approved videos; a tap places `![words](videos/<id>.mp4)`, or "Make a short video" opens the maker |
+| Video | lists approved videos; a tap places `![words](videos/<id>.mp4)`, or "Make a video of this page" opens the maker ([videos](/coach/videos.md)) |
 | YouTube | a dialog that takes a pasted link and words and places `[words](https://youtu.be/<id>)` (see [markdown pages](/coach/markdown-pages.md#youtube)) |
 | Next screen | places `---` |
 
@@ -133,7 +133,7 @@ The rules allow a coach to change only `latest` and `updatedAt` on the class doc
 
 `public/coach/js/pictures-shelf.js` and `public/coach/js/image.js`.
 
-- **Add pictures** is a label around `<input type="file" accept="image/*" multiple>`, so the system's own photo picker or camera opens without a camera permission.
+- **📷 Take a photo** and **Add pictures** sit side by side. Each is a label around a hidden file input, so the system's own camera or photo picker opens without a camera permission: **Take a photo** is `<input type="file" accept="image/*" capture="environment">`, which opens a phone's or iPad's back camera straight away (a computer shows its usual file picker); **Add pictures** is `accept="image/*" multiple`. Both upload the same way.
 - Each photo is made small **in the coach's browser** (`toShelfJpeg`): decoded (the browser applies EXIF orientation), drawn onto a white canvas at most **1600 px** on its long side, and re-encoded as **JPEG** at quality 0.85. Drawing onto a canvas keeps only pixels, so EXIF, GPS, camera and time data never leave the device. If the result is not under 2 MB it steps down: 1600 px at 0.7, then 1200 px at 0.7, then 900 px at 0.6. A file the browser cannot open (a HEIC photo on Windows, a PDF) is refused with "Try a JPEG or PNG photo".
 - The upload goes to Storage `classes/{code}/pictures/{id}.jpg` under a new Firestore id, with `Cache-Control: public, max-age=86400` (a picture never changes). It shows a progress bar. The shelf entry `classes/{code}/pictures/{id}` (`words`, `file`, `width`, `height`, `createdAt/By`) is written afterwards; if that write fails, the file is deleted again.
 - Each picture has a words box (80 characters, saved 0.8 s after typing), which is the alt text learners' screen readers read. **Put in page** places it at the cursor, and **Delete** hides it at once with Undo, then removes the shelf entry and the file.

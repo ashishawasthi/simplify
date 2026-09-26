@@ -6,7 +6,7 @@
 // response breaks offline navigations. Every file under public/ belongs here
 // (bar the few tools/test-assets.mjs names, which no device needs), and
 // `node tools/test-assets.mjs` checks both ways.
-const CACHE = "simplify-v42";
+const CACHE = "simplify-v43";
 const ASSETS = [
   "/",
   "/guide",
@@ -35,6 +35,7 @@ const ASSETS = [
   "/css/guide.css",
   "/js/guide-links.js",
   "/js/guide-live.js",
+  "/js/guide-video.js",
   "/img/guide/screen-menu.png",
   "/img/guide/screen-money.png",
   "/img/guide/mic-on-keyboard.png",

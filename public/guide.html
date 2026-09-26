@@ -17,6 +17,7 @@
        anything renders. -->
   <script src="/js/guide-links.js"></script>
   <script type="module" src="/js/guide-live.js"></script>
+  <script type="module" src="/js/guide-video.js"></script>
 </head>
 
 <body>
@@ -24,6 +25,20 @@
   <header class="guide-header">
     <h1><span aria-hidden="true">ℹ️</span> How to use this app</h1>
     <p class="subtitle">Simplify — tap a topic</p>
+    <div class="tours">
+      <details class="tour">
+        <summary><span class="tour-play" aria-hidden="true">▶</span> Watch: the basics <span class="tour-len">46 seconds</span></summary>
+        <video controls playsinline preload="none" width="720" height="1280"
+          data-src="https://storage.googleapis.com/simplify-guide-videos/learner-basics.mp4" data-poster="https://storage.googleapis.com/simplify-guide-videos/learner-basics.jpg"
+          aria-label="Watch: the basics: a short video of the app being used, with a spoken line for each tool"></video>
+      </details>
+      <details class="tour">
+        <summary><span class="tour-play" aria-hidden="true">▶</span> Watch: set-up and more <span class="tour-len">49 seconds</span></summary>
+        <video controls playsinline preload="none" width="720" height="1280"
+          data-src="https://storage.googleapis.com/simplify-guide-videos/learner-more.mp4" data-poster="https://storage.googleapis.com/simplify-guide-videos/learner-more.jpg"
+          aria-label="Watch: set-up and more: a short video of the app being used, with a spoken line for each tool"></video>
+      </details>
+    </div>
   </header>
 
   <main>

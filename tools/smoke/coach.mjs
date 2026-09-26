@@ -41,7 +41,7 @@ function fakeCloud() {
     pictures: { K7M3RQP9T: [] },
     videos: { K7M3RQP9T: [] },
     usage: { flash: 3, video: 1 },
-    limits: { flashPerMonth: 200, videosPerMonth: 5 },
+    limits: { flashPerMonth: 200, videosPerMonth: 20 },
     replies: {},
     calls: [],
     uploads: [],
@@ -208,15 +208,18 @@ function fakeCloud() {
           S.usage.flash++;
           return { action: "write", understood: `I understood: ${data.instruction}`, questions: [], title: "Going to the dentist",
             markdown: "# Going to the dentist\nI am going to the dentist.\n---\nThe dentist looks at my teeth.", note: "", used: S.usage.flash, limit: S.limits.flashPerMonth };
-        case "planVideo":
+        case "planOverlay":
           S.usage.flash++;
-          return { action: "write", understood: `I understood: a short video of ${data.request}`, questions: [], planId: "plan1",
-            prompt: `One calm, continuous shot: ${data.request}. No text, no logos, no music.`, seconds: 8, words: "Washing hands",
-            note: "", used: S.usage.flash, limit: S.limits.flashPerMonth };
-        case "startVideo": {
+          return { action: "draw", understood: `I understood: ${data.request}`, note: "",
+            shapes: [{ type: "circle", at: [500, 500], r: 200 }, { type: "arrow", from: [900, 150], to: [640, 330] }],
+            used: S.usage.flash, limit: S.limits.flashPerMonth };
+        case "makeVideo": {
+          if (S.usage.video >= S.limits.videosPerMonth) throw new CloudError("resource-exhausted", `You have made all ${S.limits.videosPerMonth} videos for this month. You can ask the admin for more.`);
           S.usage.video++;
           const vid = id("vid");
-          S.videos[code].push({ id: vid, status: "rendering", prompt: "One calm shot", words: "Washing hands", seconds: 8, createdAt: new Date() });
+          const page = S.pages[code].find((p) => p.id === data.pageId);
+          S.videos[code].push({ id: vid, kind: "page", status: "rendering", words: `Video of the page: ${page?.title ?? ""}`.slice(0, 80),
+            title: page?.title ?? "", pageId: data.pageId, readAloud: data.readAloud, music: data.music, overlays: data.overlays, createdAt: new Date() });
           notify();
           return { videoId: vid, used: S.usage.video, limit: S.limits.videosPerMonth };
         }
@@ -322,9 +325,21 @@ function fakeCloud() {
       S.institutions.find((i) => i.id === inst.id).active = active;
       return later();
     },
+    async askForMoreVideos(uid, { note }) {
+      S.calls.push({ name: "askForMoreVideos", uid, note });
+      S.requests.push({ id: id("r"), uid, kind: "more-videos", note, status: "pending", createdAt: new Date() });
+      return later();
+    },
+    async approveMoreVideos(req, admin, { videosPerMonth, note }) {
+      S.calls.push({ name: "approveMoreVideos", id: req.id, videosPerMonth, note });
+      const logId = logged(admin, "more-videos-approved", { request: req.id, coach: req.uid, note, detail: `${videosPerMonth} videos a month` });
+      Object.assign(S.requests.find((x) => x.id === req.id), { status: "approved", decidedBy: admin.uid, decisionLog: logId, videosPerMonth });
+      S.profiles[req.uid].limits = { videosPerMonth };
+      return later();
+    },
     async declineRequest(req, admin, { note = "" } = {}) {
       S.calls.push({ name: "declineRequest", id: req.id, note });
-      const logId = logged(admin, "join-declined", { request: req.id, coach: req.uid, note });
+      const logId = logged(admin, req.kind === "more-videos" ? "more-videos-declined" : "join-declined", { request: req.id, coach: req.uid, note });
       Object.assign(S.requests.find((x) => x.id === req.id), { status: "declined", decidedBy: admin.uid, decisionLog: logId });
       return later();
     },
@@ -351,7 +366,7 @@ const NAMES = [
   "publishPage", "setLatest", "mediaUrl", "addPicture", "setPictureWords", "deletePicture", "draftVideoUrl",
   "callFunction", "getLimits", "getUsage", "pendingRequests", "allCoaches", "allClasses", "setCoachSuspended",
   "decideCoach", "saveInstitution", "setInstitutionActive", "setClassStatus", "adminSetLatest", "approveRequest",
-  "declineRequest", "saveLimits", "adminLog", "logEntries", "watchWaiting", "setCoachOfClass", "addPlaceToCoach", "askAgain",
+  "declineRequest", "saveLimits", "askForMoreVideos", "approveMoreVideos", "adminLog", "logEntries", "watchWaiting", "setCoachOfClass", "addPlaceToCoach", "askAgain",
 ];
 export const STUBS = { // (also used to take screenshots)
   "/coach/js/cloud.js": `window.__sampleMp4 = "${SAMPLE_MP4}";\n(${fakeCloud})();\nexport const { ${NAMES.join(", ")} } = window.__fakeCloud;\n`,
@@ -835,41 +850,49 @@ export default [
 
   // ---------- videos and YouTube ----------
   scene({
-    name: "videos: plan (the exact request, what it costs), make, checked, approve, put in page",
+    name: "videos: a video of this page — marks on its picture, what it costs, made, checked, approved, put in page",
     path: "/coach/#class/K7M3RQP9T",
+    init: seed(`{ pages: ${PAGE}, pictures: ${SHELF}, usage: { flash: 3, video: 1 } }`),
     setup: run(async () => {
-      await waitFor(() => byText(".usage-line", "Videos: 1 of 5 this month"));
-      byText("summary", "Make a short video").click();
-      type($("#video-request"), "hands washing with soap at a sink");
-      byText("button", "Plan the video").click();
-      await waitFor(() => $(".plan-card"));
-      if (!byText(".plan-cost", "uses 1 of your 5 videos this month. You have 4 left")) throw new Error($(".plan-cost").textContent);
-      if (!byText(".plan-prompt", "One calm, continuous shot")) throw new Error("no request shown");
-      if ($(".maker-result").textContent.includes("null")) throw new Error("a missing note shows as null");
+      await waitFor(() => byText(".usage-line", "Videos: 1 of 20 this month") && $(".phone-screen .cm-h1"));
+      byText("summary", "Make a video of this page").click();
+      await waitFor(() => $('.mark-row[data-picture="pic1"]'));
+      if (!byText(".plan-cost", "uses 1 of your 20 videos this month. You have 19 left")) throw new Error($(".plan-cost").textContent);
+      type($(".mark-input"), "an arrow to the tap");
+      byText(".mark-row button", "Draw it").click();
+      await waitFor(() => !$(".mark-layer").hidden && byText(".mark-said", "I understood: an arrow to the tap"));
+      $("#video-music").click(); // no music
       byText("button", "Make the video").click();
       await waitFor(() => byText(".video-item .chip", "Ready to check"), 4000);
       byText(".video-item button", "Watch it").click();
       await waitFor(() => $(".video-item video"));
       byText(".video-item button", "Approve").click();
       await waitFor(() => byText(".video-item .chip", "On the shelf"));
+      $(".md-input").setSelectionRange(0, 0);
       byText(".video-item button", "Put in page").click();
     }),
-    expect: inPage(() => /^!\[Washing hands\]\(videos\/vid\w+\.mp4\)\n\n$/.test($(".md-input").value) &&
-      byText(".usage-line", "Videos: 2 of 5") && __fake.calls.some((c) => c.name === "checkVideo") &&
-      __fake.calls.find((c) => c.name === "startVideo").data.planId === "plan1" && $(".phone-screen .cm-video video")),
+    expect: inPage(() => {
+      const made = __fake.calls.find((c) => c.name === "makeVideo")?.data;
+      return /^!\[Video of the page: Going to the dentist\]\(videos\/vid\w+\.mp4\)\n\n/.test($(".md-input").value) &&
+        byText(".usage-line", "Videos: 2 of 20") && __fake.calls.some((c) => c.name === "checkVideo") &&
+        made.pageId === "page1" && made.readAloud === true && made.music === false &&
+        made.overlays.pic1?.[0]?.type === "circle" && __fake.calls.some((c) => c.name === "planOverlay" && c.data.pictureId === "pic1");
+    }),
   }),
   scene({
-    name: "videos: no videos left this month — Make can't be pressed",
+    name: "videos: none left this month — Make can't be pressed, and the coach can ask the admin for more",
     path: "/coach/#class/K7M3RQP9T",
-    init: seed(`{ usage: { flash: 0, video: 5 } }`),
+    init: seed(`{ pages: ${PAGE}, usage: { flash: 0, video: 20 } }`),
     setup: run(async () => {
-      await waitFor(() => byText(".usage-line", "Videos: 5 of 5"));
-      byText("summary", "Make a short video").click();
-      type($("#video-request"), "brushing teeth");
-      byText("button", "Plan the video").click();
-      await waitFor(() => $(".plan-card"));
+      await waitFor(() => byText(".usage-line", "Videos: 20 of 20") && $(".phone-screen .cm-h1"));
+      byText("summary", "Make a video of this page").click();
+      if (!byText("button", "Make the video").disabled) throw new Error("Make can be pressed");
+      type($("#more-videos-note"), "Making step videos for the whole term");
+      byText("button", "Ask the admin for more videos").click();
+      await waitFor(() => byText(".more-videos", "You asked the admin for more videos"));
     }),
-    expect: inPage(() => byText("button", "Make the video").disabled && byText(".plan-cost", "made all 5 videos")),
+    expect: inPage(() => byText(".plan-cost", "made all 20 videos") &&
+      __fake.requests.some((r) => r.kind === "more-videos" && r.note === "Making step videos for the whole term" && r.status === "pending")),
   }),
   scene({
     name: "YouTube: a pasted link goes in on its own line, as youtu.be; the preview shows a card, nothing loaded",
@@ -982,6 +1005,29 @@ export default [
         byText(".log-row", "Ms Tan declined Ms Wong") && byText(".log-row", "set the monthly limits: 150 AI requests") &&
         !$("#nav a[data-route=admin]").hidden;
     }),
+  }),
+  scene({
+    name: "admin: a coach asks for more videos — the admin gives a number; the history says so",
+    path: "/coach/#admin",
+    init: seed(`{ admins: ["coach-1"], limits: { flashPerMonth: 200, videosPerMonth: 20 }, profiles: {
+        "coach-1": { name: "Ms Tan", institutions: ["awwa-school-napiri"], note: "Admin", email: "coach@example.com", status: "approved" },
+        "coach-2": { name: "Mr Lim", institutions: ["awwa-school-napiri"], note: "", email: "lim@example.com", status: "approved" } },
+      requests: [{ id: "rv", uid: "coach-2", kind: "more-videos", note: "Step videos for the whole term", status: "pending", createdAt: new Date() }] }`),
+    setup: run(async () => {
+      const card = () => byText(".admin-card", "More videos a month");
+      await waitFor(() => card() && byText("h2", "Requests from coaches (1)"));
+      if (!card().textContent.includes("Step videos for the whole term") || !card().textContent.includes("20")) throw new Error("the card says too little");
+      byText(".admin-card button", "Approve").click();
+      await waitFor(() => card().querySelector("input[type=number]"));
+      if (card().querySelector("input[type=number]").value !== "40") throw new Error(`the suggested number: ${card().querySelector("input[type=number]").value}`);
+      type(card().querySelector("input[type=number]"), "60");
+      byText(".admin-card button", "Give them more").click();
+      await waitFor(() => byText(".toast", "Mr Lim can make 60 videos a month now."));
+      byText(".admin-tab", "History").click();
+      await waitFor(() => $(".log-row"));
+    }),
+    expect: inPage(() => __fake.profiles["coach-2"].limits?.videosPerMonth === 60 &&
+      __fake.requests[0].status === "approved" && byText(".log-row", "Ms Tan gave Mr Lim 60 videos a month, as they asked")),
   }),
   scene({
     name: "admin: the coach list — who approved them and how, approve later, suspend with a reason, changed after approval",
@@ -1164,16 +1210,13 @@ export default [
     init: seed(`{ pages: ${PAGE}, pictures: ${SHELF}, slowVideos: true }`),
     setup: run(async () => {
       await waitFor(() => $(".phone-screen .cm-h1"));
-      byText("summary", "Make a short video").click();
-      type($("#video-request"), "brushing teeth");
-      byText("button", "Plan the video").click();
-      await waitFor(() => $(".plan-card"));
-      window.__fake.replies.startVideo = () => new Promise(() => {}); // Gemini taking its two minutes
+      byText("summary", "Make a video of this page").click();
+      window.__fake.replies.makeVideo = () => new Promise(() => {}); // the renderer taking its time
       byText("button", "Make the video").click();
       await waitFor(() => $(".progress-calm span"));
     }),
     expect: inPage(() => getComputedStyle($(".progress-calm span")).animationName === "none" && fits() &&
-      byText(".working-box", "about 2 minutes")),
+      byText(".working-box", "a minute or two")),
   }),
   scene({
     name: "iPad: the QR poster — the header one row, Print beside the heading, the QR in view, the words under the poster",

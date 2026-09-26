@@ -1,0 +1,10 @@
+# Builds the video renderer's image into Artifact Registry.
+#   gcloud builds submit --config video/cloudbuild.yaml .
+# (from the repository root; .gcloudignore keeps the upload to public/, tools/ and video/)
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args: ["build", "-f", "video/Dockerfile", "-t", "asia-southeast1-docker.pkg.dev/$PROJECT_ID/simplify/video:latest", "."]
+images:
+  - asia-southeast1-docker.pkg.dev/$PROJECT_ID/simplify/video:latest
+options:
+  logging: CLOUD_LOGGING_ONLY

@@ -255,13 +255,14 @@ async function runInside() {
     [`classes/${P}/pages/page1`]: { title: "Old", markdown: "Old", createdAt: past, createdBy: "coachA", updatedAt: past, updatedBy: "coachA" },
     [`classes/${A}/pictures/pic1`]: { words: "Our bus stop", file: "pictures/pic1.jpg", width: 1600, height: 1200, createdAt: past, createdBy: "coachA" },
     [`classes/${A}/videos/vid1`]: { status: "approved", prompt: "hands", words: "Hands washing", seconds: 8, interactionId: "x", createdBy: "coachA", createdAt: past, updatedAt: past },
-    [`classes/${A}/videoPlans/plan1`]: { request: "hands", prompt: "hands", words: "Hands", seconds: 8, createdBy: "coachA", createdAt: past },
     "usage/coachA_2026-09": { flash: 3, video: 1, declined: 0 },
     "usage/coachB_2026-09": { flash: 1, video: 0, declined: 0 },
     "config/limits": { flashPerMonth: 200, videosPerMonth: 5 },
     // an older request, from when coaches asked the admin for new classes
     "requests/reqA": { uid: "coachA", kind: "new-class", className: "5 Joy", org: "AWWA School @ Napiri", note: "", status: "pending", createdAt: past },
     "requests/reqB": { uid: "coachB", kind: "join-class", classCode: A, note: "", status: "pending", createdAt: past },
+    "requests/reqV": { uid: "coachA", kind: "more-videos", note: "Step videos for the term", status: "pending", createdAt: past },
+    "requests/reqW": { uid: "coachA", kind: "more-videos", note: "", status: "pending", createdAt: past },
   };
   for (const [path, data] of Object.entries(seeds)) {
     const status = await set("owner", path, data)();
@@ -311,6 +312,16 @@ async function runInside() {
     ...(only === "coach" ? [] : [W.create(`adminLog/${logId}`, entry(suspended ? "coach-suspended" : "coach-unsuspended", { coach }))]),
     ...(only === "log" ? [] : [W.update(`coaches/${coach}`, { suspended, suspendLog: logId })]),
   ]);
+  // more videos for a coach: the request, the coach's own limit and one log entry, together
+  const moreVideos = (who, request, coach, n, { only, action = "more-videos-approved", log = {}, logId = `log${++logs}` } = {}) => batch(who, [
+    ...(only === "request" || only === "coach" ? [] : [W.create(`adminLog/${logId}`, entry(action, { request, coach, detail: `${n} videos a month`, ...log }))]),
+    ...(only === "coach" ? [] : [W.update(`requests/${request}`, { status: "approved", decidedAt: NOW, decidedBy: "admin1", decisionLog: logId, videosPerMonth: n })]),
+    ...(only === "request" ? [] : [W.update(`coaches/${coach}`, { limits: { videosPerMonth: n }, limitsLog: logId })]),
+  ]);
+  const declineMore = (who, request, { logId = `log${++logs}` } = {}) => batch(who, [
+    W.create(`adminLog/${logId}`, entry("more-videos-declined", { request, coach: "coachA" })),
+    W.update(`requests/${request}`, { status: "declined", decidedAt: NOW, decidedBy: "admin1", decisionLog: logId }),
+  ]);
   const decideRequest = (who, request, status, { note = status === "approved" ? "Seen teaching 3 Kindness with Coach A" : "", fields = {}, log = {}, only, logId = `log${++logs}` } = {}) => batch(who, [
     ...(only === "request" ? [] : [W.create(`adminLog/${logId}`, entry(`join-${status}`, { request, note, ...log }))]),
     ...(only === "log" ? [] : [W.update(`requests/${request}`, { status, decidedAt: NOW, decidedBy: "admin1", decisionLog: logId, ...fields })]),
@@ -327,7 +338,6 @@ async function runInside() {
     ["cannot read a page", get("learner", `classes/${A}/pages/page1`), NO],
     ["cannot read the picture shelf", list("learner", `classes/${A}/pictures`), NO],
     ["cannot read the video shelf", get("learner", `classes/${A}/videos/vid1`), NO],
-    ["cannot read video plans", get("learner", `classes/${A}/videoPlans/plan1`), NO],
     ["cannot read usage", get("learner", "usage/coachA_2026-09"), NO],
     ["cannot read limits", get("learner", "config/limits"), NO],
     ["cannot read a class's coaches", get("learner", `classCoaches/${A}`), NO],
@@ -383,8 +393,6 @@ async function runInside() {
     ["reads the video shelf", list("coachA", `classes/${A}/videos`), OK],
     ["cannot write a video", create("coachA", `classes/${A}/videos/vid9`, { status: "approved" }), NO],
     ["cannot approve a video itself", update("coachA", `classes/${A}/videos/vid1`, { status: "approved" }), NO],
-    ["cannot read video plans", get("coachA", `classes/${A}/videoPlans/plan1`), NO],
-    ["cannot write a video plan", create("coachA", `classes/${A}/videoPlans/plan9`, { prompt: "x" }), NO],
     ["reads its own usage", get("coachA", "usage/coachA_2026-09"), OK],
     ["reads a month with no usage yet", get("coachA", "usage/coachA_2026-10"), NF],
     ["cannot read another coach's usage", get("coachA", "usage/coachB_2026-09"), NO],
@@ -426,6 +434,10 @@ async function runInside() {
     ["cannot ask with an organisation (institutions now)", create("coachA", "requests/r2b", joinRequest("coachA", { org: "AWWA School @ Napiri" })), NO],
     ["cannot ask with a bad class code", create("coachA", "requests/r3", joinRequest("coachA", { classCode: "K7M-3RQ-P9T" })), NO],
     ["cannot ask with a note over 300", create("coachA", "requests/r4", joinRequest("coachA", { note: long(301) })), NO],
+    ["asks the admin for more videos", create("coachA", "requests/rv1", { uid: "coachA", kind: "more-videos", note: "Step videos", status: "pending", createdAt: NOW }), OK],
+    ["... not with a class code", create("coachA", "requests/rv2", { uid: "coachA", kind: "more-videos", classCode: A, status: "pending", createdAt: NOW }), NO],
+    ["... not for someone else", create("coachA", "requests/rv3", { uid: "coachB", kind: "more-videos", status: "pending", createdAt: NOW }), NO],
+    ["cannot give itself more videos", update("coachA", "coaches/coachA", { limits: { videosPerMonth: 100 } }), NO],
     ["cannot file a request already approved", create("coachA", "requests/r5", joinRequest("coachA", { status: "approved" })), NO],
     ["cannot file a request for someone else", create("coachA", "requests/r6", joinRequest("coachB")), NO],
     ["lists its own requests (uid ==)", query("coachA", "", where("requests", "uid", "EQUAL", "coachA")), OK],
@@ -583,6 +595,14 @@ async function runInside() {
     ["cannot decide a request twice", decideRequest("admin", "reqA", "declined"), NO],
     ["cannot change who asked", decideRequest("admin", "reqB", "declined", { fields: { uid: "coachA" } }), NO],
     ["declines a request (logged)", decideRequest("admin", "reqB", "declined"), OK],
+    ["cannot give a coach more videos without a log entry", moreVideos("admin", "reqV", "coachA", 40, { only: "coach" }), NO],
+    ["cannot give more than 500 a month", moreVideos("admin", "reqV", "coachA", 501), NO],
+    ["cannot give them to another coach than asked in the log", moreVideos("admin", "reqV", "coachA", 40, { log: { coach: "coachB" } }), NO],
+    ["gives a coach more videos, as they asked (logged)", moreVideos("admin", "reqV", "coachA", 40), OK],
+    ["declines a request for more videos (logged)", declineMore("admin", "reqW"), OK],
+    ["sets a coach's videos on its own (logged)", batch("admin", [
+      W.create("adminLog/logLim", entry("coach-limits-changed", { coach: "coachA", detail: "30 videos a month" })),
+      W.update("coaches/coachA", { limits: { videosPerMonth: 30 }, limitsLog: "logLim" })]), OK],
     ["adds a coach to a class (approving a join request)", update("admin", "classCoaches/Q2W3E4R5T", { uids: ["newbie", "coachA"] }), OK],
     ["cannot list 51 coaches for a class", update("admin", "classCoaches/Q2W3E4R5T", { uids: Array.from({ length: 51 }, (_, i) => `c${i}`) }), NO],
     ["lists all classes", list("admin", "classes"), OK],
@@ -603,7 +623,6 @@ async function runInside() {
     ["cannot edit a class's page", update("admin", `classes/${A}/pages/page1`, { title: "Admin", markdown: "x", updatedAt: NOW, updatedBy: "admin1" }), NO],
     ["deletes a page", remove("admin", `classes/${A}/pages/page2`), OK],
     ["deletes a video from the shelf", remove("admin", `classes/${A}/videos/vid1`), OK],
-    ["cannot read video plans", get("admin", `classes/${A}/videoPlans/plan1`), NO],
     ["lists usage", list("admin", "usage"), OK],
     ["cannot change usage", update("admin", "usage/coachA_2026-09", { flash: 0 }), NO],
     ["sets the limits", update("admin", "config/limits", { flashPerMonth: 300, videosPerMonth: 4 }), OK],

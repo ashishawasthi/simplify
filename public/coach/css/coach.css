@@ -364,6 +364,18 @@ details.fold.helper > summary h2 { margin: 0; font-size: 20px; color: inherit; }
 .usage-line { margin: 0; font-size: 15px; color: var(--c-muted); }
 .actions .usage-line { margin-left: auto; }
 .helper-result:empty, .maker-result:empty { display: none; }
+/* the video maker: switches, and marks over the page's pictures */
+.check-line { display: flex; align-items: center; gap: 10px; min-height: 44px; font-weight: 600; }
+.check-line input { width: 24px; height: 24px; margin: 0; }
+.video-marks:empty { display: none; }
+.marks-h { margin: 8px 0 0; font-size: 18px; }
+.mark-row { display: grid; gap: 12px; padding: 12px 0; border-top: 1px solid var(--c-hair); }
+@media (min-width: 520px) { .mark-row { grid-template-columns: 200px 1fr; align-items: start; } }
+.mark-picture { position: relative; max-width: 260px; }
+.mark-picture img { display: block; width: 100%; height: auto; border-radius: 8px; }
+.mark-picture .mark-layer { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 0; }
+.mark-said:empty, .more-videos:empty { display: none; }
+
 .helper-result, .maker-result { margin-top: 14px; }
 .understood { font-weight: 700; padding: 10px 12px; background: #fff; border-radius: 8px; border: 1px solid var(--c-hair); }
 .helper-note, .helper-done, .working { color: var(--c-text); }

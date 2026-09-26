@@ -10,8 +10,8 @@
 //   - calls a few of them over HTTP through the Functions emulator, exactly as
 //     the coach app does (callable protocol, an ID token, functions/.env.local).
 // Covers: who may call (only an approved, unsuspended coach of an active class), write / ask / decline, the free answer for an empty
-// instruction, monthly limits (also under parallel calls), refunds, the Singapore
-// month, the page check, and plan → start → check → approve / discard.
+// instruction, monthly limits (also under parallel calls, and a coach's own limit), refunds, the Singapore
+// month, the page check, the overlay planner (marks → shapes), and make → check → approve / discard.
 // Needs `npm ci` in functions/ first. No other dependencies.
 
 import { spawn } from "node:child_process";
@@ -140,9 +140,13 @@ async function runInside() {
     [`classCoaches/${A}`]: { uids: ["coachA", "coachS", "coachC", "coachP", "coachD", "coachL"] },
     [`classCoaches/${P}`]: { uids: ["coachA"] },
     [`classes/${A}/pictures/busstop1`]: { words: "Our bus stop", file: "pictures/busstop1.jpg", width: 1600, height: 1200, createdAt: past, createdBy: "coachA" },
-    [`classes/${A}/videos/wash1`]: { status: "approved", prompt: "hands", words: "Hands washing", seconds: 8, interactionId: "x", createdBy: "coachA", createdAt: past, updatedAt: past },
+    [`classes/${A}/videos/wash1`]: { kind: "page", status: "approved", words: "Hands washing", title: "Hands", execution: "x", createdBy: "coachA", createdAt: past, updatedAt: past },
+    [`classes/${A}/pages/pg1`]: { title: "The bus", markdown: "# The bus\nI wait at the bus stop.\n---\n![Our bus stop](pictures/busstop1.jpg)\nThe bus comes.", createdAt: past, updatedAt: past },
+    [`classes/${A}/pages/empty1`]: { title: "Nothing yet", markdown: "  ", createdAt: past, updatedAt: past },
   };
   for (const [path, data] of Object.entries(seeds)) await db.doc(path).set(data);
+  // the shelf picture's file (the overlay planner sends it to Flash; the fake only needs it there)
+  await bucket().file(`classes/${A}/pictures/busstop1.jpg`).save(Buffer.from([0xff, 0xd8, 0xff, 0xd9]), { contentType: "image/jpeg" });
 
   // ---------- who may call ----------
 
@@ -163,8 +167,8 @@ async function runInside() {
   check("an instruction over 1000 characters", (await write("coachA", { instruction: "x".repeat(1001) })).error, "invalid-argument");
   check("a page over 20000 characters", (await write("coachA", { markdown: "x".repeat(20001) })).error, "invalid-argument");
   for (const [name, handler, data] of [
-    ["planVideo", fns.planVideoHandler, { request: "hands washing" }],
-    ["startVideo", fns.startVideoHandler, { planId: "nope" }],
+    ["planOverlay", fns.planOverlayHandler, { pictureId: "busstop1", request: "an arrow to the sign" }],
+    ["makeVideo", fns.makeVideoHandler, { pageId: "pg1" }],
     ["checkVideo", fns.checkVideoHandler, { videoId: "nope" }],
     ["approveVideo", fns.approveVideoHandler, { videoId: "nope" }],
     ["discardVideo", fns.discardVideoHandler, { videoId: "nope" }],
@@ -216,7 +220,7 @@ async function runInside() {
   check("... and the count is exactly the limit", (await usage("coachA")).flash, 8);
   await db.doc("config/limits").set({ flashPerMonth: "lots", videosPerMonth: -1 });
   r = await call(fns.writePageHandler, "coachA", { classCode: A, instruction: "" });
-  check("a broken limits doc falls back to 200 / 5", r.limit, 200);
+  check("a broken limits doc falls back to the defaults (200)", r.limit, 200);
   await db.doc("config/limits").delete();
 
   section("the Singapore month (UTC+8)");
@@ -271,48 +275,59 @@ async function runInside() {
   r = await write("coachA", { instruction: "Add this video https://youtu.be/abcdefghijk to the page" });
   check("a link in the instruction may be used", r.action, "write");
 
-  // ---------- planVideo ----------
+  // ---------- planOverlay ----------
 
-  section("planVideo: write / ask / decline");
+  section("planOverlay: marks over a picture, placed by code");
   await db.doc(`usage/coachA_${monthKey()}`).delete();
-  const plan = (data) => call(fns.planVideoHandler, "coachA", { classCode: A, ...data });
-  r = await plan({ request: "" });
-  check("empty request → a free question", [r.action, r.used, r.planId], ["ask", 0, ""]);
-  r = await plan({ request: "hands washing?" });
-  check("unclear → ask", [r.action, r.questions.length, r.used], ["ask", 1, 1]);
-  r = await plan({ request: "beer being poured" });
-  check("out of scope → decline", [r.action, r.planId, r.used], ["decline", "", 2]);
-  r = await plan({ request: "[fail] hands" });
-  check("the model fails → unavailable, given back", [r.error, (await usage("coachA")).flash], ["unavailable", 2]);
-  r = await plan({ request: "hands washing with soap at a sink" });
-  check("clear → a plan", [r.action, r.seconds, r.used, !!r.planId], ["write", 8, 3, true]);
-  check("... with the exact video request", r.prompt, (p) => p.includes("hands washing with soap at a sink"));
-  const stored = (await db.doc(`classes/${A}/videoPlans/${r.planId}`).get()).data();
-  check("... stored for startVideo", [stored.createdBy, stored.seconds, stored.words], ["coachA", 8, "hands washing with soap at a sink"]);
-  check("planning spends no video credit", (await usage("coachA")).video ?? 0, 0);
+  const mark = (data) => call(fns.planOverlayHandler, "coachA", { classCode: A, pictureId: "busstop1", ...data });
+  r = await mark({ request: "" });
+  check("nothing asked → a free answer, not counted", [r.action, r.shapes.length, r.used], ["none", 0, 0]);
+  r = await mark({ request: "an arrow to the sign", pictureId: "nope" });
+  check("a picture not on the shelf", r.error, "not-found");
+  r = await mark({ request: "an arrow to the sign" });
+  check("marked → shapes, one AI request", [r.action, r.shapes.map((x) => x.type), r.used], ["draw", ["circle", "arrow"], 1]);
+  check("... a ring round the thing found", r.shapes[0], { type: "circle", at: [500, 500], r: 173 });
+  check("... an arrow ending just outside it", r.shapes[1].to, (to) => to.every((v) => v >= 0 && v <= 1000) && (to[0] < 350 || to[0] > 650 || to[1] < 350 || to[1] > 650));
+  r = await mark({ request: "nothing here" });
+  check("not found → none, with a plain note", [r.action, r.shapes.length, !!r.note], ["none", 0, true]);
+  r = await mark({ request: "a beer bottle" });
+  check("out of scope → decline, counted", [r.action, (await usage("coachA")).declined], ["decline", 1]);
+  r = await mark({ request: "[fail] the sign" });
+  check("the model fails → unavailable, given back", [r.error, (await usage("coachA")).flash], ["unavailable", 3]);
+  check("marks → shapes: a box, padded", fns.markToShape({ kind: "box", target: [100, 200, 300, 400] }), { type: "box", from: [180, 80], to: [420, 320] });
+  check("marks → shapes: a label above the thing", fns.markToShape({ kind: "label", target: [400, 400, 600, 600], text: "The tap" }), { type: "label", at: [500, 340], text: "The tap" });
+  check("marks → shapes: a bad box is dropped", fns.markToShape({ kind: "arrow", target: [1, 2] }), null);
 
   // ---------- videos ----------
 
-  section("startVideo → checkVideo → approveVideo / discardVideo");
-  const start = (planId, uid = "coachA") => call(fns.startVideoHandler, uid, { classCode: A, planId });
+  section("makeVideo → checkVideo → approveVideo / discardVideo");
+  const makeV = (data = {}, uid = "coachA") => call(fns.makeVideoHandler, uid, { classCode: A, pageId: "pg1", ...data });
   const checkV = (videoId) => call(fns.checkVideoHandler, "coachA", { classCode: A, videoId });
-  const newPlan = async (request) => (await plan({ request })).planId;
   const video = async (id) => (await db.doc(`classes/${A}/videos/${id}`).get()).data();
   const fileExists = async (path) => (await bucket().file(path).exists())[0];
+  const withPage = async (markdown) => {
+    await db.doc(`classes/${A}/pages/pgx`).set({ title: "Test", markdown, createdAt: past, updatedAt: past });
+    return makeV({ pageId: "pgx" });
+  };
 
-  check("a plan that does not exist", (await start("nope")).error, "not-found");
-  const okPlan = await newPlan("hands washing with soap");
-  check("another coach's plan (same class)", (await start(okPlan, "coachC")).error, "not-found");
-  r = await start(okPlan);
-  check("start → one credit, rendering", [r.used, r.limit, (await video(r.videoId)).status], [1, 5, "rendering"]);
+  check("a page that does not exist", (await makeV({ pageId: "nope" })).error, "not-found");
+  check("an empty page", (await makeV({ pageId: "empty1" })).message, "The page is empty. Write it first, then make its video.");
+  r = await makeV({ readAloud: false, overlays: {
+    busstop1: [{ type: "arrow", from: [900, 100], to: [500, 400] }, { type: "star", at: [1, 2] }],
+    other: [{ type: "circle", at: [500, 500], r: 100 }],
+  } });
+  check("make → one video, rendering", [r.used, r.limit, (await video(r.videoId)).status], [1, 20, "rendering"]);
   const okVideo = r.videoId;
-  check("... the render's id is stored", (await video(okVideo)).interactionId, (id) => /^fake-ok-/.test(id));
-  r = await start(okPlan);
-  check("pressed twice → the same video, no second credit", [r.videoId, r.used], [okVideo, 1]);
-  check("a draft cannot be approved while rendering", (await call(fns.approveVideoHandler, "coachA", { classCode: A, videoId: okVideo })).error, "failed-precondition");
+  const made = await video(okVideo);
+  check("... the run's name is stored", made.execution, (id) => /^fake-ok-/.test(id));
+  check("... what to make: the page as it is now, its title, the class", [made.kind, made.title, made.className, made.markdown.startsWith("# The bus")], ["page", "The bus", "3 Kindness", true]);
+  check("... read aloud off, music on (not asked)", [made.readAloud, made.music], [false, true]);
+  check("... only good marks, only for the page's pictures", made.overlays, { busstop1: [{ type: "arrow", from: [900, 100], to: [500, 400] }] });
+  check("... words for screen readers", made.words, "Video of the page: The bus");
+  check("a video cannot be approved while being made", (await call(fns.approveVideoHandler, "coachA", { classCode: A, videoId: okVideo })).error, "failed-precondition");
   check("nor discarded", (await call(fns.discardVideoHandler, "coachA", { classCode: A, videoId: okVideo })).error, "failed-precondition");
   r = await checkV(okVideo);
-  check("check → ready", r, { videoId: okVideo, status: "ready" });
+  check("check → ready (the stand-in renderer's draft)", r, { videoId: okVideo, status: "ready" });
   const [draftBytes] = await bucket().file(`classes/${A}/video-drafts/${okVideo}.mp4`).download();
   check("... the draft is in Storage, an MP4", draftBytes.subarray(4, 8).toString("latin1"), "ftyp");
   const [draftMeta] = await bucket().file(`classes/${A}/video-drafts/${okVideo}.mp4`).getMetadata();
@@ -328,65 +343,65 @@ async function runInside() {
   r = await call(fns.discardVideoHandler, "coachA", { classCode: A, videoId: okVideo });
   check("discard → discarded", r, { videoId: okVideo, status: "discarded" });
   check("... the public copy is gone", await fileExists(`classes/${A}/videos/${okVideo}.mp4`), false);
-  check("... and the credit is not given back", (await usage("coachA")).video, 1);
+  check("... and the video is not given back", (await usage("coachA")).video, 1);
   check("discard again → discarded (idempotent)", (await call(fns.discardVideoHandler, "coachA", { classCode: A, videoId: okVideo })).status, "discarded");
-  const orphan = await start(await newPlan("hands drying with a towel"));
+  const orphan = await makeV();
   await checkV(orphan.videoId);
   await bucket().file(`classes/${A}/video-drafts/${orphan.videoId}.mp4`).delete();
   check("a draft whose file is gone → a plain message", (await call(fns.approveVideoHandler, "coachA", { classCode: A, videoId: orphan.videoId })).message, "The video's file is missing. Discard it and make it again.");
   check("... and it can be discarded", (await call(fns.discardVideoHandler, "coachA", { classCode: A, videoId: orphan.videoId })).status, "discarded");
 
-  // from here on, credits are counted from what was used before each step
+  // from here on, videos are counted from what was used before each step
   let credits = (await usage("coachA")).video;
 
-  r = await start(await newPlan("[fail-start] hands"));
-  check("Omni cannot start → unavailable, credit back", [r.error, (await usage("coachA")).video], ["unavailable", credits]);
-  check("... the message says so", r.message, (m) => m.includes("credit was given back"));
-  r = await start(await newPlan("[fail-render] hands"));
+  r = await withPage("# Bus\n[fail-start]");
+  check("the renderer cannot start → unavailable, not counted", [r.error, (await usage("coachA")).video], ["unavailable", credits]);
+  check("... the message says so", r.message, (m) => m.includes("It was not counted"));
+  r = await withPage("# Bus\n[fail-render]");
   check("a render that fails", (await checkV(r.videoId)).status, "failed");
-  check("... gives the credit back", (await usage("coachA")).video, credits);
+  check("... gives the video back", (await usage("coachA")).video, credits);
   check("... and says why", (await video(r.videoId)).error, "The video could not be made.");
-  const failedPlan = (await video(r.videoId)).planId;
-  r = await start(failedPlan);
-  check("its plan can be started again", [r.used, (await video(r.videoId)).status], [credits + 1, "rendering"]);
-  await call(fns.checkVideoHandler, "coachA", { classCode: A, videoId: r.videoId });
-  r = await start(await newPlan("[slow] hands"));
+  r = await makeV();
+  await db.doc(`classes/${A}/videos/${r.videoId}`).update({ renderError: "the page is empty" });
+  check("the renderer wrote why it stopped → failed", (await checkV(r.videoId)).status, "failed");
+  check("... the video back", (await usage("coachA")).video, credits);
+  r = await withPage("# Bus\n[slow]");
   const slow = r.videoId;
   check("a slow render stays rendering", (await checkV(slow)).status, "rendering");
   await db.doc(`classes/${A}/videos/${slow}`).update({ createdAt: Timestamp.fromMillis(Date.now() - 31 * 60 * 1000) });
   check("... after 30 minutes it fails", (await checkV(slow)).status, "failed");
-  check("... and gives the credit back", (await usage("coachA")).video, credits);
+  check("... and gives the video back", (await usage("coachA")).video, credits);
   await db.doc(`classes/${A}/videos/lost1`).set({
-    status: "rendering", prompt: "x", words: "x", seconds: 8, interactionId: null, planId: "x", usageMonth: monthKey(),
+    kind: "page", status: "rendering", words: "x", markdown: "# x", execution: null, usageMonth: monthKey(),
     createdBy: "coachA", createdAt: Timestamp.fromMillis(Date.now() - 11 * 60 * 1000), updatedAt: past,
   });
   await db.doc(`usage/coachA_${monthKey()}`).update({ video: FieldValue.increment(1) });
-  check("startVideo died before the render id → fails after 10 min", (await checkV("lost1")).status, "failed");
-  check("... credit back", (await usage("coachA")).video, credits);
+  check("makeVideo died before the run's name → fails after 10 min", (await checkV("lost1")).status, "failed");
+  check("... the video back", (await usage("coachA")).video, credits);
   await db.doc(`classes/${A}/videos/old1`).set({
-    status: "rendering", prompt: "x", words: "x", seconds: 8, interactionId: "fake-slow-x", planId: "x", usageMonth: "2026-08",
+    kind: "page", status: "rendering", words: "x", markdown: "# x", execution: "fake-slow-x", usageMonth: "2026-08",
     createdBy: "coachA", createdAt: Timestamp.fromMillis(Date.now() - 40 * 60 * 1000), updatedAt: past,
   });
   await db.doc("usage/coachA_2026-08").set({ video: 1 });
   await checkV("old1");
-  await db.doc(`classes/${A}/videos/late1`).set({
-    status: "rendering", prompt: "x", words: "x", seconds: 8, interactionId: "fake-ok-late", planId: "x", usageMonth: monthKey(),
-    createdBy: "coachA", createdAt: Timestamp.fromMillis(Date.now() - 45 * 60 * 1000), updatedAt: past,
-  });
-  await db.doc(`usage/coachA_${monthKey()}`).update({ video: FieldValue.increment(1) });
-  check("a clip that finished while nobody looked is still saved", (await checkV("late1")).status, "ready");
-  check("... and its credit stays used", (await usage("coachA")).video, credits + 1);
-  credits += 1;
-  check("a refund goes to the month the credit came from", [(await db.doc("usage/coachA_2026-08").get()).get("video"), (await usage("coachA")).video], [0, credits]);
+  check("a video given back goes to the month it came from", [(await db.doc("usage/coachA_2026-08").get()).get("video"), (await usage("coachA")).video], [0, credits]);
 
-  section("startVideo: monthly video limit");
+  section("makeVideo: monthly video limit, and a coach's own");
   const usedVideos = (await usage("coachA")).video;
   await db.doc("config/limits").set({ videosPerMonth: usedVideos + 1 });
-  r = await start(await newPlan("tapping a card at a gate"));
+  r = await makeV();
   check("the last video of the month", [r.used, r.limit], [usedVideos + 1, usedVideos + 1]);
   await checkV(r.videoId);
-  r = await start(await newPlan("returning a tray"));
-  check("one more → limit reached", r, { error: "resource-exhausted", message: `You have made all ${usedVideos + 1} videos for this month.` });
+  r = await makeV();
+  check("one more → limit reached, and how to get more", r, { error: "resource-exhausted", message: `You have made all ${usedVideos + 1} videos for this month. You can ask the admin for more.` });
+  await db.doc("coaches/coachA").update({ limits: { videosPerMonth: usedVideos + 3 } });
+  r = await makeV();
+  check("the admin gave this coach more → made", [r.used, r.limit], [usedVideos + 2, usedVideos + 3]);
+  await checkV(r.videoId);
+  check("... others still have everyone's limit", (await call(fns.makeVideoHandler, "coachC", { classCode: A, pageId: "pg1" })).limit, usedVideos + 1);
+  await db.doc("coaches/coachA").update({ limits: { videosPerMonth: "lots" } });
+  check("a broken own limit → everyone's", (await makeV()).error, "resource-exhausted");
+  await db.doc("coaches/coachA").update({ limits: FieldValue.delete() });
   await db.doc("config/limits").delete();
 
   // ---------- over HTTP, as the coach app calls ----------
@@ -455,11 +470,10 @@ async function runInside() {
   check("another class's coach → the plain message", [h.error?.status, h.error?.message], ["PERMISSION_DENIED", "You are not a coach of this class."]);
   h = await http("writePage", "coachP", { classCode: A, instruction: "A page" });
   check("a coach waiting for the admin → the plain message", [h.error?.status, h.error?.message], ["PERMISSION_DENIED", "The admin has not approved you yet."]);
-  h = await http("planVideo", "coachA", { classCode: A, request: "a tray returned at a hawker centre" });
-  check("planVideo → a plan", [h.result?.action, !!h.result?.planId], ["write", true]);
-  const httpPlan = h.result?.planId;
-  h = await http("startVideo", "coachA", { classCode: A, planId: httpPlan });
-  check("startVideo → rendering", !!h.result?.videoId, true);
+  h = await http("planOverlay", "coachA", { classCode: A, pictureId: "busstop1", request: "a ring round the sign" });
+  check("planOverlay → shapes", [h.result?.action, h.result?.shapes?.length], ["draw", 2]);
+  h = await http("makeVideo", "coachA", { classCode: A, pageId: "pg1" });
+  check("makeVideo → being made", !!h.result?.videoId, true);
   const httpVideo = h.result?.videoId;
   h = await http("checkVideo", "coachA", { classCode: A, videoId: httpVideo });
   check("checkVideo → ready", h.result?.status, "ready");

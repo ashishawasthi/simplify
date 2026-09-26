@@ -1,7 +1,7 @@
 ---
 type: System Reference
 title: Offline and Updates
-description: How the learner app works offline and gets new versions — the service worker's versioned precache and revalidating install, what it answers and ignores, the CACHE bump rule and what test-assets.mjs enforces, update.js's safe reload, Hosting's Cache-Control headers, and My class's separate media cache.
+description: How the learner app works offline and gets new versions — the service worker's versioned precache and revalidating install, what it answers and ignores, the CACHE bump rule and what test-assets.mjs enforces, update.js's safe reload, Hosting's Cache-Control headers, My class's separate media cache, and the guide videos, which are online only.
 tags: [service-worker, cache, offline, updates, precache, cache-control, pwa]
 status: stable
 ---
@@ -39,7 +39,7 @@ It does not answer (the browser fetches as if no worker were there):
 | Request | Why |
 |---|---|
 | Any method other than `GET` | Nothing to precache |
-| Another origin | Firestore, Cloud Storage and YouTube (My class) go straight to the network; `class-data.js` keeps its own copy of what it needs |
+| Another origin | Firestore, Cloud Storage and YouTube (My class) and the guide videos go straight to the network; `class-data.js` keeps its own copy of what it needs |
 | `/coach` and anything under `/coach/` | The coach app is never cached for learners |
 | Anything under `/__/` | Firebase Hosting's reserved paths (auth handler, `init.json`) |
 
@@ -96,3 +96,7 @@ My class keeps its own offline copy, separate from the worker's precache, in `pu
 - A file is fetched with `credentials: "omit"`, `mode: "cors"` and a 120-second limit, and kept only if its type is `image/*` for a picture or `video/*` for a video. The page itself is fetched with `cache: "no-store"` and a 20-second limit.
 - After a Leave, the saved copy and the whole media cache are deleted at the next start (`forgetClassIfNone`), not at once, so the toast's undo can still restore them.
 - In Cloud Storage the files carry their own `Cache-Control`: shelf pictures `public, max-age=86400` (set by the coach app on upload; a picture id is never reused), approved videos `public, max-age=86400` (set by `approveVideo`), video drafts `private, max-age=0`.
+
+## The guide videos
+
+The guides' "Watch" videos are **online only**. They are in the public `simplify-guide-videos` bucket on `storage.googleapis.com`, not in `public/`, so they are not in `ASSETS` and the worker never caches them (another origin): at 4–7 MB each, the three together are several times the whole offline copy (about 4 MB). Only `public/js/guide-video.js`, which loads them when a Watch fold opens, is precached (`CACHE` `simplify-v43` added it). Offline, an opened fold's video simply does not play; the rest of the guide works as before. A remade video needs no `CACHE` bump: it is uploaded with `Cache-Control: public, max-age=3600`, so devices see it within the hour. See [guide videos](/operations/guide-videos.md).

@@ -7,10 +7,11 @@
   <!-- For coaches only: kept out of search results, like the coach app. -->
   <meta name="robots" content="noindex">
   <meta name="theme-color" content="#0d47a1">
-  <meta name="description" content="How to write and publish your class's page in Simplify for coaches: sign in, get a class, put it on learners' devices, pictures, YouTube, writing with AI and short videos.">
+  <meta name="description" content="How to write and publish your class's page in Simplify for coaches: sign in, get a class, put it on learners' devices, pictures, YouTube, writing with AI and videos of your pages.">
   <title>Help for coaches · Simplify for coaches</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/coach/css/guide.css">
+  <script type="module" src="/js/guide-video.js"></script>
 </head>
 
 <body>
@@ -25,6 +26,12 @@
     <h1>Help for coaches</h1>
     <p class="lead">How to write one simple page for your class, and put it on
       your learners' phones and iPads.</p>
+    <details class="tour">
+      <summary><span class="tour-play" aria-hidden="true">▶</span> Watch: the coach app <span class="tour-len">53 seconds</span></summary>
+      <video controls playsinline preload="none" width="720" height="1280"
+        data-src="https://storage.googleapis.com/simplify-guide-videos/coach.mp4" data-poster="https://storage.googleapis.com/simplify-guide-videos/coach.jpg"
+        aria-label="The coach app: a short video of signing in, making a class, writing a page and publishing it"></video>
+    </details>
 
     <nav class="contents" id="contents" aria-labelledby="contents-h">
       <h2 id="contents-h">Contents</h2>
@@ -38,7 +45,7 @@
         <li><a href="#pictures">Pictures</a></li>
         <li><a href="#youtube">YouTube videos</a></li>
         <li><a href="#helper">Write with AI</a></li>
-        <li><a href="#videos">Short videos</a></li>
+        <li><a href="#videos">Videos of your pages</a></li>
         <li><a href="#admin">For the admin</a></li>
         <li><a href="#privacy">Privacy and data</a></li>
       </ol>
@@ -314,7 +321,7 @@
             <tr><td><code>**soap**</code> and <code>*slowly*</code></td><td><strong>bold</strong> and <em>italic</em>, for a word or two</td><td>Bold (<kbd>Ctrl</kbd>+<kbd>B</kbd>, or <kbd>⌘</kbd>+<kbd>B</kbd> on a Mac)</td></tr>
             <tr><td><code>- Soap</code><br><code>1. Wet my hands</code></td><td>A list with big bullets, or numbers. One level only.</td><td>List</td></tr>
             <tr><td><code>![Soap on my hands](pictures/…jpg)</code></td><td>A picture from the class's shelf, full width. The words are read out by screen readers.</td><td>Picture (<a href="#pictures">section 7</a>)</td></tr>
-            <tr><td><code>![Hands washing](videos/…mp4)</code></td><td>A short video you made and approved. It never plays by itself.</td><td>Video (<a href="#videos">section 10</a>)</td></tr>
+            <tr><td><code>![Hands washing](videos/…mp4)</code></td><td>A video of a page you made and approved. It never plays by itself.</td><td>Video (<a href="#videos">section 10</a>)</td></tr>
             <tr><td><code>[How to wash hands](https://youtu.be/…)</code> on its own line</td><td>A YouTube card. Nothing loads until a learner taps it.</td><td>YouTube (<a href="#youtube">section 8</a>)</td></tr>
             <tr><td><code>[HealthHub](https://www.healthhub.sg)</code></td><td>One big button naming the website. Only <code>https://</code> links.</td><td></td></tr>
             <tr><td><code>---</code> on its own line</td><td><strong>Next screen.</strong> Learners see one screen at a time, with big Back and Next buttons.</td><td>Next screen</td></tr>
@@ -431,8 +438,9 @@
         coaches. Pages can use only pictures on it.</p>
       <ol class="steps">
         <li><strong>Add pictures</strong> (the Pictures panel under the
-          editor). Choose one or more photos; on a phone or iPad you can take
-          one with the camera.</li>
+          editor) and choose one or more photos, or tap
+          <strong>📷 Take a photo</strong> to take one with the phone's or
+          iPad's camera.</li>
         <li>Under each picture, type <strong>a few words saying what it
           shows</strong>, for example <em>Soap on my hands</em>. They are
           saved as you type.</li>
@@ -440,8 +448,8 @@
           <strong>Put in page</strong>.</li>
       </ol>
       <figure>
-        <a href="/coach/img/guide/pictures.png"><img src="/coach/img/guide/pictures.png" width="852" height="517" loading="lazy"
-          alt="The Pictures panel: Add pictures, and four pictures (a tap, soap, rubbing hands, drying hands), each with its words, Put in page and Delete."></a>
+        <a href="/coach/img/guide/pictures.png"><img src="/coach/img/guide/pictures.png" width="852" height="529" loading="lazy"
+          alt="The Pictures panel: Take a photo, Add pictures, and four pictures (a tap, soap, rubbing hands, drying hands), each with its words, Put in page and Delete."></a>
         <figcaption>The picture shelf</figcaption>
       </figure>
       <p>Or tap <strong>Picture</strong> in the toolbar, and tap a picture to
@@ -614,8 +622,8 @@
         <li>Each coach has <strong>200 AI requests a month</strong> (the
           admin sets the number). The panel shows how many you have used:
           <em>AI requests: 12 of 200 this month</em>.</li>
-        <li>Every answer counts, including questions and a no. Planning a
-          short video counts too (<a href="#videos">section 10</a>).</li>
+        <li>Every answer counts, including questions and a no. Marking a
+          picture for a video counts too (<a href="#videos">section 10</a>).</li>
         <li>Not counted: an instruction too short to act on (the AI just
           asks what you want), and a request that failed (<em>This request was
           not counted</em>).</li>
@@ -628,78 +636,75 @@
 
     <!-- 10 -->
     <section class="topic" id="videos" aria-labelledby="videos-h">
-      <h2 id="videos-h"><span class="num">10.</span> Short videos
+      <h2 id="videos-h"><span class="num">10.</span> Videos of your pages
         <a class="here" href="#videos" aria-label="Link to this section">🔗</a></h2>
 
-      <p>You can have AI make a short, realistic clip of one everyday action,
-        such as hands washing at a sink, a card tapped at an MRT gate, or a
-        tray returned at a hawker centre. It takes five steps, and each is your
-        decision. Find them in the <strong>Videos</strong> panel under the
-        editor.</p>
+      <p>Simplify can turn a page into a short video: the page as learners see
+        it in My class, one screen at a time, with its words read aloud. You
+        can point things out in its pictures, such as an arrow to the tap.
+        Find it in the <strong>Videos</strong> panel under the editor.</p>
 
       <ol class="steps">
-        <li><strong>Plan.</strong> Open <strong>Make a short video</strong>,
-          describe one calm scene, and tap <strong>Plan the video</strong>.
-          This uses one AI request, not a video. Like Write with AI, the
-          planner may ask questions, or say no.</li>
-        <li><strong>Check the exact request.</strong> You see <strong>The
-          video request</strong>: the exact words the video maker will get,
-          its length, and the words learners' screen readers will hear. Not
-          right? Tap <strong>Change the description</strong> and plan
-          again.</li>
+        <li><strong>Open the page</strong> in the editor, then open
+          <strong>Make a video of this page</strong>.</li>
+        <li><strong>Choose.</strong> <strong>Read the words aloud</strong> and
+          <strong>Quiet music</strong> are on; untick either if you like.</li>
+        <li><strong>Point things out</strong> (if you like). Under each of the
+          page's pictures, say what to point out, for example <em>an arrow to
+          the tap</em> or <em>a ring round the soap</em>, and tap
+          <strong>Draw it</strong>. The AI looks at the picture and draws the
+          marks; you see them before anything is made. Each uses one AI
+          request. <strong>Remove the marks</strong> takes them off.</li>
         <li><strong>Make.</strong> Tap <strong>Make the video</strong>. This
-          uses <strong>1 of your 5 videos this month</strong>; the line above
-          the button says how many you have left. It takes about 2 minutes to
-          start and a few more to finish. Keep working meanwhile; the video
-          shows <strong>Being made</strong>, then updates by itself.</li>
+          uses <strong>1 of your 20 videos this month</strong>; the line above
+          the button says how many you have left. It takes a minute or two.
+          Keep working meanwhile; the video shows <strong>Being
+          made</strong>, then updates by itself.</li>
         <li><strong>Watch the private draft.</strong> When it says
           <strong>Ready to check</strong>, tap <strong>Watch it</strong>. Only
           the class's coaches can see it.</li>
         <li><strong>Approve or discard.</strong> <strong>Approve</strong> puts
           it <strong>On the shelf</strong>; then <strong>Put in page</strong>
           (or the <strong>Video</strong> button in the toolbar) places it.
-          <strong>Discard</strong> deletes it, and it
-          <strong>still counts</strong> as one of your videos: it was already
-          paid for.</li>
+          <strong>Discard</strong> deletes it, and it still counts as one of
+          your videos.</li>
       </ol>
       <figure>
-        <a href="/coach/img/guide/video-plan.png"><img src="/coach/img/guide/video-plan.png" width="852" height="970" loading="lazy"
-          alt="The Videos panel after planning: Videos 1 of 5 this month. Describe the video. I understood: a short clip of hands being washed with soap at a sink. The video request: one calm, continuous shot at hand level of hands at a sink, no faces, no text, no music. Length 8 seconds. Words for learners: Hands washing with soap at a sink. Making it uses 1 of your 5 videos this month. You have 4 left. Make the video, and Change the description."></a>
-        <figcaption>Steps 1 and 2: the plan, and what it will use</figcaption>
+        <a href="/coach/img/guide/video-maker.png"><img src="/coach/img/guide/video-maker.png" width="818" height="1392" loading="lazy"
+          alt="Make a video of this page: Read the words aloud and Quiet music, both ticked. Point things out: the tap picture with a yellow arrow and the label The tap drawn on it, the words an arrow to the tap, Draw it and Remove the marks, and I understood: an arrow pointing at the tap. Making it uses 1 of your 20 videos this month. You have 19 left. Make the video."></a>
+        <figcaption>Steps 1 to 4: the page's video, with an arrow on a picture</figcaption>
       </figure>
       <figure>
-        <a href="/coach/img/guide/video-shelf.png"><img src="/coach/img/guide/video-shelf.png" width="852" height="1278" loading="lazy"
-          alt="The video shelf: one video Being made (it usually takes a few minutes, this updates by itself); one Ready to check, with a player, Approve and Discard; one On the shelf, with a player, Put in page and Delete."></a>
-        <figcaption>Steps 3 to 5 on the shelf. (A test clip stands in for the videos here.)</figcaption>
+        <a href="/coach/img/guide/video-shelf.png"><img src="/coach/img/guide/video-shelf.png" width="818" height="1088" loading="lazy"
+          alt="The video shelf: one video Being made (it usually takes a minute or two, this updates by itself); one Ready to check, with a player, Approve and Discard; one On the shelf, with a player, Put in page and Delete."></a>
+        <figcaption>Steps 5 and 6 on the shelf. (A test clip stands in for the videos here.)</figcaption>
       </figure>
 
       <h3>What the videos are like</h3>
       <ul>
-        <li>One calm, continuous, realistic shot, 3 to 10 seconds long (often
-          about 8), landscape.</li>
-        <li><strong>No text</strong>, captions, signs, logos or brands.</li>
-        <li><strong>No real people</strong> or look-alikes: people are
-          generic, faces stay out of close-up, and usually you see just hands
-          and objects.</li>
-        <li>No music or voice; only soft, natural sounds of the action.</li>
-        <li>Places are generic Singapore settings (an HDB kitchen, a void deck,
-          an MRT gate), never a named or recognisable real place.</li>
-        <li>The planner says no to bodies undressed (for puberty or
-          toileting, use pictures and words instead), anything violent or
-          frightening, real people or learners, cartoon characters, and
-          anything that identifies a learner, family or school.</li>
-        <li>AI clips can look wrong in small ways (an odd hand, an object that
-          changes). Watch the whole draft before you approve it.</li>
+        <li><strong>Exactly the page</strong>: the real My class screen, with
+          its words, pictures and buttons as learners see them, and
+          <strong>Next</strong> tapped between screens. Nothing is made up by
+          AI; the AI only places the marks you asked for.</li>
+        <li>Upright, for phones, and short: a few seconds a screen, long
+          enough to hear its words. A page of more than 20 screens stops at
+          the 20th.</li>
+        <li>The words are read in the app's own voice. Only the page's
+          headings, sentences and lists are read, not the words for pictures.</li>
+        <li>The video is made from the page as it is when you tap
+          <strong>Make the video</strong>; later changes need a new video.</li>
       </ul>
       <ul>
         <li>If a video can't be made, it says <em>Could not be made</em>, and
-          your video is given back. The same happens if it takes more than
+          it is not counted. The same happens if it takes more than
           30 minutes.</li>
         <li>Learners' videos never play by themselves: a learner taps
           <strong>▶</strong>. They are saved on the device for offline
           use.</li>
-        <li>At the limit: <em>You have made all 5 videos for this
-          month.</em></li>
+        <li><strong>Need more?</strong> When 3 or fewer are left, you can tap
+          <strong>Ask the admin for more videos</strong> and say why. The
+          admin decides how many you can make each month. At the limit:
+          <em>You have made all 20 videos for this month.</em></li>
       </ul>
       <p class="to-top"><a href="#contents">Back to contents</a></p>
     </section>
@@ -745,11 +750,11 @@
       </ul>
       <figure>
         <a href="/coach/img/guide/admin-requests.png"><img src="/coach/img/guide/admin-requests.png" width="880" height="1219" loading="lazy"
-          alt="Admin, Waiting tab: Coaches waiting for approval (1): Mr Lim, with email, works at AWWA School @ Napiri, how to check them and when asked; below, How did you check them? filled in with Seen taking classes at AWWA School @ Napiri on Monday, Approve and Cancel. Requests to join a class (1): Join K7M-3RQ-P9T (3 Kindness), with the coach, where they work, where the class is, the class's coaches, how to check them, their note, Approve and Decline."></a>
+          alt="Admin, Waiting tab: Coaches waiting for approval (1): Mr Lim, with email, works at AWWA School @ Napiri, how to check them and when asked; below, How did you check them? filled in with Seen taking classes at AWWA School @ Napiri on Monday, Approve and Cancel. Requests from coaches (1): Join K7M-3RQ-P9T (3 Kindness), with the coach, where they work, where the class is, the class's coaches, how to check them, their note, Approve and Decline."></a>
         <figcaption>Approving a coach: how you checked them</figcaption>
       </figure>
 
-      <h3>Waiting: requests to join a class</h3>
+      <h3>Waiting: requests from coaches</h3>
       <p>A coach who works with a colleague asks to join the colleague's
         class. Each request shows the class, the coach, where they work,
         where the class is, its coaches, and their note. Approve only after
@@ -833,8 +838,13 @@
 
       <h3>Limits</h3>
       <p>The same for every coach, counted in Singapore months: AI requests
-        (Write with AI and video planning) and videos, each about US$0.80.
-        Save the limits; Undo on the message.</p>
+        (Write with AI and marking pictures) and videos of pages (each a few
+        cents to make). Save the limits; Undo on the message.</p>
+      <p>A coach who needs more videos can ask. Their request waits under
+        <strong>Requests from coaches</strong>, with how many they can make
+        now: <strong>Approve</strong>, type the new number for that coach, and
+        tap <strong>Give them more</strong>; or <strong>Decline</strong>.
+        Both go in the history.</p>
       <p class="to-top"><a href="#contents">Back to contents</a></p>
     </section>
 
@@ -853,7 +863,7 @@
             <tr><td>Your sign-in (Google account email and name)</td><td>Firebase Authentication (Google), in the US</td><td>You and the admin</td></tr>
             <tr><td>About you (including where you work), and your requests</td><td>Singapore</td><td>You and the admin</td></tr>
             <tr><td>The admin history: who approved or declined you, when, and the admin's note on how they checked</td><td>Singapore</td><td>Admins only (a decline's message is shown to you)</td></tr>
-            <tr><td>Draft pages, picture words, video plans</td><td>Singapore</td><td>The class's coaches and the admin</td></tr>
+            <tr><td>Draft pages, picture words, and what each video is made from</td><td>Singapore</td><td>The class's coaches and the admin</td></tr>
             <tr><td>The published page</td><td>Singapore</td><td><strong>Anyone with the class code</strong></td></tr>
             <tr><td>Pictures, and approved videos</td><td>Singapore</td><td>Anyone with the exact address, which a published page gives</td></tr>
             <tr><td>Video drafts (before approval)</td><td>Singapore</td><td>The class's coaches</td></tr>
@@ -861,11 +871,13 @@
           </tbody>
         </table>
       </div>
-      <p><strong>Write with AI and videos</strong> use Google's Gemini models,
-        which may run outside Singapore. They get what you type, the page and
-        your pictures' words, never anything about learners. Simplify doesn't
-        keep what you type to the AI; finished videos are stored in
-        Singapore.</p>
+      <p><strong>Write with AI</strong> and <strong>marking a picture</strong>
+        use Google's Gemini models, which may run outside Singapore. They get
+        what you type, the page and your pictures' words — and, to mark a
+        picture, that picture — never anything about learners. Simplify
+        doesn't keep what you type to the AI. Videos are made by Simplify
+        itself (on Google Cloud in Singapore; the words are read by Google's
+        text-to-speech), and stored in Singapore.</p>
 
       <h3>What learners' devices send</h3>
       <p>To get the page, a learner's device sends only the class code (and,

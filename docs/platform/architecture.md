@@ -33,6 +33,7 @@ This document owns the shape of the learner app in `public/`: which module does 
 | `setup.js` | The set-up page (`#setup`): the press-and-hold gate, menu switches, words and sound, each tool's `setup()` section |
 | `guide-links.js` | Guide pages only: sends an old `/guide#<section>` link to the section's own page |
 | `guide-live.js` | Guide pages only: listens to the class's push signal (`class-live.js`), and a page the coach shows now opens `/#my-class` |
+| `guide-video.js` | The guide menu only: gives each "Watch" fold's video its address and poster when the fold opens (nothing is fetched before), and pauses it when it closes — see [guide videos](/operations/guide-videos.md#the-guide-videos-bucket) |
 
 **Shared parts** (imported by any tool that needs them)
 

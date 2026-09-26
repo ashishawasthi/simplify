@@ -1,7 +1,7 @@
 ---
 type: Operations Runbook
 title: Release and Deploy
-description: What CI runs on pull requests and on main, how a merge deploys the backend (functions, rules, indexes) and then Hosting, PR previews, the deploy account's roles, the manual commands for when CI is unavailable, the release checklist (tests, smoke, docs check, CACHE bump, ASSETS, guide only after testing), the one public URL, and the linear-history convention.
+description: What CI runs on pull requests and on main, how a merge deploys the backend (functions, rules, indexes) and then Hosting, PR previews, the deploy account's roles, the manual commands for when CI is unavailable, the release checklist (tests, smoke, docs check, CACHE bump, ASSETS, guide and guide videos only after testing, rebuilding the video renderer's image), the one public URL, and the linear-history convention.
 tags: [release, deploy, ci, github-actions, firebase-hosting, preview-channels, cache-bump, checklist]
 status: stable
 ---
@@ -32,7 +32,9 @@ Only when CI is unavailable, or for a one-off: from a machine signed in with `fi
 |---|---|---|
 | Hosting (by hand) | `firebase deploy --only hosting` | Same as the merge workflow's last job. |
 | Rules and indexes | `firebase deploy --only firestore:rules,firestore:indexes,storage,database` | `firestore.rules`, `firestore.indexes.json`, `storage.rules`, `database.rules.json`. Run `node tools/test-rules.mjs` first. `storage.rules` reads Firestore, which needs `roles/firebaserules.firestoreServiceAgent` on the Storage service agent; an interactive `--only storage` deploy offers to grant it (already granted, see [cloud project](/operations/cloud-project.md#storage-rules-can-read-firestore)). |
-| Cloud Functions | `firebase deploy --only functions` (or `--only functions:writePage` for one) | The `predeploy` runs `tools/copy-class-markdown.mjs`, so `functions/class-markdown.js` is refreshed from `public/js/class-markdown.js`. Uploads `functions/` except `node_modules`, `test` and `*.local` (so `functions/.env.local` and its fake-model switch never deploy). The deployer needs permission to act as `simplify-functions@simplify-special.iam.gserviceaccount.com`. Run `node tools/test-functions.mjs` first. |
+| Cloud Functions | `firebase deploy --only functions` (or `--only functions:writePage` for one) | The `predeploy` runs `tools/copy-class-markdown.mjs`, so `functions/class-markdown.js` and `functions/overlay.js` are refreshed from `public/js/class-markdown.js` and `public/coach/js/overlay.js`. Uploads `functions/` except `node_modules`, `test` and `*.local` (so `functions/.env.local` and its fake-model switch never deploy). The deployer needs permission to act as `simplify-functions@simplify-special.iam.gserviceaccount.com`. Run `node tools/test-functions.mjs` first. |
+
+| The video renderer (Cloud Run job) | `gcloud builds submit --config video/cloudbuild.yaml .`, then `gcloud run jobs update simplify-video --region asia-southeast1 --image asia-southeast1-docker.pkg.dev/simplify-special/simplify/video:latest` | **Never deployed by CI.** The image carries its own copy of `public/`, `tools/` and `video/`, so page videos show the reader as it was when the image was built. See [guide videos](/operations/guide-videos.md#the-cloud-run-job). |
 
 Avoid a bare `firebase deploy`: it deploys everything at once, functions included.
 
@@ -50,10 +52,11 @@ Before merging to `main`:
 4. **New public file → `ASSETS`.** Every new file under `public/` (outside `public/coach/`) goes into `ASSETS` in `public/sw.js`, pages by clean URL. `tools/test-assets.mjs` fails otherwise.
 5. **Bump `CACHE`.** Change `CACHE` in `public/sw.js` (`simplify-v<N>` → `simplify-v<N+1>`) for any change to a file the service worker precaches: HTML, CSS, JS, the manifest, a picture or a guide screenshot. Without a new `CACHE`, installed apps keep serving the old files however long they stay open. Skip it only when nothing under `public/` changed, or only `public/coach/` did (the service worker never caches the coach app). How a new `CACHE` reaches devices is in [offline and updates](/platform/offline-and-updates.md).
 6. **Try it on real devices.** Run the change locally on an Android phone and an iPad (including offline, from port 5050), since those are what learners use.
+7. **Rebuild the video renderer's image** after the merge when the change touches `video/`, or anything the renderer films or uses: the learner reader (My class, `class-markdown.js`, `my-class.css`), `public/coach/js/overlay.js`, the guide scenes, the coach app and its stand-in, or `tools/make-voice.mjs`. Build and update the job as in the table above; otherwise coaches' page videos keep showing the old reader.
 
 ### The guide comes after testing
 
-The learner guide (`public/guide.html`, `public/guide/*.html`) and its screenshots are updated only **after** the app change has been tested locally on an Android phone and an iPad, never alongside it, so the words and pictures describe what actually ships. Order: build → test (tests, smoke, devices, offline) → update the guide pages and retake the screenshots with `tools/shoot-guide.mjs` → bump `CACHE`. The guide is a topic menu with one short page per topic: add a page for a new feature rather than growing an existing one, with a button on the guide menu and an `ASSETS` entry.
+The learner guide (`public/guide.html`, `public/guide/*.html`) and its screenshots are updated only **after** the app change has been tested locally on an Android phone and an iPad, never alongside it, so the words and pictures describe what actually ships. Order: build → test (tests, smoke, devices, offline) → update the guide pages and retake the screenshots with `tools/shoot-guide.mjs` → bump `CACHE` → after the merge, **remake the guide videos** whose screens changed, on the job so their fonts match Android: rebuild its image first (it films its own copy of the app), then `gcloud run jobs execute simplify-video --region asia-southeast1 --args=<name or all>,--upload --wait` (see [guide videos](/operations/guide-videos.md)). The videos live in their own bucket, not in `public/`, so remaking one needs no `CACHE` bump and reaches everyone within the hour. The guide is a topic menu with one short page per topic: add a page for a new feature rather than growing an existing one, with a button on the guide menu and an `ASSETS` entry.
 
 ## Addresses
 

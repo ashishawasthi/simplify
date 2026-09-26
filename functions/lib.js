@@ -100,7 +100,10 @@ export const meaningfulLength = (text) => (String(text).match(/[\p{L}\p{N}]/gu) 
 
 // ---------- monthly limits and usage ----------
 
-export const DEFAULT_LIMITS = { flashPerMonth: 200, videosPerMonth: 5 };
+// Page videos are made by code (the renderer on Cloud Run, a few cents each),
+// so a coach may make many more of them than the old AI videos.
+export const DEFAULT_LIMITS = { flashPerMonth: 200, videosPerMonth: 20 };
+export const MAX_COACH_VIDEOS = 500; // the most an admin may give one coach
 
 // The Singapore month (UTC+8, no daylight saving) as "YYYY-MM"
 export function monthKey(now = Date.now()) {
@@ -109,28 +112,39 @@ export function monthKey(now = Date.now()) {
 
 export const usageRef = (uid, month) => db.doc(`usage/${uid}_${month}`);
 const limitsRef = () => db.doc("config/limits");
+const coachRef = (uid) => db.doc(`coaches/${uid}`);
 
-// config/limits, with the defaults for a missing doc or a missing / bad field
-export function limitsFrom(snap) {
+// config/limits, with the defaults for a missing doc or a missing / bad field —
+// and a coach's own limit, where an admin has given them one
+// (coaches/{uid}.limits, on the coach's request), in place of everyone's
+export function limitsFrom(snap, coachSnap = null) {
   const count = (v, fallback) => (Number.isInteger(v) && v >= 0 ? v : fallback);
   const d = snap?.exists ? snap.data() : {};
-  return {
+  const own = (coachSnap?.exists ? coachSnap.get("limits") : null) ?? {};
+  const all = {
     flashPerMonth: count(d.flashPerMonth, DEFAULT_LIMITS.flashPerMonth),
     videosPerMonth: count(d.videosPerMonth, DEFAULT_LIMITS.videosPerMonth),
+  };
+  return {
+    flashPerMonth: count(own.flashPerMonth, all.flashPerMonth),
+    videosPerMonth: Number.isInteger(own.videosPerMonth) && own.videosPerMonth >= 0 && own.videosPerMonth <= MAX_COACH_VIDEOS
+      ? own.videosPerMonth : all.videosPerMonth,
   };
 }
 
 const LIMIT_FIELD = { flash: "flashPerMonth", video: "videosPerMonth" };
 export const LIMIT_REACHED = {
   flash: (limit) => `You have used all ${limit} AI requests for this month.`,
-  video: (limit) => `You have made all ${limit} videos for this month.`,
+  video: (limit) => `You have made all ${limit} videos for this month. You can ask the admin for more.`,
 };
+
+// the documents a limit depends on, for a transaction's or a batch's getAll
+export const limitDocs = (uid, month) => [usageRef(uid, month), limitsRef(), coachRef(uid)];
 
 // This month's count and limit, without using anything (for answers that cost nothing).
 export async function peekUsage(uid, kind) {
-  const month = monthKey();
-  const [usage, limits] = await db.getAll(usageRef(uid, month), limitsRef());
-  return { used: usage.get(kind) ?? 0, limit: limitsFrom(limits)[LIMIT_FIELD[kind]] };
+  const [usage, limits, coach] = await db.getAll(...limitDocs(uid, monthKey()));
+  return { used: usage.get(kind) ?? 0, limit: limitsFrom(limits, coach)[LIMIT_FIELD[kind]] };
 }
 
 // Count one use BEFORE the model is called, inside a transaction, so two requests
@@ -139,8 +153,8 @@ export async function reserve(uid, kind) {
   const month = monthKey();
   const ref = usageRef(uid, month);
   return db.runTransaction(async (tx) => {
-    const [usage, limits] = await tx.getAll(ref, limitsRef());
-    const limit = limitsFrom(limits)[LIMIT_FIELD[kind]];
+    const [usage, limits, coach] = await tx.getAll(...limitDocs(uid, month));
+    const limit = limitsFrom(limits, coach)[LIMIT_FIELD[kind]];
     const used = usage.get(kind) ?? 0;
     if (used >= limit) fail("resource-exhausted", LIMIT_REACHED[kind](limit));
     tx.set(ref, { [kind]: used + 1, uid, month }, { merge: true });

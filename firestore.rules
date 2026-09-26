@@ -12,8 +12,8 @@ rules_version = '2';
 // console only (admins/{uid}) and sign in with Google too; every approval,
 // decline and suspension they make is written together with an adminLog
 // entry saying who did it and — for an approval — how they checked. The
-// Cloud Functions use the Admin SDK, which skips these rules — so videos,
-// video plans and usage are written by the functions only.
+// Cloud Functions use the Admin SDK, which skips these rules — so videos and
+// usage are written by the functions (and the video renderer) only.
 //
 // Tests: node tools/test-rules.mjs (starts the emulators itself).
 
@@ -229,6 +229,16 @@ service cloud.firestore {
                          && isId(incoming().get('suspendLog', ''))
                          && loggedNow(incoming().suspendLog,
                               incoming().suspended ? 'coach-suspended' : 'coach-unsuspended', 'coach', uid))
+                    // a coach's own monthly limit (more videos, when they asked)
+                    || (isAdmin()
+                         && onlyChanged(['limits', 'limitsLog'])
+                         && incoming().limits is map
+                         && incoming().limits.keys().hasOnly(['videosPerMonth'])
+                         && incoming().limits.videosPerMonth is int
+                         && incoming().limits.videosPerMonth >= 0 && incoming().limits.videosPerMonth <= 500
+                         && isId(incoming().get('limitsLog', ''))
+                         && (loggedNow(incoming().limitsLog, 'more-videos-approved', 'coach', uid)
+                             || loggedNow(incoming().limitsLog, 'coach-limits-changed', 'coach', uid)))
                     || (isAdmin()
                          && onlyChanged(['institutions', 'otherPlace'])
                          && !('otherPlace' in incoming())
@@ -237,17 +247,17 @@ service cloud.firestore {
                          && incoming().institutions.hasAll(resource.data.get('institutions', [])));
     }
 
-    // ---------- requests: joining a colleague's class (the admin approves) ----------
+    // ---------- requests: joining a colleague's class, or more videos a month (the admin decides) ----------
 
     // (Older documents may also hold kind 'new-class', className and org: an
     // approved coach now makes their own classes, so no new ones are written.)
     match /requests/{requestId} {
       function validRequest(d) {
         return d.keys().hasOnly(['uid', 'kind', 'classCode', 'note', 'status', 'createdAt'])
-          && d.keys().hasAll(['uid', 'kind', 'classCode', 'status', 'createdAt'])
+          && d.keys().hasAll(['uid', 'kind', 'status', 'createdAt'])
           && d.uid == request.auth.uid
-          && d.kind == 'join-class'
-          && isCode(d.classCode)
+          && ((d.kind == 'join-class' && isCode(d.get('classCode', '')))
+              || (d.kind == 'more-videos' && !('classCode' in d)))
           && d.status == 'pending'
           && d.createdAt == request.time
           && text(d.get('note', ''), 300);
@@ -257,16 +267,20 @@ service cloud.firestore {
       // a coach reads (and lists, with where("uid", "==", uid)) only their own
       allow get, list: if (signedIn() && resource.data.uid == request.auth.uid) || isAdmin();
       // the admin decides once, with its adminLog entry: only status,
-      // decidedAt, decidedBy, decisionLog and resultCode change
+      // decidedAt, decidedBy, decisionLog, resultCode (a join) and
+      // videosPerMonth (more videos: the coach's new limit) change
       allow update: if isAdmin()
         && resource.data.status == 'pending'
-        && onlyChanged(['status', 'decidedAt', 'decidedBy', 'decisionLog', 'resultCode'])
+        && onlyChanged(['status', 'decidedAt', 'decidedBy', 'decisionLog', 'resultCode', 'videosPerMonth'])
         && incoming().status in ['approved', 'declined']
         && incoming().decidedAt == request.time
         && incoming().decidedBy == request.auth.uid
         && (!('resultCode' in incoming()) || isCode(incoming().resultCode))
+        && (!('videosPerMonth' in incoming())
+            || (incoming().videosPerMonth is int && incoming().videosPerMonth >= 0 && incoming().videosPerMonth <= 500))
         && isId(incoming().get('decisionLog', ''))
-        && loggedNow(incoming().decisionLog, 'join-' + incoming().status, 'request', requestId);
+        && loggedNow(incoming().decisionLog,
+             (resource.data.kind == 'more-videos' ? 'more-videos-' : 'join-') + incoming().status, 'request', requestId);
     }
 
     // ---------- classes: the public part (name + the latest published page) ----------
@@ -383,14 +397,13 @@ service cloud.firestore {
         allow delete: if isClassCoach(code) || isAdmin();
       }
 
-      // ---------- videos: the video shelf, written only by the Cloud Functions ----------
+      // ---------- videos: the video shelf, written only by the Cloud Functions and the renderer ----------
 
       match /videos/{videoId} {
         allow get, list: if isClassCoach(code) || isAdmin();
         allow delete: if isAdmin();
       }
 
-      // classes/{code}/videoPlans/{planId}: no client access at all (functions only)
     }
 
     // ---------- classCoaches: which coaches a class has ----------
@@ -430,7 +443,8 @@ service cloud.firestore {
           && d.action in ['coach-approved', 'coach-declined', 'coach-pending', 'coach-suspended', 'coach-unsuspended',
                           'join-approved', 'join-declined', 'coach-removed', 'coach-added', 'coach-place-added',
                           'institution-added', 'institution-edited', 'institution-retired', 'institution-restored',
-                          'class-suspended', 'class-restored', 'page-taken-down', 'page-put-back', 'limits-changed']
+                          'class-suspended', 'class-restored', 'page-taken-down', 'page-put-back', 'limits-changed',
+                          'more-videos-approved', 'more-videos-declined', 'coach-limits-changed']
           && d.adminUid == request.auth.uid
           && d.adminEmail == request.auth.token.email
           && d.at == request.time
@@ -453,8 +467,10 @@ service cloud.firestore {
             ? getAfter(/databases/$(database)/documents/coaches/$(d.coach)).data.get('decisionLog', '') == logId
           : d.action in ['coach-suspended', 'coach-unsuspended']
             ? getAfter(/databases/$(database)/documents/coaches/$(d.coach)).data.get('suspendLog', '') == logId
-          : d.action in ['join-approved', 'join-declined']
+          : d.action in ['join-approved', 'join-declined', 'more-videos-approved', 'more-videos-declined']
             ? getAfter(/databases/$(database)/documents/requests/$(d.request)).data.get('decisionLog', '') == logId
+          : d.action == 'coach-limits-changed'
+            ? getAfter(/databases/$(database)/documents/coaches/$(d.coach)).data.get('limitsLog', '') == logId
           : true;
       }
 

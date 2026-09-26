@@ -227,7 +227,7 @@ export function adminScreen(root, ctx, tabArg = "") {
         waiting.length ? h("ul", { class: "admin-list" }, waiting.map(waitingCard))
           : h("p", { class: "empty" }, "Nobody is waiting.")),
       h("section", { class: "section", "aria-labelledby": "adm-req-h" },
-        h("h2", { id: "adm-req-h" }, `Requests to join a class (${requests.length})`),
+        h("h2", { id: "adm-req-h" }, `Requests from coaches (${requests.length})`),
         requests.length ? h("p", { class: "small" }, "Approve only after checking they really coach that class.") : null,
         requests.length ? h("ul", { class: "admin-list" }, requests.map(requestCard))
           : h("p", { class: "empty" }, "Nothing is waiting.")));
@@ -355,15 +355,17 @@ export function adminScreen(root, ctx, tabArg = "") {
       h("div", { class: "actions" }, use, small("Cancel", closeForm, "quiet")));
   }
 
-  // ---- requests to join a class ----
+  // ---- requests: to join a class, or for more videos a month ----
 
   function requestCard(req) {
     const coach = coachOf(req.uid);
     const joining = req.kind === "join-class";
+    const moreVideos = req.kind === "more-videos";
     const cls = joining ? classOf(req.classCode) : null;
+    const videosNow = coach?.limits?.videosPerMonth ?? data.limits.videosPerMonth;
     const what = joining
       ? `Join ${formatCode(req.classCode)}${cls ? ` (${cls.name})` : " — no class has this code"}`
-      : `New class: ${req.className}`;
+      : moreVideos ? "More videos a month" : `New class: ${req.className}`;
     const decline = async (note) => {
       open = null;
       hiddenRequests.add(req.id);
@@ -397,6 +399,26 @@ export function adminScreen(root, ctx, tabArg = "") {
           load();
         },
       });
+    } else if (open === `more-approve:${req.id}`) {
+      const countKey = `more-count:${req.id}`;
+      const count = field({ label: "Videos a month for this coach", type: "number", inputmode: "numeric", min: 0, max: 500, step: 1,
+        value: drafts.get(countKey) ?? String(videosNow + 20), dataset: { keep: countKey } });
+      count.input.addEventListener("input", () => drafts.set(countKey, count.input.value));
+      actions = decisionForm({
+        key: `more-approve:${req.id}`, label: "Why? (if you like)", max: 300, before: count.field,
+        hint: "Kept in the admin history with your name. A page video costs a few cents.",
+        confirmText: "Give them more",
+        onConfirm: async (note) => {
+          const videosPerMonth = Number(count.input.value);
+          if (!Number.isInteger(videosPerMonth) || videosPerMonth < 0 || videosPerMonth > 500) throw new Error("Give a whole number from 0 to 500.");
+          await cloud.approveMoreVideos(req, user, { videosPerMonth, note, coach });
+          drafts.delete(`more-approve:${req.id}`);
+          drafts.delete(countKey);
+          open = null;
+          toast.show(`${coachName(req.uid)} can make ${videosPerMonth} videos a month now.`);
+          load();
+        },
+      });
     } else if (open === `join-decline:${req.id}`) {
       actions = decisionForm({
         key: `join-decline:${req.id}`, label: "Why? (if you like)", max: 300,
@@ -407,6 +429,7 @@ export function adminScreen(root, ctx, tabArg = "") {
       // an older "new class" request: coaches make their own classes now
       actions = h("div", { class: "actions" },
         joining ? h("button", { class: "btn btn-primary btn-small", type: "button", disabled: !cls, onclick: () => openForm(`join-approve:${req.id}`) }, "Approve") : null,
+        moreVideos ? h("button", { class: "btn btn-primary btn-small", type: "button", onclick: () => openForm(`more-approve:${req.id}`) }, "Approve") : null,
         small("Decline", () => openForm(`join-decline:${req.id}`)));
     }
     const status = coach ? statusOf(coach) : null;
@@ -418,11 +441,12 @@ export function adminScreen(root, ctx, tabArg = "") {
         ["Works at", coach ? namesOf(coach.institutions, data.institutions) : null],
         ["The class is at", cls?.institution ? institutionName(cls.institution) : cls?.org],
         ["The class's coaches", cls ? cls.uids.map(coachName).join(", ") || "None" : null],
+        ["Videos a month now", moreVideos ? String(videosNow) : null],
         ["How to check them", coach?.note],
         ["Their note", req.note],
         ["Asked", whenText(req.createdAt)],
       ]),
-      joining ? null : h("p", { class: "small" }, "An older request: coaches now make their own classes once approved."),
+      joining || moreVideos ? null : h("p", { class: "small" }, "An older request: coaches now make their own classes once approved."),
       actions);
   }
 
@@ -803,6 +827,9 @@ export function adminScreen(root, ctx, tabArg = "") {
       case "page-taken-down": return ["took “", e.detail || "the page", "” down from ", cls];
       case "page-put-back": return ["put “", e.detail || "the page", "” back on ", cls];
       case "limits-changed": return ["set the monthly limits: ", e.detail];
+      case "more-videos-approved": return ["gave ", who, " ", e.detail || "more videos a month", ", as they asked"];
+      case "more-videos-declined": return ["declined ", who, "'s request for more videos"];
+      case "coach-limits-changed": return ["set ", who, "'s videos: ", e.detail];
       default: return [e.action];
     }
   }
@@ -837,11 +864,11 @@ export function adminScreen(root, ctx, tabArg = "") {
 
   function limitsForm() {
     const flash = field({ label: "AI requests per coach per month", type: "number", inputmode: "numeric", min: 0, max: 5000, step: 1, value: String(data.limits.flashPerMonth) });
-    const videos = field({ label: "Videos per coach per month", type: "number", inputmode: "numeric", min: 0, max: 100, step: 1, value: String(data.limits.videosPerMonth) });
+    const videos = field({ label: "Videos per coach per month (a coach can ask for more)", type: "number", inputmode: "numeric", min: 0, max: 100, step: 1, value: String(data.limits.videosPerMonth) });
     const save = h("button", { class: "btn btn-primary", type: "submit" }, "Save the limits");
     const form = h("form", { class: "stack form-narrow", novalidate: true },
       flash.field, videos.field, h("div", { class: "actions" }, save),
-      h("p", { class: "field-hint" }, "The same for every coach, counted in Singapore months. AI requests are writing pages and planning videos (Gemini Flash); each video costs about US$0.80."));
+      h("p", { class: "field-hint" }, "The same for every coach, counted in Singapore months, unless you gave a coach more videos when they asked. AI requests are writing pages and marking pictures (Gemini Flash); a page video costs a few cents to make (most of it the voice)."));
     // numbers only, within the limits the rules allow: forgiven as typed, never refused
     const clamp = (input, max) => Math.min(max, Math.max(0, Math.round(Number(input.value) || 0)));
     form.addEventListener("submit", (e) => e.preventDefault());

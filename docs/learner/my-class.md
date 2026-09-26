@@ -31,7 +31,7 @@ the class (on the set-up page) removes it.
 - The screen being read is saved in `localStorage` `simplify-my-class-v1` as `{ page, screen }`, so Back into My
   class or a reload shows the same screen; a fresh visit starts at screen 1.
 - **Pictures and videos** come only from the class's shelf, shown full width with their words as the description for
-  screen readers. A video never plays by itself. A file not on the device and not reachable shows "Needs the
+  screen readers; a video keeps its own shape (a coach's page video is upright), at most 65% of the screen's height. A video never plays by itself. A file not on the device and not reachable shows "Needs the
   internet" in its place, and loads when the internet is back.
 - **YouTube** appears as a card that loads nothing from YouTube until it is tapped, then plays in the
   privacy-enhanced player; see [markdown pages](/coach/markdown-pages.md#youtube).
