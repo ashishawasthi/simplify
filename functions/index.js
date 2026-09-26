@@ -169,7 +169,9 @@ export async function writePageHandler(request) {
 // A mark from the model is about a box round the thing ([ymin, xmin, ymax,
 // xmax], 0–1000, the way Gemini finds things); here it becomes a shape the
 // renderer draws (public/coach/js/overlay.js), placed by code, not guessed.
-export function markToShape(mark) {
+// `size` is the picture's { width, height }: a ring is measured on its
+// shorter side (as overlay.js draws it), so it fits wide and tall photos alike.
+export function markToShape(mark, size = {}) {
   const t = Array.isArray(mark?.target) ? mark.target.map(Number) : [];
   if (t.length !== 4 || t.some((v) => !Number.isFinite(v))) return null;
   const [y1, x1, y2, x2] = [Math.min(t[0], t[2]), Math.min(t[1], t[3]), Math.max(t[0], t[2]), Math.max(t[1], t[3])]
@@ -177,7 +179,12 @@ export function markToShape(mark) {
   const cx = Math.round((x1 + x2) / 2);
   const cy = Math.round((y1 + y2) / 2);
   const pad = 20;
-  if (mark.kind === "circle") return { type: "circle", at: [cx, cy], r: Math.max(40, Math.round(Math.max(x2 - x1, y2 - y1) / 2 * 1.15)) };
+  if (mark.kind === "circle") {
+    const w = Number(size.width) > 0 ? Number(size.width) : 1;
+    const h = Number(size.height) > 0 ? Number(size.height) : 1;
+    const across = Math.max(((x2 - x1) * w) / 1000, ((y2 - y1) * h) / 1000); // the thing's larger side, in the picture's units
+    return { type: "circle", at: [cx, cy], r: Math.max(40, Math.round(((across / 2) * 1.15 * 1000) / Math.min(w, h))) };
+  }
   if (mark.kind === "box") return { type: "box", from: [Math.max(0, x1 - pad), Math.max(0, y1 - pad)], to: [Math.min(1000, x2 + pad), Math.min(1000, y2 + pad)] };
   if (mark.kind === "label") {
     // above the thing, or below it when there is no room above
@@ -228,7 +235,8 @@ export async function planOverlayHandler(request) {
 
   const answer = reply.blocked ? { action: "decline", note: "The AI cannot mark this. Try asking in a different way." } : reply.answer;
   const shapes = answer.action === "draw"
-    ? cleanShapes((Array.isArray(answer.marks) ? answer.marks : []).map(markToShape).filter(Boolean))
+    ? cleanShapes((Array.isArray(answer.marks) ? answer.marks : [])
+      .map((m) => markToShape(m, { width: picture.get("width"), height: picture.get("height") })).filter(Boolean))
     : [];
   const action = answer.action === "draw" && !shapes.length ? "none" : answer.action;
   if (action === "decline") await countDecline(ticket);

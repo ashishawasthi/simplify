@@ -43,8 +43,8 @@ All headers come from `hosting.headers` in `firebase.json`. For the same header 
 | `default-src` | `'self'` | Everything else comes from the site |
 | `script-src` | `'self'` | No inline script, no other host |
 | `style-src` | `'self'` | No inline `<style>` or `style=""`; JS sets styles through the DOM, which the CSP allows |
-| `img-src` | `'self' blob: https://storage.googleapis.com` | `blob:` for My class's pictures, shown from the device's media cache; Google Storage for a guide video's poster |
-| `media-src` | `'self' blob: https://storage.googleapis.com` | `blob:` for My class's videos, likewise; Google Storage for the guide videos, only once a Watch fold is opened |
+| `img-src` | `'self' blob: https://storage.googleapis.com/simplify-guide-videos/` | `blob:` for My class's pictures, shown from the device's media cache; the guide-videos bucket only (not the rest of Google Storage) for a guide video's poster |
+| `media-src` | `'self' blob: https://storage.googleapis.com/simplify-guide-videos/` | `blob:` for My class's videos, likewise; Google Storage for the guide videos, only once a Watch fold is opened |
 | `connect-src` | `'self' https://firestore.googleapis.com https://firebasestorage.googleapis.com https://simplify-special-default-rtdb.asia-southeast1.firebasedatabase.app` | The one class read, the class's pictures and videos, and the push signal's stream (the stream answers directly, with no redirect to another host) |
 | `frame-src` | `https://www.youtube-nocookie.com` | YouTube's privacy-enhanced player, only after a tap |
 | `object-src` | `'none'` | No plugins |
@@ -61,8 +61,8 @@ Every picture is bundled (`/img/pic/`), so a card looks the same on every device
 | `default-src` | `'self'` | |
 | `script-src` | `'self' https://apis.google.com` | Firebase Auth's Google sign-in popup helper; the SDK itself is vendored under `/coach/vendor/` |
 | `style-src` | `'self'` | |
-| `img-src` | `'self' blob: data: https://firebasestorage.googleapis.com https://lh3.googleusercontent.com https://storage.googleapis.com` | `blob:` for pictures being uploaded and for the marks over a picture (an SVG made by `overlay.js`); Storage for shelf pictures; the coach guide video's poster; `data:` and Google profile photos are allowed, though no code in `public/coach/js/` uses them today |
-| `media-src` | `'self' blob: https://firebasestorage.googleapis.com https://storage.googleapis.com` | Approved videos from Storage; drafts as `blob:` after an authenticated download; the coach guide's video |
+| `img-src` | `'self' blob: data: https://firebasestorage.googleapis.com https://lh3.googleusercontent.com https://storage.googleapis.com/simplify-guide-videos/` | `blob:` for pictures being uploaded and for the marks over a picture (an SVG made by `overlay.js`); Storage for shelf pictures; the coach guide video's poster; `data:` and Google profile photos are allowed, though no code in `public/coach/js/` uses them today |
+| `media-src` | `'self' blob: https://firebasestorage.googleapis.com https://storage.googleapis.com/simplify-guide-videos/` | Approved videos from Storage; drafts as `blob:` after an authenticated download; the coach guide's video |
 | `connect-src` | `'self' https://firestore.googleapis.com https://firebasestorage.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://asia-southeast1-simplify-special.cloudfunctions.net` | Firestore, Storage, Firebase Auth (sign-in and token refresh), and the six callables |
 | `frame-src` | `https://simplify-special.firebaseapp.com https://www.youtube-nocookie.com` | The Auth handler frame, and the preview's YouTube player |
 | `object-src`, `base-uri`, `form-action`, `frame-ancestors` | as the learner CSP | |

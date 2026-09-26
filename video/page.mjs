@@ -191,6 +191,15 @@ export async function renderPageVideo(args, { renderBoard, outDir, cacheDir }) {
         : await classFile(code, kind, id);
       if (bytes) files.set(`/page-media/${kind}/${id}`, [kind === "video" ? "video/mp4" : "image/jpeg", bytes]);
     }
+    // a file no longer on the shelf is left out, as a learner's device leaves
+    // it out ("gone"); here there is no server to tell gone from offline
+    const missing = media.filter(([k, id]) => !files.has(`/page-media/${k}/${id}`));
+    if (missing.length) {
+      const gone = new Set(missing.map(([k, id]) => `${k === "video" ? "videos" : "pictures"}/${id}.${k === "video" ? "mp4" : "jpg"}`));
+      spec.markdown = spec.markdown.split("\n")
+        .filter((line) => !/^\s*!\[[^\]]*\]\(([^)\s]+)[^)]*\)\s*$/.test(line) || !gone.has(/\(([^)\s]+)/.exec(line)[1]))
+        .join("\n");
+    }
     const board = await pageBoard(spec, { cacheDir, mediaIds: media.filter(([k, id]) => files.has(`/page-media/${k}/${id}`)) });
     const { mp4 } = await renderBoard(board, { name: `page-${videoId}`, outDir, extraFiles: files });
     if (local) return;

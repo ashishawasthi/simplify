@@ -45,7 +45,7 @@ It never marks a face. If the coach only says what to point out, it uses one arr
 
 **The model never places or draws anything itself.** `markToShape` in `functions/index.js` turns each mark's box into a shape, placed by code:
 
-- a **circle** round the middle of the box, a little bigger than it (radius at least 40);
+- a **circle** round the middle of the box, a little bigger than it, measured on the picture's shorter side as `overlay.js` draws it (the picture's `width` and `height` from its shelf doc), so a ring fits on wide and tall photos alike (radius at least 40);
 - a **box** 20 units outside it on every side;
 - a **label** 60 units above it, or below when there is no room above, kept 120 units from the sides;
 - an **arrow** from the side of the picture with the most room, 260 units long, ending 20 units outside the thing.
@@ -63,7 +63,7 @@ Then `cleanShapes` (below) keeps only well-formed shapes. A `draw` with no usabl
 
 ## 2. Make
 
-**Make the video** first saves the page (the video is made from the page as saved), then calls `makeVideo` with `{ classCode, pageId, readAloud, music, overlays }`. The panel says "Starting the video. It shows below when it is ready to check, in a minute or two.", then "The video is being made. It shows below when it is ready to check." The function:
+**Make the video** first saves the page (the video is made from the page as saved); if the save fails it stops there with "The page could not be saved, so its video can't be made yet. Check the internet, then try again." and nothing is used. Then it calls `makeVideo` with `{ classCode, pageId, readAloud, music, overlays }`. The panel says "Starting the video. It shows below when it is ready to check, in a minute or two.", then "The video is being made. It shows below when it is ready to check." The function:
 
 1. runs `requireClassCoach`, and checks that the page exists ("That page was not found.") and is not empty ("The page is empty. Write it first, then make its video.");
 2. in **one Firestore transaction**, checks that a video is left this month (`usage/{uid}_{YYYY-MM}.video` against the coach's limit, below) or refuses with "You have made all *n* videos for this month. You can ask the admin for more."; counts it (`video + 1`); and creates `classes/{code}/videos/{id}` with:
@@ -82,7 +82,7 @@ If the start fails, the video is marked `failed` and given back, and the coach r
 The job runs `node video/render.mjs page <code> <videoId>` (`renderPageVideo` in `video/page.mjs`), as the service account `simplify-video@` ([cloud project](/operations/cloud-project.md#the-video-renderer)):
 
 1. It reads the video document through the Firestore REST API and stops, doing nothing, unless it is `rendering` and `kind: "page"`.
-2. It fetches the page's pictures (and any approved videos in it) by their public paths, exactly as a learner device does. A file not on the shelf any more is left out.
+2. It fetches the page's pictures (and any approved videos in it) by their public paths, exactly as a learner device does. A file not on the shelf any more is left out of the video, its line taken out of the page first, as a learner's device leaves it out (the renderer has no server to tell "gone" from "offline", so it never shows "Needs the internet").
 3. It films the page in the **real learner reader**: a headless Chrome opens the app with the class and its files already on the "device" (localStorage `simplify-class-v1` and Cache Storage `simplify-class-media` seeded, as if the QR code had been scanned), at `#my-class`. Each screen (at most 20) waits until every picture has drawn, speaks its text in the app's voice (Chirp 3 HD `en-IN-Chirp3-HD-Erinome`, at rate 1.0 in videos), draws the coach's marks over its pictures one by one, and taps **Next**. A screen with nothing to read stays 2.2 seconds.
 4. It adds an intro card (the page's title and the class name, the title spoken when reading aloud) and an end card, "All done", and composes a **720 × 1280 portrait** H.264 / AAC MP4 at 30 frames a second, with the music ducked under the voice (or silent, when music is off).
 5. It uploads the draft to Storage `classes/{code}/video-drafts/{id}.mp4` (`Cache-Control: private, max-age=0`) reads the video again (makeVideo may have saved the run's name meanwhile), and sets `status: "ready"` and `bytes` only if it is still `rendering` — with that read's `updateTime` as a precondition — so a video given up on meanwhile is never marked ready.
@@ -127,7 +127,7 @@ Months are Singapore months. A coach's limit is their own `coaches/{uid}.limits.
 
 ### Asking the admin for more
 
-When 3 or fewer videos are left, the panel offers "Need more videos this month? Say why (if you like)" (300 characters) and **Ask the admin for more videos**. That writes a request `{ uid, kind: "more-videos", note, status: "pending", createdAt }` (no class code) and the toast "Asked. The admin will decide."; while it waits, the panel says "You asked the admin for more videos. They will decide soon." The admin gives the coach a new number a month, or declines ([admin and approvals](/coach/admin-and-approvals.md#monthly-limits)). An approved number stays until the admin changes it.
+When 3 or fewer videos are left, the panel offers "Need more videos each month? Say why (if you like)" (300 characters) and **Ask the admin for more videos**. That writes a request `{ uid, kind: "more-videos", note, status: "pending", createdAt }` (no class code) and the toast "Asked. The admin will decide."; while it waits, the panel says "You asked the admin for more videos. They will decide soon." The admin gives the coach a new number a month, or declines ([admin and approvals](/coach/admin-and-approvals.md#monthly-limits)). An approved number stays until the admin changes it.
 
 ## Where videos live
 

@@ -286,7 +286,9 @@ async function runInside() {
   check("a picture not on the shelf", r.error, "not-found");
   r = await mark({ request: "an arrow to the sign" });
   check("marked → shapes, one AI request", [r.action, r.shapes.map((x) => x.type), r.used], ["draw", ["circle", "arrow"], 1]);
-  check("... a ring round the thing found", r.shapes[0], { type: "circle", at: [500, 500], r: 173 });
+  check("... a ring round the thing found, sized on the photo's shorter side (1600×1200)", r.shapes[0], { type: "circle", at: [500, 500], r: 230 });
+  check("marks → shapes: a ring on a square picture", fns.markToShape({ kind: "circle", target: [350, 350, 650, 650] }), { type: "circle", at: [500, 500], r: 173 });
+  check("marks → shapes: a tall thing on a wide photo gets a ring that fits it", fns.markToShape({ kind: "circle", target: [100, 450, 900, 550] }, { width: 1920, height: 1080 }).r, 460);
   check("... an arrow ending just outside it", r.shapes[1].to, (to) => to.every((v) => v >= 0 && v <= 1000) && (to[0] < 350 || to[0] > 650 || to[1] < 350 || to[1] > 650));
   r = await mark({ request: "nothing here" });
   check("not found → none, with a plain note", [r.action, r.shapes.length, !!r.note], ["none", 0, true]);

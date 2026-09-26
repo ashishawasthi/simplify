@@ -409,8 +409,9 @@ export function adminScreen(root, ctx, tabArg = "") {
         hint: "Kept in the admin history with your name. A page video costs a few cents.",
         confirmText: "Give them more",
         onConfirm: async (note) => {
-          const videosPerMonth = Number(count.input.value);
-          if (!Number.isInteger(videosPerMonth) || videosPerMonth < 0 || videosPerMonth > 500) throw new Error("Give a whole number from 0 to 500.");
+          const typed = count.input.value.trim();
+          const videosPerMonth = Number(typed);
+          if (!typed || !Number.isInteger(videosPerMonth) || videosPerMonth < 0 || videosPerMonth > 500) throw new Error("Give a whole number from 0 to 500.");
           await cloud.approveMoreVideos(req, user, { videosPerMonth, note, coach });
           drafts.delete(`more-approve:${req.id}`);
           drafts.delete(countKey);

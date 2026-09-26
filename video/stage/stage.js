@@ -129,8 +129,9 @@ function drawPhone(el, s, lt, { dx = 0, dy = 0, opacity = 1 } = {}) {
       fx.append(dot);
     }
     // a coach's marks over a picture, drawn in over most of a second
-    // (until the next tap: Next takes the picture away)
-    const gone = e.type === "overlay" && s.events.some((x) => x.type === "tap" && x.t > e.t && x.t <= rt);
+    // (until the next tap — Next takes the picture away — or the next marked
+    // picture, which may have scrolled the page under these marks)
+    const gone = e.type === "overlay" && s.events.some((x) => (x.type === "tap" || x.type === "overlay") && x.t > e.t && x.t <= rt);
     if (e.type === "overlay" && since >= 0 && !gone) {
       const box = document.createElement("div");
       Object.assign(box.style, { position: "absolute", left: `${e.x}px`, top: `${e.y}px`, width: `${e.w}px`, height: `${e.h}px` });

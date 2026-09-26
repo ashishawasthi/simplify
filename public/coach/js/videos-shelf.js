@@ -36,6 +36,7 @@ export function mountVideos(ws) {
   // ---------- making one: a video of the page open in the editor ----------
 
   const overlays = new Map(); // picture id → shapes, for the page being made
+  const markUrls = new Set(); // blob: URLs of the marks shown, released when rows go
   const readAloud = h("input", { type: "checkbox", checked: true, id: "video-read" });
   const withMusic = h("input", { type: "checkbox", checked: true, id: "video-music" });
   const marks = h("div", { class: "video-marks" });
@@ -79,8 +80,13 @@ export function mountVideos(ws) {
   // the pictures of the page open now, each with its marks and a box to ask for them
   // (the parser is loaded when the maker is first opened, as the preview
   // loads it: a class screen opens no faster or slower for this panel)
-  let pictureKey = "";
+  let pictureKey = null; // the pictures the rows are for (null: none drawn yet)
   let parser = null;
+  function clearMarks() {
+    for (const url of markUrls) URL.revokeObjectURL(url);
+    markUrls.clear();
+    marks.replaceChildren();
+  }
   async function renderMarks() {
     if (!ws.editor) return; // the editor is made after this panel
     parser ??= await import("/js/class-markdown.js");
@@ -91,10 +97,8 @@ export function mountVideos(ws) {
     for (const id of [...overlays.keys()]) if (!pictures.some((p) => p.id === id)) overlays.delete(id);
     if (key === pictureKey) return;
     pictureKey = key;
-    if (!pictures.length) {
-      marks.replaceChildren();
-      return;
-    }
+    clearMarks();
+    if (!pictures.length) return;
     marks.replaceChildren(
       h("h3", { class: "marks-h" }, "Point things out"),
       h("p", { class: "field-hint" }, "Optional. Say what to point out in a picture, and the AI draws an arrow, a ring or a label on it. Each uses one AI request."),
@@ -109,9 +113,16 @@ export function mountVideos(ws) {
       const shapes = overlays.get(picture.id) ?? [];
       const show = shapes.length > 0 && img.naturalWidth > 0;
       layer.hidden = !show;
-      if (layer.src) URL.revokeObjectURL(layer.src);
-      if (show) layer.src = URL.createObjectURL(new Blob([overlaySvg(shapes, img.naturalWidth, img.naturalHeight)], { type: "image/svg+xml" }));
-      else layer.removeAttribute("src");
+      if (layer.src) {
+        URL.revokeObjectURL(layer.src);
+        markUrls.delete(layer.src);
+      }
+      if (show) {
+        layer.src = URL.createObjectURL(new Blob([overlaySvg(shapes, img.naturalWidth, img.naturalHeight)], { type: "image/svg+xml" }));
+        markUrls.add(layer.src);
+      } else {
+        layer.removeAttribute("src");
+      }
       clear.hidden = !shapes.length;
     };
     img.addEventListener("load", () => draw());
@@ -171,7 +182,11 @@ export function mountVideos(ws) {
     fill(maker, waiting);
     let reply;
     try {
-      await ws.editor.flush(); // the video is made from the page as saved
+      // the video is made from the page as saved: an unsaved page would be the old one
+      if (!(await ws.editor.flush())) {
+        fill(maker, h("p", { class: "notice is-problem" }, "The page could not be saved, so its video can't be made yet. Check the internet, then try again."));
+        return;
+      }
       reply = await cloud.callFunction("makeVideo", {
         classCode: code, pageId: ws.editor.pageId, readAloud: readAloud.checked, music: withMusic.checked,
         overlays: Object.fromEntries(overlays),
@@ -222,7 +237,7 @@ export function mountVideos(ws) {
       }
     });
     fill(more, h("div", { class: "field" },
-      h("label", { for: "more-videos-note" }, "Need more videos this month? Say why (if you like)"),
+      h("label", { for: "more-videos-note" }, "Need more videos each month? Say why (if you like)"),
       note),
       h("div", { class: "actions" }, send));
   }
@@ -239,7 +254,8 @@ export function mountVideos(ws) {
   ws.on("text", pageChanged);
   ws.on("page", () => {
     overlays.clear();
-    pictureKey = "";
+    pictureKey = null;
+    clearMarks();
     fill(maker);
     pageChanged();
   });
@@ -432,6 +448,7 @@ export function mountVideos(ws) {
       alive = false;
       clearTimeout(pollTimer);
       clearTimeout(marksTimer);
+      for (const url of markUrls) URL.revokeObjectURL(url);
       document.removeEventListener("visibilitychange", onVisible);
       for (const url of drafts.values()) URL.revokeObjectURL(url);
     },
