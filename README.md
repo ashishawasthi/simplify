@@ -36,7 +36,9 @@ The **coach platform** behind My class lets coaches the admin has approved — e
 work at — make classes and write one simple markdown page per class, with pictures, YouTube videos, an AI helper,
 and short videos of their own pages (the real learner reader filmed by code, read aloud — no AI-made pictures),
 backed by Firestore, Cloud Storage, Cloud Functions, a Cloud Run job (the video renderer) and a Realtime Database
-(the push signal) in Singapore.
+(the push signal) in Singapore. Admins get an email when a coach waits for approval or asks for something, and a coach
+when the admin decides their request, through the Firebase extension Trigger Email from Firestore (Gmail, as
+`contact@whiz.coach`); learners are never emailed.
 
 ## Live
 
@@ -95,8 +97,8 @@ node tools/test-pictures.mjs    # the picture set: list vs files, SVG safety, si
 node tools/test-class.mjs       # class markdown, class codes, reading a class, the push signal, the service worker's exclusions
 node tools/test-coach.mjs       # the coach app's pure parts
 node tools/test-assets.mjs      # sw.js ASSETS matches exactly the files the app serves
-node tools/test-rules.mjs       # Firestore, Storage and Realtime Database rules (starts the emulators; needs Java + Firebase CLI)
-node tools/test-functions.mjs   # the Cloud Functions and the push trigger, with fake AI models (starts the emulators too)
+node tools/test-rules.mjs       # Firestore, Storage and Realtime Database rules, incl. mail/ closed to every client (starts the emulators; needs Java + Firebase CLI)
+node tools/test-functions.mjs   # the Cloud Functions, the push trigger and the email triggers, with fake AI models (starts the emulators too)
 node tools/test-seed.mjs        # seeding the institutions and the coach-status migration (starts the emulator too)
 node tools/smoke.mjs            # every screen in headless Chrome; `node tools/smoke.mjs wait` for one file
 node tools/build-docs-index.mjs --check   # docs frontmatter, generated indexes and links
@@ -119,6 +121,10 @@ The Firebase project is `simplify-special`, with the custom domain `simplify.whi
   to `ASSETS` — otherwise installed apps keep the old version, or the new file won't work offline.
 - **Update the guide, its screenshots and its videos only after a change has been tested locally**, never
   alongside it.
+- **The email extension is not deployed by CI**: after `firebase ext:list --project simplify-special`, run
+  `firebase deploy --only extensions --project simplify-special` by hand (all or nothing; never a bare `firebase deploy`),
+  and grant the invoker role on a new trigger after its first deploy — see
+  [cloud project](docs/operations/cloud-project.md#email).
 - **The video renderer's image is not deployed by CI**: rebuild it when `video/` or the learner reader changes
   (`gcloud builds submit --config video/cloudbuild.yaml .`, then update the job).
 

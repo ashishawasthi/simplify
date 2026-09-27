@@ -1,8 +1,8 @@
 ---
 type: System Reference
 title: Costs and Limits
-description: What Simplify costs to run and what keeps the bill small — the Blaze plan and the S$50 budget alert (it warns, it does not cap), Hosting transfer and the offline download per device, Firestore and Storage at pilot scale, the AI and video unit costs (Flash requests, page videos rendered on Cloud Run with a spoken voice, the public guide-videos bucket) and the per-coach monthly limits (200 Flash requests, 20 videos, more on request) enforced on the server, the Realtime Database push stream (tiny, and only while the app is on screen), and how often learner devices ask for a new page.
-tags: [costs, billing, blaze, budget, limits, gemini, cloud-run, text-to-speech, hosting, quotas, realtime-database]
+description: What Simplify costs to run and what keeps the bill small — the Blaze plan and the S$50 budget alert (it warns, it does not cap), Hosting transfer and the offline download per device, Firestore and Storage at pilot scale, the AI and video unit costs (Flash requests, page videos rendered on Cloud Run with a spoken voice, the public guide-videos bucket) and the per-coach monthly limits (200 Flash requests, 20 videos, more on request) enforced on the server, the Realtime Database push stream (tiny, and only while the app is on screen), email through whiz.coach's Gmail account (free, but its limit of about 2,000 recipients a day is shared with whiz.coach, so what sign-ups set off is capped), and how often learner devices ask for a new page.
+tags: [costs, billing, blaze, budget, limits, gemini, cloud-run, text-to-speech, hosting, quotas, realtime-database, email]
 status: stable
 ---
 
@@ -27,7 +27,9 @@ limit is enforced. The resources themselves are in [cloud project](/operations/c
 | Realtime Database (asia-southeast1) | One stream per learner device **while the app is on screen**, to its class's signal `{ at, force }` (a few dozen bytes per publish); written only by the `classSignal` function | Free tier (1 GB stored, 10 GB downloaded a month). Blaze allows 200,000 streams open at once per database — far beyond a pilot |
 | Cloud Storage (asia-southeast1) | Class pictures (≤ 2 MB each, usually far less) and approved videos (a few MB each), downloaded once per device and then kept offline | Cents a month |
 | Cloud Storage — `simplify-guide-videos` (asia-southeast1, public) | The three guide videos (4–7 MB each) and their posters, fetched only when someone opens a guide's Watch fold, from `storage.googleapis.com` | Cents a month: about a tenth of a US cent per full view |
-| Cloud Functions (2nd gen, asia-southeast1) | The six callables, only when a coach uses Write with AI or videos; the `classSignal` trigger, once per change to a class; at most 10 instances each | Negligible |
+| Cloud Functions (2nd gen, asia-southeast1) | The six callables, only when a coach uses Write with AI or videos; the `classSignal` trigger, once per change to a class; the `coachMail` and `requestMail` triggers, once per change to a coach profile or request; the email extension's function, a few runs per email; at most 10 instances each | Negligible |
+| Gmail (whiz.coach's Google Workspace) | The emails to coaches and admins, sent by the email extension as `ashish@whiz.coach` | Free (part of the Workspace account); limited to about 2,000 recipients a day, shared with every whiz.coach environment — see [email](#email) |
+| Secret Manager | One secret: the email extension's Gmail app password | Free tier (6 active versions and 10,000 reads a month) |
 | Vertex AI — Gemini Flash | `writePage`, `planOverlay` | A fraction of a cent per request |
 | Cloud Run job `simplify-video` (asia-southeast1, 2 CPU, 4 GiB) | One run per page video a coach makes (`makeVideo`), and the owner's remakes of the guide videos | About **US$0.01** per page video (a minute or two) |
 | Cloud Text-to-Speech (Chirp 3 HD) | The words a page video reads aloud, and the guide videos' lines | US$30 per million characters at list price (after any monthly free allowance): about US$0.03 for a page of 1,000 characters, at most about US$0.36 (20 screens of 600) |
@@ -57,6 +59,16 @@ per Singapore month** (UTC+8), checked on the server before any model is called 
 - Worst case for the whole platform at the defaults is therefore a few US dollars × the number of coaches a month,
   plus whatever the admin grants on request (500 long videos a month could reach about US$185 for that coach), plus
   small change for everything else. A budget alert at 50% is the moment to look at `usage/` in Firestore.
+
+## Email
+
+Email costs nothing extra: it goes through the Gmail account of whiz.coach's Google Workspace. What bounds it is
+Gmail's sending limit for that account, **about 2,000 recipients a day, shared with every whiz.coach environment**.
+Emails to a coach follow only an admin's decision, so they stay few. Emails to admins follow what anyone with a
+Google account can do (fill in About you, ask again), so they are capped at **50 a Singapore day**
+(`ADMIN_MAILS_PER_DAY` in `functions/mail.js`, counted in `mailCounts/{YYYY-MM-DD}`): past the cap none go that day
+except one notice to each admin that more is waiting, and the live count on the Admin link is always right. Who gets what is in
+[security](/platform/security.md#email); the sending set-up in [cloud project](/operations/cloud-project.md#email).
 
 ## What keeps the rest small
 

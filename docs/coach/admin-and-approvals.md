@@ -2,7 +2,7 @@
 type: Operations Runbook
 title: Admin and Approvals
 description: Who the admin is and how one is made (admins/{uid} in the console, Google sign-in only), and every action on the coach app's Admin screen and its tabs — approving or declining coaches with a note of how they were checked, the admin log (who approved which coach, when, and how), places coaches type that are not in the list, join requests, requests for more videos a month, suspending coaches and classes, taking a coach off a class, taking a page down, the monthly AI and video limits (and one coach's own video limit), and the institutions coaches choose from (seeding, adding, retiring) — with the writes and rules behind each, and the one-off switch-on steps.
-tags: [admin, coach-approval, audit-log, admin-log, institutions, join-requests, more-videos, suspend, take-down, monthly-limits, firestore-rules, runbook]
+tags: [admin, coach-approval, audit-log, admin-log, institutions, join-requests, more-videos, suspend, take-down, monthly-limits, email, firestore-rules, runbook]
 status: stable
 ---
 
@@ -96,6 +96,20 @@ is not in that count). Every action shows a toast; everything but approving a re
 
 A decision's note is typed in a small form that opens **in the card** (only one at a time); what was typed is kept
 while the screen redraws, and an Undo opens the form again with it.
+
+### Emails about what waits
+
+Every admin also gets an email, at the address of their own coach profile, when something starts to wait: a coach
+fills in About you ("A coach is waiting for your approval"), a declined coach asks again ("A coach asked again to be
+approved"), or a coach sends a request ("A coach asked to join a class", with the code, or "A coach asked for more
+videos a month"). The coach's name is in the body, in quotes, never in the subject; each links to
+`https://simplify.whiz.coach/coach/#admin`; none carries the coach's own note, so the checking still happens on this
+screen. Putting a coach back to waiting yourself sends nothing. They stop for the day after 50 (anyone with a Google
+account can fill in About you), with one last email, "More is waiting on Simplify", saying so; the count on the Admin
+link is always right. When an admin decides a request, the
+coach who asked gets an email with the decision, never with the admin's note. Deciding on a coach sends nothing: the
+coach's own screen changes as it happens. The functions `coachMail` and `requestMail` write these emails and the
+Trigger Email from Firestore extension sends them ([security](/platform/security.md#email)).
 
 ### Waiting: coaches waiting for approval
 
@@ -272,7 +286,7 @@ refused), giving a coach more videos (only with its entry, for the coach who ask
 coach), that a coach waiting for approval (or declined, or suspended) can do nothing but edit their own profile
 (and, declined, ask again), a place typed instead of an institution, and that an approved coach can make a class
 only for their own active institution; `node tools/test-functions.mjs` that every callable
-refuses a coach who is not approved; `node tools/test-seed.mjs` the seeding and migration tools;
+refuses a coach who is not approved, and which emails the admins and the coach get (once each, never with a note); `node tools/test-seed.mjs` the seeding and migration tools;
 `node tools/smoke.mjs coach` drives the Admin screen in Chrome against a stand-in `cloud.js` — the note forms,
 Undo bringing a note back, a place not in the list, taking a coach off a class, giving a coach more videos when they
 ask, the history and its search, and

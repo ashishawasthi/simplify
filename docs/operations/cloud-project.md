@@ -1,8 +1,8 @@
 ---
 type: Operations Runbook
 title: Cloud Project
-description: What exists in the Firebase / Google Cloud project simplify-special (billing, APIs, Firestore, the Realtime Database for the push signal, the Storage bucket and its CORS, the functions' service account and IAM, the Storage service agent, the budget, Authentication, Cloud Functions and the classSignal trigger, the video renderer — Cloud Run job simplify-video, its service account and roles, the Artifact Registry repository, the public guide-videos bucket — Hosting and the custom domain, the first admin), how each was set up (2026-09-23; the Realtime Database and the video renderer 2026-09-26) and how to recreate it, and the hosts a school network must allow.
-tags: [firebase, google-cloud, iam, firestore, realtime-database, cloud-storage, cloud-functions, cloud-run, artifact-registry, eventarc, authentication, hosting, runbook]
+description: What exists in the Firebase / Google Cloud project simplify-special (billing, APIs, Firestore, the Realtime Database for the push signal, the Storage bucket and its CORS, the functions' service account and IAM, the Storage service agent, the budget, Authentication, Cloud Functions and the three Firestore triggers, email — the Trigger Email from Firestore extension, its Gmail app-password secret and how to set it up, check it and replace the password — the video renderer — Cloud Run job simplify-video, its service account and roles, the Artifact Registry repository, the public guide-videos bucket — Hosting and the custom domain, the first admin), how each was set up (2026-09-23; the Realtime Database and the video renderer 2026-09-26) and how to recreate it, and the hosts a school network must allow.
+tags: [firebase, google-cloud, iam, firestore, realtime-database, cloud-storage, cloud-functions, cloud-run, artifact-registry, eventarc, authentication, hosting, email, firebase-extensions, secret-manager, runbook]
 status: stable
 ---
 
@@ -20,7 +20,9 @@ Everything Simplify runs on lives in one Firebase / Google Cloud project, `simpl
 | Storage rules → Firestore | Firebase Storage service agent holds `roles/firebaserules.firestoreServiceAgent` |
 | Budget | "simplify-special monthly (S$50)": S$50 a month, this project only, alerts at 50%, 90% and 100% of actual spend |
 | Authentication | Google provider on; authorized domains `simplify.whiz.coach`, `simplify-special.web.app`, `simplify-special.firebaseapp.com`, `localhost` |
-| Cloud Functions | six 2nd-gen callables in `asia-southeast1`, Node.js 22, 256 MiB, max 10 instances, running as `simplify-functions`, invokable by `allUsers`; one Firestore trigger, `classSignal`, through Eventarc; `simplify-functions` holds `roles/run.developer` on the job `simplify-video` and `roles/iam.serviceAccountUser` on `simplify-video@` |
+| Cloud Functions | six 2nd-gen callables in `asia-southeast1`, Node.js 22, 256 MiB, max 10 instances, running as `simplify-functions`, invokable by `allUsers`; three Firestore triggers, `classSignal`, `coachMail` and `requestMail` (the last two called by nothing until their invoker grants, below), through Eventarc; `simplify-functions` holds `roles/run.developer` on the job `simplify-video` and `roles/iam.serviceAccountUser` on `simplify-video@` |
+| Email | **not live yet** (2026-09-27: see [Email](#email) for what is left). The extension Trigger Email from Firestore (instance `firestore-send-email`, `firebase/firestore-send-email@0.2.10`, installed by hand), `asia-southeast1`, running as `ext-firestore-send-email@simplify-special.iam.gserviceaccount.com`; sends `mail/` through Gmail as `ashish@whiz.coach`, from `Simplify <contact@whiz.coach>` |
+| Secret Manager | **not set up yet** (the API is off): one secret, `ext-firestore-send-email-SMTP_PASSWORD` (the email extension's Gmail app password), replicated in `asia-southeast1` only |
 | Video renderer | Cloud Run job `simplify-video`, `asia-southeast1`, 2 CPU, 4 GiB, 30-minute task timeout, no retries, running as `simplify-video@simplify-special.iam.gserviceaccount.com`; image in the Artifact Registry repository `simplify` (Docker, `asia-southeast1`) |
 | Guide videos | `gs://simplify-guide-videos`, `asia-southeast1`, uniform access, public to read |
 | Hosting | default site `simplify-special` (`simplify-special.web.app`), custom domain `simplify.whiz.coach` active with its certificate |
@@ -28,7 +30,7 @@ Everything Simplify runs on lives in one Firebase / Google Cloud project, `simpl
 
 ## Billing and APIs
 
-The project is on the **Blaze** plan: Cloud Storage for Firebase needs it for a bucket since 3 February 2026, and so do Cloud Functions. The APIs the app depends on are enabled: `firestore`, `firebasestorage`, `storage`, `firebaserules`, `identitytoolkit`, `securetoken`, `firebasehosting`, `cloudfunctions`, `run`, `cloudbuild`, `artifactregistry`, `eventarc`, `aiplatform`, `billingbudgets`, `firebasedatabase` and `texttospeech` (all `.googleapis.com`).
+The project is on the **Blaze** plan: Cloud Storage for Firebase needs it for a bucket since 3 February 2026, and so do Cloud Functions. The APIs the app depends on are enabled: `firestore`, `firebasestorage`, `storage`, `firebaserules`, `identitytoolkit`, `securetoken`, `firebasehosting`, `cloudfunctions`, `run`, `cloudbuild`, `artifactregistry`, `eventarc`, `aiplatform`, `billingbudgets`, `firebasedatabase` and `texttospeech`, and for email `firebaseextensions` and `secretmanager` (all `.googleapis.com`).
 
 ```sh
 gcloud billing projects link simplify-special --billing-account=<BILLING_ACCOUNT_ID>
@@ -36,7 +38,8 @@ gcloud services enable firestore.googleapis.com firebasestorage.googleapis.com s
   firebaserules.googleapis.com identitytoolkit.googleapis.com securetoken.googleapis.com \
   firebasehosting.googleapis.com cloudfunctions.googleapis.com run.googleapis.com cloudbuild.googleapis.com \
   artifactregistry.googleapis.com eventarc.googleapis.com aiplatform.googleapis.com \
-  billingbudgets.googleapis.com firebasedatabase.googleapis.com texttospeech.googleapis.com --project simplify-special
+  billingbudgets.googleapis.com firebasedatabase.googleapis.com texttospeech.googleapis.com \
+  firebaseextensions.googleapis.com secretmanager.googleapis.com --project simplify-special
 ```
 
 ## Firestore
@@ -81,7 +84,7 @@ Deleted objects are kept for 7 days (the bucket's default soft-delete policy).
 
 ## The functions' service account
 
-The Cloud Functions run as `simplify-functions@simplify-special.iam.gserviceaccount.com` (`serviceAccount` in `setGlobalOptions` in `functions/index.js`), not as the default compute account, so they get only what they use: calling Gemini, reading and writing Firestore through the Admin SDK, reading and writing objects in the one bucket, writing the push signal to the Realtime Database (`roles/firebasedatabase.admin`: no narrower predefined role lets the Admin SDK write data), and receiving the `classSignal` trigger's Firestore events (`roles/eventarc.eventReceiver`).
+The Cloud Functions run as `simplify-functions@simplify-special.iam.gserviceaccount.com` (`serviceAccount` in `setGlobalOptions` in `functions/index.js`), not as the default compute account, so they get only what they use: calling Gemini, reading and writing Firestore through the Admin SDK, reading and writing objects in the one bucket, writing the push signal to the Realtime Database (`roles/firebasedatabase.admin`: no narrower predefined role lets the Admin SDK write data), and receiving the triggers' Firestore events (`roles/eventarc.eventReceiver`).
 
 ```sh
 gcloud iam service-accounts create simplify-functions --display-name="Simplify Cloud Functions" \
@@ -95,7 +98,7 @@ gcloud storage buckets add-iam-policy-binding gs://simplify-special.firebasestor
   --member=$SA --role=roles/storage.objectAdmin
 ```
 
-Whoever deploys the functions must be allowed to act as this account (`roles/iam.serviceAccountUser` on it; project owners already are). The Firebase CLI also checks, before any functions deploy, that the deployer may act as the App Engine default account `simplify-special@appspot.gserviceaccount.com`, although nothing runs as it (there is no App Engine app, scheduled job or extension). That account held the project-wide Editor role by Google's default; the owner removed it (2026-09-25), so it holds no roles, and the CI deploy account may act as it without gaining anything. If a Google service ever needs it again, it will fail with a permission error naming that account.
+Whoever deploys the functions must be allowed to act as this account (`roles/iam.serviceAccountUser` on it; project owners already are). The Firebase CLI also checks, before any functions deploy, that the deployer may act as the App Engine default account `simplify-special@appspot.gserviceaccount.com`, although nothing runs as it (there is no App Engine app or scheduled job, and the email extension runs as its own account). That account held the project-wide Editor role by Google's default; the owner removed it (2026-09-25), so it holds no roles, and the CI deploy account may act as it without gaining anything. If a Google service ever needs it again, it will fail with a permission error naming that account.
 
 Function builds (Cloud Build) run as the default compute account `908084220716-compute@developer.gserviceaccount.com`, so a deployer must be allowed to act as it too. It also held Editor by default; the owner replaced that (2026-09-25) with **Cloud Build Builder** alone — read the uploaded source, write build logs, push the image to `gcf-artifacts` — which is all a build uses (nothing else runs as it: no VMs, and the Cloud Run job runs as its own account). The video renderer's image is built by Cloud Build as this account too. A build failing for a missing permission would name this account; put the permission (not Editor) back.
 
@@ -135,13 +138,15 @@ gcloud run services add-iam-policy-binding makevideo --region asia-southeast1 --
   --member=allUsers --role=roles/run.invoker
 gcloud functions delete planVideo --region asia-southeast1 --project simplify-special --gen2 --quiet
 ```
- Environment: `GCLOUD_PROJECT` (set by the platform) and the optional `SIMPLIFY_BUCKET`, defaulting to `simplify-special.firebasestorage.app`, and `SIMPLIFY_RENDER_JOB`, defaulting to `simplify-video`. There are no secrets: Gemini is reached through Vertex AI, and the video job through the Cloud Run Admin API, with the service account's own credentials.
+ Environment: `GCLOUD_PROJECT` (set by the platform) and the optional `SIMPLIFY_BUCKET`, defaulting to `simplify-special.firebasestorage.app`, and `SIMPLIFY_RENDER_JOB`, defaulting to `simplify-video`. The functions have no secrets: Gemini is reached through Vertex AI, and the video job through the Cloud Run Admin API, with the service account's own credentials. (The project's one secret is the email extension's, below.)
 
-One Firestore trigger, `classSignal` (`onDocumentWritten("classes/{code}")`, same region, same identity), writes the push signal to the Realtime Database whenever a class's page changes (`functions/signal.js`). It is delivered through Eventarc: the Eventarc service agent (`service-908084220716@gcp-sa-eventarc.iam.gserviceaccount.com`, `roles/eventarc.serviceAgent`) and `simplify-functions`' `roles/eventarc.eventReceiver`. The very first deploy of a trigger in a project can fail with "Permission denied while using the Eventarc Service Agent" while those permissions spread; deploying again a few minutes later works. Eventarc delivers each event through a Pub/Sub push subscription that calls the function's Cloud Run service as `simplify-functions`, so that account needs `roles/run.invoker` on the `classsignal` service — granted on that one service only (2026-09-26), since the CLI did not grant it. Without it the logs show 403 "lacks run.routes.invoke" and no signal is written. A function deleted and made again needs it again:
+Three Firestore triggers run in the same region with the same identity: `classSignal` (`onDocumentWritten("classes/{code}")`) writes the push signal to the Realtime Database whenever a class's page changes (`functions/signal.js`), and `coachMail` (`coaches/{uid}`) and `requestMail` (`requests/{id}`) queue emails in `mail/` (`functions/mail.js`, see [Email](#email)). They are delivered through Eventarc: the Eventarc service agent (`service-908084220716@gcp-sa-eventarc.iam.gserviceaccount.com`, `roles/eventarc.serviceAgent`) and `simplify-functions`' `roles/eventarc.eventReceiver`. The very first deploy of a trigger in a project can fail with "Permission denied while using the Eventarc Service Agent" while those permissions spread; deploying again a few minutes later works. Eventarc delivers each event through a Pub/Sub push subscription that calls the function's Cloud Run service as `simplify-functions`, so that account needs `roles/run.invoker` on each trigger's service, granted service by service because the CLI does not grant it: on `classsignal` since 2026-09-26, and on `coachmail` and `requestmail` by the owner right after their first deploy. Without it the logs show 403 "lacks run.routes.invoke" and the trigger does nothing (no signal, no email). A function deleted and made again needs it again:
 
 ```sh
-gcloud run services add-iam-policy-binding classsignal --region asia-southeast1 --project simplify-special \
-  --member=serviceAccount:simplify-functions@simplify-special.iam.gserviceaccount.com --role=roles/run.invoker
+for service in classsignal coachmail requestmail; do
+  gcloud run services add-iam-policy-binding $service --region asia-southeast1 --project simplify-special \
+    --member=serviceAccount:simplify-functions@simplify-special.iam.gserviceaccount.com --role=roles/run.invoker
+done
 ```
 
 A merge to `main` deploys them, after the tests and before the website (see [release and deploy](/operations/release-and-deploy.md#ci-workflows)). By hand, only when CI is unavailable:
@@ -151,6 +156,63 @@ firebase deploy --only functions
 ```
 
 The coach app's CSP names the functions' origin, `https://asia-southeast1-simplify-special.cloudfunctions.net`: moving region means changing `functions/index.js`, `FUNCTIONS_REGION` in `public/coach/js/firebase-config.js` and `firebase.json` together.
+
+## Email
+
+The functions email coaches and admins about approvals and requests ([security](/platform/security.md#email) says who and what) the way whiz.coach sends its own mail: `functions/mail.js` writes one document per email to `mail/{id}`, and the Firebase extension **Trigger Email from Firestore** (instance `firestore-send-email`, `firebase/firestore-send-email@0.2.10`, pinned under `extensions` in `firebase.json`) sends it and writes `delivery.state` back onto it. Its settings are `extensions/firestore-send-email.env`:
+
+- **Transport**: Gmail submission, `smtps://ashish%40whiz.coach@smtp.gmail.com:465`, signed in as the Google Workspace user `ashish@whiz.coach` with an **app password of Simplify's own** (revoking whiz.coach's leaves Simplify's mail working, and the other way round), sending as its alias: `From: Simplify <contact@whiz.coach>`, `Reply-To: contact@whiz.coach`. Not `smtp-relay.gmail.com:587`: the relay admits servers by allowlisted IP, and a function's IP changes (it answers `421-4.7.0 Try again later` at EHLO). Never sign in as `contact@`: an alias has no app password.
+- **DNS: nothing to do.** whiz.coach's SPF, DKIM and strict DMARC already authenticate mail from `contact@whiz.coach`, whichever project hands it to Gmail; they are kept with whiz.coach's own set-up.
+- **The limit is shared**: the account may send to about 2,000 recipients a day, for every whiz.coach environment and Simplify together (the cap on Simplify's side is in [costs and limits](/operations/costs-and-limits.md#email)).
+- **The extension's function**, `ext-firestore-send-email-processqueue` (2nd gen, `asia-southeast1`, beside the database), runs as its own account, `ext-firestore-send-email@simplify-special.iam.gserviceaccount.com`, which the extension creates with the roles it declares.
+- **The secret**, `ext-firestore-send-email-SMTP_PASSWORD`, holds the app password, replicated in `asia-southeast1` only. It is made with `gcloud`, so it has no `firebase-extensions-managed` label, and uninstalling the extension should leave it alone (the Firebase CLI deletes only labelled secrets; whether the Extensions service itself would is not documented, hence the version check below). An extensions deploy that installs or changes the extension grants the Firebase Extensions service agent (`service-908084220716@gcp-sa-firebasemods.iam.gserviceaccount.com`) `roles/secretmanager.admin` on it, so the extension can let its own account read it.
+
+**Status, 2026-09-27: not live yet.** The code is merged, so CI has deployed `coachMail` and `requestMail`, but nothing calls them until their `run.invoker` grants ([Cloud Functions](#cloud-functions)), so nothing is written to `mail/` and nobody is emailed. Still to do, in this order: steps 1 to 3 below, one test email to the owner's own address (its `delivery.state` and, in Gmail's "Show original", `spf=pass`, `dkim=pass` for `whiz.coach` and `dmarc=pass`), then the two grants. The grants come last: an email written before the extension is installed is never sent. Events from before the grants may still arrive once they are made (Pub/Sub keeps retrying them for up to a day). Once it is live, this paragraph and the "not live yet" notes above go.
+
+Set up by hand (an email written while no extension is installed is never sent):
+
+1. The owner makes the app password at <https://myaccount.google.com/apppasswords>, signed in as `ashish@whiz.coach` (check the account chip first; it needs 2-Step Verification), and names it for Simplify. Google shows it in four groups of four; the commands below drop the spaces.
+2. The Secret Manager API, then the secret, pasted without echo so it stays out of the shell history:
+
+   ```sh
+   gcloud services enable secretmanager.googleapis.com --project simplify-special
+   read -rs P && printf '%s' "${P// /}" | gcloud secrets create ext-firestore-send-email-SMTP_PASSWORD \
+     --project simplify-special --replication-policy=user-managed --locations=asia-southeast1 --data-file=- ; unset P
+   ```
+
+3. The extension, after checking that nothing installed is missing from `firebase.json`:
+
+   ```sh
+   firebase ext:list --project simplify-special
+   firebase deploy --only extensions --project simplify-special
+   ```
+
+**Never deployed by CI**, whose account has no Extensions role. CI's `--force` deletes only functions the CLI itself deployed (labelled `deployment-tool: cli-firebase…`), never the extension's (`firebase-extensions`). **An extensions deploy is all or nothing**: `--only extensions:<instance>` is refused, and an extension that is installed but missing from `firebase.json` is uninstalled, with its own secrets. So `firebase ext:list` comes first, every time; a bare `firebase deploy` would reconcile the extensions too.
+
+**Checking it.** Every email leaves its document: `delivery.state` ends `SUCCESS`, or `ERROR` with the SMTP error in `delivery.error`; the function's logs are under `ext-firestore-send-email-processqueue`. Bounces go to `contact@whiz.coach`, often into the Spam folder of `ashish@whiz.coach`. After any extensions deploy, check that the secret still has an enabled version and that the live settings are the committed ones:
+
+```sh
+gcloud secrets versions list ext-firestore-send-email-SMTP_PASSWORD --project simplify-special --filter='state:ENABLED'
+gcloud functions describe ext-firestore-send-email-processqueue --gen2 --region asia-southeast1 --project simplify-special \
+  --format='value(serviceConfig.environmentVariables.DEFAULT_FROM,serviceConfig.secretEnvironmentVariables)'
+```
+
+| `delivery.error` | Cause | Fix |
+|---|---|---|
+| `534 5.7.9 Application-specific password required` | the secret holds the account's own password, or the address in the URI is `contact@` | an app password of `ashish@whiz.coach` |
+| `535 5.7.8 Username and Password not accepted` | the app password was revoked, or 2-Step Verification was turned off | a new app password (below) |
+| `421-4.7.0 Try again later` (at EHLO) | the URI names `smtp-relay.gmail.com` | `smtp.gmail.com:465`, as committed |
+
+**A new app password** (after a revoke, or to change it): make one as in step 1, add it as a new version, deploy the extension again, check with the `describe` above that it uses the new version, then disable the old one (`gcloud secrets versions disable <n> --secret ext-firestore-send-email-SMTP_PASSWORD --project simplify-special`):
+
+```sh
+read -rs P && printf '%s' "${P// /}" | gcloud secrets versions add ext-firestore-send-email-SMTP_PASSWORD \
+  --project simplify-special --data-file=- ; unset P
+firebase ext:list --project simplify-special
+firebase deploy --only extensions --project simplify-special
+```
+
+To stop all of Simplify's email at once, revoke its app password: every email then ends `ERROR` (535) and nothing else changes.
 
 ## The video renderer
 

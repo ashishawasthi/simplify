@@ -127,7 +127,7 @@ Months are Singapore months. A coach's limit is their own `coaches/{uid}.limits.
 
 ### Asking the admin for more
 
-When 3 or fewer videos are left, the panel offers "Need more videos each month? Say why (if you like)" (300 characters) and **Ask the admin for more videos**. That writes a request `{ uid, kind: "more-videos", note, status: "pending", createdAt }` (no class code) and the toast "Asked. The admin will decide."; while it waits, the panel says "You asked the admin for more videos. They will decide soon." The admin gives the coach a new number a month, or declines ([admin and approvals](/coach/admin-and-approvals.md#monthly-limits)). An approved number stays until the admin changes it.
+When 3 or fewer videos are left, the panel offers "Need more videos each month? Say why (if you like)" (300 characters) and **Ask the admin for more videos**. That writes a request `{ uid, kind: "more-videos", note, status: "pending", createdAt }` (no class code) and the toast "Asked. The admin will decide."; while it waits, the panel says "You asked the admin for more videos. They will decide soon." The admin gives the coach a new number a month, or declines ([admin and approvals](/coach/admin-and-approvals.md#monthly-limits)), and the coach gets an email saying which. An approved number stays until the admin changes it.
 
 ## Where videos live
 
