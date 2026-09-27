@@ -631,6 +631,16 @@ async function runInside() {
     ["reads its own admin doc", get("admin", "admins/admin1"), OK],
     ["cannot create another admin", create("admin", "admins/coachA", {}), NO],
 
+    "— email: the functions only (mail, mailCounts)",
+    ["admin cannot list the emails", list("admin", "mail"), NO],
+    ["admin cannot read an email", get("admin", "mail/coach-newbie-1-admin1"), NO],
+    ["admin cannot queue an email", create("admin", "mail/m1", { to: "someone@example.com", message: { subject: "Hi", html: "<p>Hi</p>" } }), NO],
+    ["coach cannot queue an email", create("coachA", "mail/m2", { to: "someone@example.com", message: { subject: "Hi", html: "<p>Hi</p>" } }), NO],
+    ["coach waiting for the admin cannot queue an email", create("coachP", "mail/m3", { to: "someone@example.com", message: { subject: "Hi", html: "<p>Hi</p>" } }), NO],
+    ["learner cannot queue an email", create("learner", "mail/m4", { to: "someone@example.com", message: { subject: "Hi", html: "<p>Hi</p>" } }), NO],
+    ["admin cannot read the day's email count", get("admin", "mailCounts/2026-09-27"), NO],
+    ["admin cannot reset the day's email count", set("admin", "mailCounts/2026-09-27", { admin: 0 }), NO],
+
     "— realtime database: the push signal",
     ["learner reads its class's signal", rtdb("learner", "GET", `signals/${A}`), OK],
     ["learner streams its class's signal", stream("learner", `signals/${A}`), OK],

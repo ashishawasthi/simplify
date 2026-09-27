@@ -1,8 +1,12 @@
-# GitGuardian secret scanning. The one ignored file holds the Firebase web
-# app's config, whose apiKey is a public identifier Google designs to be
-# shipped in web pages (access is controlled by the Firestore and Storage
-# rules and by the Cloud Functions' own checks, not by keeping it secret).
+# GitGuardian secret scanning. Two ignored files:
+# - the Firebase web app's config, whose apiKey is a public identifier Google
+#   designs to be shipped in web pages (access is controlled by the Firestore
+#   and Storage rules and by the Cloud Functions' own checks, not by keeping it
+#   secret);
+# - the email extension's stand-in password for the emulators, which opens
+#   nothing (the real one is only in Secret Manager).
 version: 2
 secret:
   ignored-paths:
     - public/coach/js/firebase-config.js
+    - extensions/firestore-send-email.secret.local

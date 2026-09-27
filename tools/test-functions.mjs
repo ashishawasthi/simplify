@@ -1,4 +1,4 @@
-// Cloud Functions tests: the six callables and the classSignal trigger in functions/index.js, with the fake
+// Cloud Functions tests: the six callables and the three triggers in functions/index.js, with the fake
 // models (SIMPLIFY_AI_FAKE=1 — nothing is sent to Gemini and nothing costs money):
 //
 //   node tools/test-functions.mjs
@@ -11,7 +11,8 @@
 //     the coach app does (callable protocol, an ID token, functions/.env.local).
 // Covers: who may call (only an approved, unsuspended coach of an active class), write / ask / decline, the free answer for an empty
 // instruction, monthly limits (also under parallel calls, and a coach's own limit), refunds, the Singapore
-// month, the page check, the overlay planner (marks → shapes), and make → check → approve / discard.
+// month, the page check, the overlay planner (marks → shapes), make → check → approve / discard, the push
+// signal, and the emails the triggers queue in mail/ (to whom, once only, the day's cap).
 // Needs `npm ci` in functions/ first. No other dependencies.
 
 import { spawn } from "node:child_process";
@@ -444,6 +445,117 @@ async function runInside() {
   await db.doc(`classes/${T}`).update({ status: "suspended" });
   for (const end = Date.now() + 20000; Date.now() < end && seen; await new Promise((r) => setTimeout(r, 250))) seen = await signalNow(T);
   check("the admin pausing the class removes it", seen, null);
+
+  // ---------- email: what coachMail and requestMail queue for the extension ----------
+
+  section("email: coachMail and requestMail (called directly)");
+  const { ADMIN_MAILS_PER_DAY, adminAddresses, coachMailHandler, dayKey, escapeHtml, requestMailHandler } =
+    await import(pathToFileURL(join(ROOT, "functions", "mail.js")).href);
+  const mailDoc = async (id) => (await db.doc(`mail/${id}`).get()).data() ?? null;
+  const mailIds = async (prefix) => (await db.collection("mail").get()).docs.map((d) => d.id).filter((id) => id.startsWith(prefix));
+  const sentToday = async () => (await db.doc(`mailCounts/${dayKey()}`).get()).get("admin") ?? 0;
+  const written = (params, before, after) => ({ id: "evt", params, data: { before: { data: () => before }, after: { data: () => after } } });
+  // two admins with a coach profile each, and one with none yet (no address)
+  await db.doc(`mailCounts/${dayKey()}`).delete();
+  for (const [uid, name] of [["adm1", "Admin One"], ["adm2", "Admin Two"]]) {
+    await db.doc(`coaches/${uid}`).set({ name, email: `${uid}@example.com`, institutions: ["awwa-school-napiri"], status: "approved", createdAt: past });
+  }
+  for (const uid of ["adm1", "adm2", "adm3"]) await db.doc(`admins/${uid}`).set({ note: "test" });
+
+  check("the Singapore day: 00:30 on the 27th", dayKey(Date.parse("2026-09-26T16:30:00Z")), "2026-09-27");
+  check("... and 23:59 on the 26th", dayKey(Date.parse("2026-09-26T15:59:00Z")), "2026-09-26");
+  check("text is escaped for the HTML", escapeHtml(`<b>"Tom" & 'Jerry'</b>`), "&lt;b&gt;&quot;Tom&quot; &amp; &#039;Jerry&#039;&lt;/b&gt;");
+  check("admins' addresses come from their coach profiles", await adminAddresses(),
+    [{ uid: "adm1", email: "adm1@example.com" }, { uid: "adm2", email: "adm2@example.com" }]);
+
+  const signedUp = Timestamp.fromDate(new Date("2026-09-27T01:00:00Z"));
+  const lim = { name: "Mr <Lim>", email: "lim@example.com", note: "Call me on 9123 4567", institutions: ["awwa-school-napiri"], status: "pending", createdAt: signedUp };
+  const coachChange = (before, after, uid = "lim1") => written({ uid }, before, after);
+  // every email to admins is counted: the day's count equals the admin emails queued since it was reset
+  const adminMails = async () => (await db.collection("mail").get()).docs.filter((d) => /^(coach|request)-/.test(d.id)).length;
+  check("a new coach profile → an email to each admin", await coachMailHandler(coachChange(null, lim)), { kind: "coach-waiting", queued: 2 });
+  check("... counted for the day, one per email", await sentToday(), await adminMails());
+  const waiting = await mailDoc(`coach-lim1-${signedUp.toMillis()}-adm1`);
+  check("... to the admin's own address", waiting?.to, "adm1@example.com");
+  check("... a subject without the coach's own words", waiting?.message?.subject, "A coach is waiting for your approval");
+  check("... the name quoted and escaped in the HTML", waiting?.message?.html.includes(`"Mr &lt;Lim&gt;"`), true);
+  check("... with the Admin screen's address", waiting?.message?.html.includes("https://simplify.whiz.coach/coach/#admin"), true);
+  check("... but not what the coach wrote about themself", waiting?.message?.html.includes("9123"), false);
+  check("the same event again queues nothing more", await coachMailHandler(coachChange(null, lim)), { kind: "coach-waiting", queued: 0 });
+  check("... one email for each admin, not counted again", [(await mailIds("coach-lim1-")).length, (await sentToday()) === (await adminMails())], [2, true]);
+  const flip = String.fromCodePoint(0x202e); // RIGHT-TO-LEFT OVERRIDE: would show what follows backwards
+  await coachMailHandler(coachChange(null, { ...lim, name: `Mr ${flip}miL` }, "lim3"));
+  check("a direction-changing character in a name is dropped", (await mailDoc(`coach-lim3-${signedUp.toMillis()}-adm1`))?.message?.html.includes(flip), false);
+  check("an edit while waiting sends nothing", await coachMailHandler(coachChange(lim, { ...lim, name: "Mr Lim" })), null);
+  check("an admin's decision on a coach sends nothing", await coachMailHandler(coachChange(lim, { ...lim, status: "approved" })), null);
+  check("an approved coach put back to waiting sends nothing", await coachMailHandler(coachChange({ ...lim, status: "approved" }, lim)), null);
+  const legacy = { name: "Coach L", email: "coachL@example.com", createdAt: past };
+  check("a profile from before approvals put to waiting sends nothing", await coachMailHandler(coachChange(legacy, { ...legacy, status: "pending" }, "coachL")), null);
+  check("a profile deleted sends nothing", await coachMailHandler(coachChange(lim, null)), null);
+  const declined = { ...lim, status: "declined", decisionMessage: "Please add a work email I can check." };
+  check("an admin putting a declined coach back to waiting sends nothing", await coachMailHandler(coachChange(declined, { ...declined, status: "pending" })), null);
+  const askedAgain = Timestamp.fromDate(new Date("2026-09-27T03:00:00Z"));
+  check("a declined coach asking again → each admin again",
+    await coachMailHandler(coachChange(declined, { ...declined, status: "pending", reappliedAt: askedAgain })), { kind: "coach-asked-again", queued: 2 });
+  check("... in a new email that says so", (await mailDoc(`coach-lim1-${askedAgain.toMillis()}-adm2`))?.message?.subject, "A coach asked again to be approved");
+  await db.doc(`mailCounts/${dayKey()}`).set({ admin: ADMIN_MAILS_PER_DAY - 1 });
+  check("past the day's cap → no email, and each admin is told once",
+    await coachMailHandler(coachChange(null, lim, "lim2")), { kind: "coach-waiting", queued: 0, capped: true, notified: true });
+  check("... nothing was queued about it", (await mailIds("coach-lim2-")).length, 0);
+  check("... the notice", (await mailDoc(`capped-${dayKey()}-adm2`))?.message?.subject, "More is waiting on Simplify");
+  check("the next one past the cap: no second notice",
+    await coachMailHandler(coachChange(null, lim, "lim4")), { kind: "coach-waiting", queued: 0, capped: true, notified: false });
+  check("... still one notice for each admin", (await mailIds(`capped-${dayKey()}-`)).length, 2);
+  await db.doc(`mailCounts/${dayKey()}`).delete();
+
+  const requestChange = (before, after, id) => written({ id }, before, after);
+  const askJoin = { uid: "coachA", kind: "join-class", classCode: A, note: "I teach it with Ms Tan", status: "pending", createdAt: signedUp };
+  check("a request to join a class → each admin", await requestMailHandler(requestChange(null, askJoin, "rq1")), { kind: "join-class-waiting", queued: 2 });
+  const joinMail = await mailDoc("request-rq1-adm2");
+  check("... the coach and the code, in the body", [joinMail?.message?.subject, joinMail?.message?.html.includes(`"Coach A" asked to join the class K7M-3RQ-P9T`)], ["A coach asked to join a class", true]);
+  check("... not the coach's note", joinMail?.message?.html.includes("Ms Tan"), false);
+  check("the same request again queues nothing more", (await requestMailHandler(requestChange(null, askJoin, "rq1"))).queued, 0);
+  const more = { uid: "coachB", kind: "more-videos", note: "", status: "pending", createdAt: signedUp };
+  check("a request for more videos → each admin", await requestMailHandler(requestChange(null, more, "rq2")), { kind: "more-videos-waiting", queued: 2 });
+  check("an old 'new class' request sends nothing",
+    await requestMailHandler(requestChange(null, { uid: "coachA", kind: "new-class", className: "5 Joy", status: "pending", createdAt: signedUp }, "rq3")), null);
+
+  const decided = (request, status, extra = {}) => ({ ...request, status, decidedAt: signedUp, decidedBy: "adm1", decisionLog: "log1", ...extra });
+  check("a join approved → the coach", await requestMailHandler(requestChange(askJoin, decided(askJoin, "approved", { resultCode: A }), "rq1")), { kind: "join-class-approved", queued: 1 });
+  const joined = await mailDoc("decided-rq1");
+  check("... to the coach's own address", joined?.to, "coachA@example.com");
+  check("... naming the class", [joined?.message?.subject, joined?.message?.html.includes("3 Kindness (K7M-3RQ-P9T)")], ["You can now open 3 Kindness", true]);
+  check("the same decision again queues nothing more",
+    (await requestMailHandler(requestChange(askJoin, decided(askJoin, "approved", { resultCode: A }), "rq1"))).queued, 0);
+  const joinB = { ...askJoin, uid: "coachB" };
+  check("a join declined → the coach", await requestMailHandler(requestChange(joinB, decided(joinB, "declined"), "rq4")), { kind: "join-class-declined", queued: 1 });
+  const refused = await mailDoc("decided-rq4");
+  check("... names the code they typed, not the class", [refused?.message?.html.includes("K7M-3RQ-P9T"), refused?.message?.html.includes("3 Kindness")], [true, false]);
+  check("more videos given → the coach", await requestMailHandler(requestChange(more, decided(more, "approved", { videosPerMonth: 60 }), "rq2")), { kind: "more-videos-approved", queued: 1 });
+  check("... with the number", (await mailDoc("decided-rq2"))?.message?.subject, "You can make 60 videos a month now");
+  check("more videos declined → the coach", (await requestMailHandler(requestChange(more, decided(more, "declined"), "rq5"))).kind, "more-videos-declined");
+  check("... says so", (await mailDoc("decided-rq5"))?.message?.subject, "Your request for more videos was not approved");
+  check("more videos approved without a number → still approved",
+    (await requestMailHandler(requestChange(more, decided(more, "approved"), "rq9"))).kind, "more-videos-approved");
+  check("... in general words", (await mailDoc("decided-rq9"))?.message?.subject, "You can make more videos a month now");
+  check("a coach with no profile gets nothing (no address)",
+    await requestMailHandler(requestChange({ ...more, uid: "ghost" }, decided({ ...more, uid: "ghost" }, "declined"), "rq6")), { kind: "more-videos-declined", queued: 0 });
+  check("a decision changed later sends nothing", await requestMailHandler(requestChange(decided(more, "declined"), decided(more, "approved"), "rq7")), null);
+  check("a request deleted sends nothing", await requestMailHandler(requestChange(askJoin, null, "rq8")), null);
+
+  section("email through the emulators: the triggers queue it by themselves");
+  const waitForMail = async (id) => {
+    let found = null;
+    for (const end = Date.now() + 20000; Date.now() < end && !found; await new Promise((r) => setTimeout(r, 250))) found = await mailDoc(id);
+    return found;
+  };
+  const joinedAt = Timestamp.now();
+  await db.doc("coaches/ong1").set({ name: "Ms Ong", email: "ong@example.com", institutions: ["awwa-school-napiri"], status: "pending", createdAt: joinedAt });
+  check("a new coach profile → the admins' emails", (await waitForMail(`coach-ong1-${joinedAt.toMillis()}-adm1`))?.to, "adm1@example.com");
+  await db.doc("requests/trig1").set({ uid: "coachA", kind: "more-videos", note: "", status: "pending", createdAt: Timestamp.now() });
+  check("a new request → the admins' emails", (await waitForMail("request-trig1-adm2"))?.to, "adm2@example.com");
+  await db.doc("requests/trig1").update({ status: "declined", decidedAt: Timestamp.now(), decidedBy: "adm1", decisionLog: "log9" });
+  check("the admin's decision → the coach's email", (await waitForMail("decided-trig1"))?.to, "coachA@example.com");
 
   section("over HTTP through the Functions emulator (the coach app's way)");
   const base = `http://127.0.0.1:${PORTS.functions}/${PROJECT}/asia-southeast1`;

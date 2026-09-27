@@ -490,6 +490,20 @@ service cloud.firestore {
       allow list: if isAdmin();
     }
 
+    // ---------- mail/{id} and mailCounts/{day}: the Cloud Functions only ----------
+
+    // The emails the functions queue for the "Trigger Email from Firestore"
+    // extension, which sends each one through Gmail (as contact@whiz.coach) and
+    // writes back how it went; and how many went to admins each day. Denied by
+    // default anyway; said here because a client that could write mail/ could
+    // send any email in Simplify's name, and every one holds someone's address.
+    match /mail/{id} {
+      allow read, write: if false;
+    }
+    match /mailCounts/{day} {
+      allow read, write: if false;
+    }
+
     // ---------- config/limits: monthly limits per coach (admins set them) ----------
 
     match /config/limits {

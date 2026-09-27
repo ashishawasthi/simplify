@@ -1,5 +1,5 @@
 // Cloud Functions for the Simplify coach platform (docs/coach/,
-// docs/platform/ai-models.md). Six callables and one trigger, all in asia-southeast1:
+// docs/platform/ai-models.md). Six callables and three triggers, all in asia-southeast1:
 //
 //   writePage    the page helper: one Gemini Flash call → write / ask / decline
 //   planOverlay  marks over a picture (an arrow, a ring, a label): one Flash call
@@ -11,6 +11,8 @@
 //   discardVideo removes the clip (the video is not given back: it was made)
 //   classSignal  on every change to classes/{code}: the push signal learners'
 //                devices listen to (signal.js)
+//   coachMail    a coach now waits for approval → an email to each admin (mail.js)
+//   requestMail  a coach's request is new → each admin; decided → that coach (mail.js)
 //
 // Every callable first checks that the caller is signed in, has a coach profile
 // the admin has not suspended, is listed for the class, and that the class is
@@ -33,6 +35,7 @@ import { THINKING } from "./models.js";
 import { cleanShapes } from "./overlay.js";
 import { OVERLAY_SCHEMA, OVERLAY_SYSTEM, overlayInput, EMPTY_WRITE_ANSWER, WRITE_PAGE_SCHEMA, WRITE_PAGE_SYSTEM, writePageInput } from "./prompts.js";
 import { fakeRenderClip, readRender, startRender } from "./render.js";
+import { coachMailHandler, requestMailHandler } from "./mail.js";
 import { classSignalHandler } from "./signal.js";
 
 setGlobalOptions({
@@ -458,6 +461,8 @@ export const checkVideo = callable(60, checkVideoHandler);
 export const approveVideo = callable(120, approveVideoHandler);
 export const discardVideo = callable(60, discardVideoHandler);
 
-// ---------- the trigger ----------
+// ---------- the triggers ----------
 
 export const classSignal = onDocumentWritten({ document: "classes/{code}", timeoutSeconds: 60 }, classSignalHandler);
+export const coachMail = onDocumentWritten({ document: "coaches/{uid}", timeoutSeconds: 60 }, coachMailHandler);
+export const requestMail = onDocumentWritten({ document: "requests/{id}", timeoutSeconds: 60 }, requestMailHandler);
