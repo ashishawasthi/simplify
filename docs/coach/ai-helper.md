@@ -79,7 +79,7 @@ what was asked.
 `writePageHandler` in `functions/index.js`, in order:
 
 1. **The caller** — `requireClassCoach`: signed in, has a coach profile, not suspended, approved by the admin, listed
-   in `classCoaches/{code}`, class active. Otherwise a plain refusal ("The admin has not approved you yet.", "You are
+   in `classCoaches/{code}`, class active. Otherwise a plain refusal ("Your application is waiting for the admin's approval.", "You are
    not a coach of this class.", "This class is paused by the admin.").
 2. **The input** — lengths above; answers cleaned (never refused).
 3. **Too short to act on** — fewer than 4 letters or digits across the instruction and answers: a free **ask**

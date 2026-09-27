@@ -408,7 +408,8 @@ export function plainText(inline) {
 // ---------- addresses ----------
 
 // An https address a button may open, as a URL, or null: no other scheme,
-// and no user name or password in it (https://bank.example@evil.example).
+// and no user name or password in it (a "bank.example" name placed before
+// an @, so the link looks like the bank but opens evil.example).
 function httpsUrl(target) {
   if (typeof target !== "string" || !target || target.length > MAX_URL) return null;
   let url;

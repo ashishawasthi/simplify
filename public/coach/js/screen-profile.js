@@ -1,7 +1,7 @@
 // About you: the name, where the coach works (one or more institutions from
 // the admin's list, and/or a school or centre not in the list yet, in their
-// own words — the admin adds it) and a note that let the admin check a coach
-// is who they say, before approving them. Only the coach and the admin see it
+// own words — the admin adds it) and the coach's role and contact, which the
+// admin reviews with the rest before approving them. Only the coach and the admin see it
 // (firestore.rules, coaches/{uid}). The sign-in email is kept with it, and
 // can't be changed here. A new profile waits for the admin's approval.
 
@@ -17,8 +17,8 @@ export function profileScreen(root, ctx, { isNew }) {
 
   const name = field({ label: "Your name", maxLength: 60, autocomplete: "name", value: saved.name ?? user.name ?? "" });
   const note = field({
-    label: "How can the admin check who you are?", multiline: true, rows: 4, maxLength: 300, value: saved.note ?? "",
-    hint: "For example: your role, and a work email or phone number the admin can check.",
+    label: "Your role, and how the admin can reach you", multiline: true, rows: 4, maxLength: 300, value: saved.note ?? "",
+    hint: "For example: form teacher, and a work email or phone number.",
   });
   const where = h("div", null, h("p", { class: "loading", role: "status" }, "Loading the institutions…"));
   const other = field({
@@ -78,7 +78,7 @@ export function profileScreen(root, ctx, { isNew }) {
   });
 
   const lead = isNew
-    ? "The admin checks this before you can use Simplify. Only you and the admin see it."
+    ? "To keep Simplify safe for students, the admin reviews every coach's application before approving it. Only you and the admin see this."
     : gate === "about"
       ? "Simplify now asks where you work. Only you and the admin see this."
       : "Only you and the admin see this.";

@@ -156,9 +156,9 @@ async function runInside() {
   check("not signed in", (await write(null)).error, "unauthenticated");
   check("signed in, no coach profile", await write("stranger"), { error: "permission-denied", message: "Fill in About you first." });
   check("suspended coach", await write("coachS"), { error: "permission-denied", message: "Your account is paused. Ask the admin." });
-  check("coach waiting for the admin", await write("coachP"), { error: "permission-denied", message: "The admin has not approved you yet." });
-  check("coach the admin declined", await write("coachD"), { error: "permission-denied", message: "The admin has not approved you as a coach. Contact the admin." });
-  check("coach from before approvals (no status)", await write("coachL"), { error: "permission-denied", message: "The admin has not approved you yet." });
+  check("coach waiting for the admin", await write("coachP"), { error: "permission-denied", message: "Your application is waiting for the admin's approval." });
+  check("coach the admin declined", await write("coachD"), { error: "permission-denied", message: "Your application was not approved. Please contact the admin." });
+  check("coach from before approvals (no status)", await write("coachL"), { error: "permission-denied", message: "Your application is waiting for the admin's approval." });
   check("coach of another class", await write("coachB"), { error: "permission-denied", message: "You are not a coach of this class." });
   check("class that does not exist", (await write("coachA", { classCode: "ZZZZZZZZZ" })).message, "You are not a coach of this class.");
   check("paused class", await write("coachA", { classCode: P }), { error: "failed-precondition", message: "This class is paused by the admin." });
@@ -176,7 +176,7 @@ async function runInside() {
     check(`${name}: coach of another class`, (await call(handler, "coachB", { classCode: A, ...data })).error, "permission-denied");
     check(`${name}: suspended coach`, (await call(handler, "coachS", { classCode: A, ...data })).error, "permission-denied");
     check(`${name}: coach waiting for the admin`, await call(handler, "coachP", { classCode: A, ...data }),
-      { error: "permission-denied", message: "The admin has not approved you yet." });
+      { error: "permission-denied", message: "Your application is waiting for the admin's approval." });
     check(`${name}: coach the admin declined`, (await call(handler, "coachD", { classCode: A, ...data })).error, "permission-denied");
   }
 
@@ -471,7 +471,7 @@ async function runInside() {
   h = await http("writePage", "coachB", { classCode: A, instruction: "A page" });
   check("another class's coach → the plain message", [h.error?.status, h.error?.message], ["PERMISSION_DENIED", "You are not a coach of this class."]);
   h = await http("writePage", "coachP", { classCode: A, instruction: "A page" });
-  check("a coach waiting for the admin → the plain message", [h.error?.status, h.error?.message], ["PERMISSION_DENIED", "The admin has not approved you yet."]);
+  check("a coach waiting for the admin → the plain message", [h.error?.status, h.error?.message], ["PERMISSION_DENIED", "Your application is waiting for the admin's approval."]);
   h = await http("planOverlay", "coachA", { classCode: A, pictureId: "busstop1", request: "a ring round the sign" });
   check("planOverlay → shapes", [h.result?.action, h.result?.shapes?.length], ["draw", 2]);
   h = await http("makeVideo", "coachA", { classCode: A, pageId: "pg1" });

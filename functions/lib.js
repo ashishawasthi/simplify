@@ -58,8 +58,8 @@ export async function requireClassCoach(request, rawCode) {
   if (coach.get("suspended") === true) fail("permission-denied", "Your account is paused. Ask the admin.");
   if (coach.get("status") !== "approved") {
     fail("permission-denied", coach.get("status") === "declined"
-      ? "The admin has not approved you as a coach. Contact the admin."
-      : "The admin has not approved you yet.");
+      ? "Your application was not approved. Please contact the admin."
+      : "Your application is waiting for the admin's approval.");
   }
   const uids = members.get("uids");
   if (!klass.exists || !Array.isArray(uids) || !uids.includes(uid)) {

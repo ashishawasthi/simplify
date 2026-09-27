@@ -167,7 +167,7 @@ The six callables in `functions/index.js` run in `asia-southeast1` as `simplify-
 
 1. the call carries a signed-in uid (`unauthenticated`);
 2. the class code, normalised, is 9 characters (`invalid-argument`);
-3. `coaches/{uid}` exists ("Fill in About you first."), is not suspended ("Your account is paused. Ask the admin.") and is approved ("The admin has not approved you yet." — or, when declined, "The admin has not approved you as a coach. Contact the admin."), and the class exists and `classCoaches/{code}.uids` includes the uid (`permission-denied`);
+3. `coaches/{uid}` exists ("Fill in About you first."), is not suspended ("Your account is paused. Ask the admin.") and is approved ("Your application is waiting for the admin's approval." — or, when declined, "Your application was not approved. Please contact the admin."), and the class exists and `classCoaches/{code}.uids` includes the uid (`permission-denied`);
 4. the class's `status` is `active` (`failed-precondition`).
 
 Then each checks its own input before calling a model or touching Storage:

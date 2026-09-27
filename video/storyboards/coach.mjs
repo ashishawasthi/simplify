@@ -55,7 +55,7 @@ export default {
           }),
         },
         {
-          title: "About you", icon: "🏫", line: "Pick your school. An admin checks, then approves you.",
+          title: "About you", icon: "🏫", line: "Pick your school. The admin reviews it, then approves you.",
           shot: shot("", "{ profiles: {}, coachesOf: {} }", {
             expect: `$("h1")?.textContent === "About you" && !!$(".pick-option")`,
             steps: [

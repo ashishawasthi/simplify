@@ -15,7 +15,7 @@ function whatTheAdminSees(root, ctx) {
     h("dl", { class: "facts facts-wide" },
       h("dt", null, "Name"), h("dd", null, profile.name),
       h("dt", null, "Where you work"), places,
-      h("dt", null, "How to check you"), h("dd", null, profile.note || "Nothing yet")),
+      h("dt", null, "Your role and contact"), h("dd", null, profile.note || "Nothing yet")),
     h("div", { class: "actions" }, h("a", { class: "btn btn-secondary", href: "#about" }, "Change About you")));
   root.append(box);
   const show = (list) => places.replaceChildren(h("ul", { class: "plain-list" }, workPlaces(profile, list).map((n) => h("li", null, n))));
@@ -26,11 +26,11 @@ export function waitingScreen(root, ctx) {
   const { user, profile } = ctx;
   const screen = h("section", { class: "screen waiting" },
     h("h1", null, "Waiting for approval"),
-    h("p", { class: "lead" }, `Thank you, ${profile.name}. The admin checks who you are and where you work before you can use Simplify as a coach.`),
+    h("p", { class: "lead" }, `Thank you, ${profile.name}. To keep Simplify safe for students, the admin reviews every coach's application before approving it.`),
     h("section", { class: "section", "aria-labelledby": "next-h" },
       h("h2", { id: "next-h" }, "What happens next"),
       h("ol", { class: "next-steps" },
-        h("li", null, "The admin checks you — for example, they may have seen you teach at your school, or they call it — and may contact you."),
+        h("li", null, "The admin reviews your application. They may already know your work at your school, or contact you to confirm a few details."),
         h("li", null, "When the admin approves you, this page changes by itself. You can close it and come back later: sign in again with ",
           h("strong", null, user.email), "."),
         h("li", null, "Then you can make your classes, or join a colleague's class."))));
@@ -58,7 +58,7 @@ export function declinedScreen(root, ctx) {
     h("h1", null, "Not approved"),
     message
       ? notice(`The admin says: “${message}”`, { tone: "warning" })
-      : notice("The admin has not approved you as a coach. If you think this is a mistake, contact the admin.", { tone: "warning" }),
+      : notice("Your application was not approved this time. If you think something was missed, please contact the admin.", { tone: "warning" }),
     h("p", null, "If something in About you was missing or wrong, change it, then ask the admin again."),
     problem,
     h("div", { class: "actions" }, again));

@@ -116,7 +116,7 @@ export function classesScreen(root, ctx) {
   const joinSend = h("button", { class: "btn btn-primary", type: "submit" }, "Send to the admin");
   const joinProblem = h("div");
   const joinForm = h("form", { class: "stack", novalidate: true },
-    h("p", { class: "field-hint" }, "The admin checks you really coach that class, then adds you to it."),
+    h("p", { class: "field-hint" }, "To keep classes safe for students, the admin reviews each request to join, then adds you to the class."),
     joinCode.field, joinEcho, joinNote.field, joinProblem,
     h("div", { class: "actions" }, joinSend));
   // the code is forgiven as it is typed: case, dashes and spaces don't matter
