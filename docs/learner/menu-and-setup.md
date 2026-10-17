@@ -96,7 +96,7 @@ With `picturesOnly` on, `<html>` gets `data-pictures-only` and every `.pic-words
 
 ### The Speak button
 
-`speak` (default on) allows the 🔊 Speak button on full-screen cards; it shows only when this is on and the card has words this device can say — a recorded clip, or the device's own voice ([the recorded voice](/platform/voice.md)). The card and the voice rules are in [Show a card](/learner/show-card.md#the-full-screen-card).
+`speak` (default on) allows the 🔊 Speak button on full-screen cards ([Show a card](/learner/show-card.md#the-full-screen-card), [I need](/learner/i-need.md), [Stop and check](/learner/stop-check.md)), in [Steps](/learner/steps.md), and in [My class](/learner/my-class.md); it shows only when this is on and there are words this device can say — a recorded clip, or the device's own voice ([the recorded voice](/platform/voice.md)).
 
 ## The set-up page (`#setup`)
 
@@ -116,7 +116,7 @@ Every visit starts behind one big button, "⚙️ Hold to open set-up": press an
 Every switch is a whole row (`role="switch"`, `aria-checked`), with its state in colour, a mark (✔ or none), the knob's side and a word (On/Off). Every change is saved the moment it is made and offered back in the toast with "↩ Put it back". The page uses plain words, never `.pic-words`.
 
 1. **My class** — `public/js/class-setup.js`, in `div#class-setup-slot` (below). It comes first because typing a class code is what the class poster sends most adults here to do.
-2. **Show on the menu** — a switch per tool (not My class), grouped under each group's picture and name like the menu, each with the tool's menu picture. Toast: "Wait: off the menu" / "Wait: on the menu".
+2. **Show on the menu** — a row of quick preset pills (**All tools**, **Money only**, **Daily life only**, toast "Menu: Money only" with Put it back), followed by a switch per tool (not My class), grouped under each group's picture and name like the menu, each with the tool's menu picture. Toast: "Wait: off the menu" / "Wait: on the menu".
 3. **Words and sound** — "Pictures only (hide words)" (toast "Pictures only: on/off") and "Speak button on cards" (toast "Speak button: on/off").
 4. **Each tool's own section**, for every tool whose module exports `setup()`, in `TOOLS` order under the tool's picture and name: Steps, I need, Show a card. A section's `setup(section, shell)` runs the first time the settings open and its `show()` on later openings; its settings are saved as `tools[<id>]` through `setToolSettings()`. A section that throws is left out and the rest of the page works.
 

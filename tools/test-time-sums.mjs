@@ -4,7 +4,7 @@
 //   node tools/test-time-sums.mjs
 
 import {
-  DAY, MAX_ADD, QUICK, afterAnswer, clockText, durationText, howLongUntil, inputValue, minutesOf, parseTime,
+  DAY, MAX_ADD, MAX_WAIT, QUICK, afterAnswer, clockText, durationText, howLongUntil, inputValue, minutesOf, parseTime,
   quickText, timeAfter, untilAnswer, wholeNumber,
 } from "../public/js/tools/time-sums-calc.js";
 
@@ -57,6 +57,9 @@ const cases = [
   ["until, no end yet", howLongUntil(t("14:10"), null), null],
   ["the until answer", json(untilAnswer(t("14:10"), t("15:30"))),
     json({ tone: "answer", headline: "1 hour 20 minutes", subline: "2:10 pm to 3:30 pm", badge: "1 hour 20 minutes" })],
+  ["the until answer, within Wait's 60 min", untilAnswer(t("14:10"), t("14:25")).waitMinutes, 15],
+  ["the until answer, 0 min has no Wait", untilAnswer(t("14:10"), t("14:10")).waitMinutes, undefined],
+  ["the until answer, over MAX_WAIT has no Wait", untilAnswer(t("14:00"), t("15:01")).waitMinutes, MAX_WAIT === 60 ? undefined : 61],
   ["the until answer, tomorrow", untilAnswer(t("22:00"), t("06:30")).subline, "10:00 pm to 6:30 am tomorrow"],
 
   // what time after

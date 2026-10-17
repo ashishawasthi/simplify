@@ -355,9 +355,9 @@
     <span id="result-float-amount" class="result-float-amount"></span>
   </div>
 
-  <!-- The answer, always visible inside a tool. The Show me button sits
-       outside the live region, so screen readers don't re-read it with every
-       change of the answer. -->
+  <!-- The answer, always visible inside a tool. The Speak and Show me buttons
+       sit outside the live region, so screen readers don't re-read them with
+       every change of the answer. -->
   <section id="result" class="result is-neutral" aria-label="Answer" hidden>
     <div class="result-live" role="status" aria-live="polite">
       <span id="result-icon" class="result-icon" aria-hidden="true"></span>
@@ -366,6 +366,10 @@
         <p id="result-subline" class="result-subline"></p>
       </div>
     </div>
+    <button id="result-speak" class="round-btn result-speak" type="button" hidden
+      aria-label="Speak: say the answer out loud">
+      <span aria-hidden="true">🔊</span>
+    </button>
     <div id="result-action-wrap" class="result-action" hidden>
       <button id="result-action" class="show-me-btn" type="button"
         aria-label="Show me: the notes and coins for this amount">

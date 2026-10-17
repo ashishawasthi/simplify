@@ -27,8 +27,14 @@ import { PICTURES } from "../pictures.js";
 export const MAX_CARDS = 12;
 export const MAX_WORDS = 40;
 export const VIEWS = Object.freeze(["now-next", "my-day"]);
+export const ROUTINES = Object.freeze([
+  { id: "morning", label: "Morning" },
+  { id: "afternoon", label: "Afternoon" },
+  { id: "outing", label: "Outing" },
+].map(Object.freeze));
 
 const PICTURE_WORDS = new Map(PICTURES.map((p) => [p.id, p.words]));
+const ROUTINE_IDS = new Set(ROUTINES.map((r) => r.id));
 
 const isRecord = (value) => !!value && typeof value === "object" && !Array.isArray(value);
 const clamp = (n, lo, hi) => Math.min(Math.max(n, lo), hi);
@@ -36,6 +42,13 @@ const clamp = (n, lo, hi) => Math.min(Math.max(n, lo), hi);
 function freeze(state) {
   for (const card of state.cards) Object.freeze(card);
   Object.freeze(state.cards);
+  if (state.routines) {
+    for (const list of Object.values(state.routines)) {
+      for (const card of list) Object.freeze(card);
+      Object.freeze(list);
+    }
+    Object.freeze(state.routines);
+  }
   return Object.freeze(state);
 }
 
@@ -54,6 +67,22 @@ export function cleanCard(raw) {
     : "";
   if (!picture && !words) return null;
   return { picture, words, changed: raw.changed === true };
+}
+
+function cleanRoutines(raw) {
+  if (!isRecord(raw)) return null;
+  const out = {};
+  for (const { id } of ROUTINES) {
+    if (!Array.isArray(raw[id])) continue;
+    const list = [];
+    for (const item of raw[id]) {
+      const card = cleanCard(item);
+      if (!card || list.length >= MAX_CARDS) continue;
+      list.push({ picture: card.picture, words: card.words });
+    }
+    if (list.length > 0) out[id] = list;
+  }
+  return Object.keys(out).length > 0 ? out : null;
 }
 
 // Whatever was stored — an older shape, a hand edit, junk — as a usable
@@ -77,11 +106,14 @@ export function clean(raw) {
   // a card without a usable id gets the next free one
   let next = Math.max(0, ...ids) + 1;
   for (const card of cards) card.id ??= next++;
-  return freeze({
+  const routines = cleanRoutines(r.routines);
+  const state = {
     cards,
     done: clamp(done, 0, cards.length),
     view: VIEWS.includes(r.view) ? r.view : "now-next",
-  });
+  };
+  if (routines) state.routines = routines;
+  return freeze(state);
 }
 
 // ---------- reading it ----------
@@ -211,3 +243,41 @@ export function restoreAll(s, before) {
 export function setView(s, view) {
   return VIEWS.includes(view) && view !== s.view ? freeze({ ...s, view }) : s;
 }
+
+// ---------- saved routines (Morning, Afternoon, Outing) ----------
+
+export const routineCards = (s, id) => s.routines?.[id] ?? [];
+
+// Save the day's cards as a named routine (Morning, Afternoon, Outing).
+// A routine stores the normal plan ({ picture, words }, not one-off changed).
+export function saveRoutine(s, id) {
+  if (!ROUTINE_IDS.has(id) || !s.cards.length) return s;
+  const list = s.cards.map(({ picture, words }) => ({ picture, words }));
+  const routines = {};
+  for (const r of ROUTINES) {
+    if (r.id === id) routines[r.id] = list;
+    else if (s.routines?.[r.id]) routines[r.id] = s.routines[r.id].map((c) => ({ ...c }));
+  }
+  return freeze({ ...s, cards: s.cards.map((c) => ({ ...c })), routines });
+}
+
+// Put a saved routine's cards on the day, from the start (done = 0).
+export function useRoutine(s, id) {
+  const saved = s.routines?.[id];
+  if (!saved?.length) return s;
+  const cards = saved.map((c, i) => ({ id: i + 1, picture: c.picture, words: c.words, changed: false }));
+  return withCards(s, cards, 0);
+}
+
+// Take a saved routine away.
+export function removeRoutine(s, id) {
+  if (!s.routines?.[id]) return s;
+  const routines = {};
+  for (const r of ROUTINES) {
+    if (r.id !== id && s.routines[r.id]) routines[r.id] = s.routines[r.id].map((c) => ({ ...c }));
+  }
+  const next = { cards: s.cards.map((c) => ({ ...c })), done: s.done, view: s.view };
+  if (Object.keys(routines).length > 0) next.routines = routines;
+  return freeze(next);
+}
+

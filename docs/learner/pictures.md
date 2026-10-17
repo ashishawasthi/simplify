@@ -92,7 +92,8 @@ the script, look at every picture again, run the test, and bump `CACHE` in `publ
 ## The picture picker
 
 `pickPicture({ title, allowWords = true, current })` in `public/js/picture-picker.js`: a full-screen sheet in the same
-look as the notes-and-coins picker, built the first time it opens, with the pictures in their groups and a words box.
+look as the notes-and-coins picker, built the first time it opens, with a words box, a group jump bar (**My day**, **I
+need**, **Going out**, **Steps**) that scrolls straight to any group, and the pictures in their groups.
 
 - Resolves to `{ picture, words }` — `picture` an id or null, `words` "" or up to 40 characters — or `null` for ✕,
   Esc, or Done with nothing picked and nothing typed ("nothing changes", never an error).

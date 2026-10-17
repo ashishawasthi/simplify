@@ -12,6 +12,7 @@
 
 export const DAY = 24 * 60;
 export const MAX_ADD = 24 * 60 - 1; // what can be added: under a day ("tomorrow" at most)
+export const MAX_WAIT = 60; // the longest wait #wait?m= can start (wait-time.js)
 
 // "HH:MM" (or "H:MM", seconds ignored) → minutes, or null
 export function parseTime(value) {
@@ -75,16 +76,20 @@ export function timeAfter(start, add) {
   return { minutes: total % DAY, tomorrow: total >= DAY, added: amount };
 }
 
-// The answer panel for "How long until?" (the result.js shape), or null
+// The answer panel for "How long until?" (the result.js shape), or null.
+// Wait can time 1 to MAX_WAIT minutes (#wait?m=), so an Until answer in that
+// range carries waitMinutes for the button that starts it.
 export function untilAnswer(start, end) {
   const r = howLongUntil(start, end);
   if (!r) return null;
-  return {
+  const out = {
     tone: "answer",
     headline: durationText(r.minutes),
     subline: `${clockText(start)} to ${clockText(end)}${r.tomorrow ? " tomorrow" : ""}`,
     badge: durationText(r.minutes),
   };
+  if (r.minutes >= 1 && r.minutes <= MAX_WAIT) out.waitMinutes = r.minutes;
+  return out;
 }
 
 // The answer panel for "What time after?", or null

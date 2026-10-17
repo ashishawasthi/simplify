@@ -8,7 +8,8 @@ description: Non-negotiable privacy, safety and release rules for Simplify
 - No logos, brand artwork, or drawings resembling Singapore notes/coins (only colour, proportion, metal, size).
 - No health claims. No logs of feelings, behaviour or location.
 - Any change to `public/` requires bumping `CACHE` in `public/sw.js` and listing new files in `ASSETS`.
+- All code changes must be made and tested locally; pushing/merging to `main` automatically deploys everything via CI.
 - Never run a bare `firebase deploy`. Do not hand-edit generated `docs/**/index.md`.
 - Follow [AGENTS.md](../../AGENTS.md) and [DESIGN.md](../../DESIGN.md).
 - Allowed without asking (migrated from Claude permissions): web search, read-only `gcloud services|artifacts|run`
-  commands. Ask before anything that deploys or changes cloud resources.
+  commands. Ask before pushing to `main` or running anything that deploys or changes cloud resources.

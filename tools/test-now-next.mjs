@@ -5,9 +5,9 @@
 //   node tools/test-now-next.mjs
 
 import {
-  MAX_CARDS, MAX_WORDS, emptyState, clean, cleanCard, label, current, nextCard, allDone, canAdd, slot,
+  MAX_CARDS, MAX_WORDS, ROUTINES, emptyState, clean, cleanCard, label, current, nextCard, allDone, canAdd, slot,
   slotOfNew, add, change, remove, putBack, move, toggleChanged, markDone, backTo, restart, setDone, removeAll,
-  restoreAll, setView,
+  restoreAll, setView, routineCards, saveRoutine, useRoutine, removeRoutine,
 } from "../public/js/tools/now-next-list.js";
 import { PICTURES } from "../public/js/pictures.js";
 
@@ -148,6 +148,20 @@ const cases = [
   ["view: My day", setView(DAY, "my-day").view, "my-day"],
   ["view: nonsense ignored", setView(DAY, "sideways"), DAY],
   ["view: cards untouched", setView(DAY, "my-day").cards === DAY.cards, true],
+
+  // ---- saved routines ----
+  ["routines: three named slots", ROUTINES.map((r) => r.id).join(), "morning,afternoon,outing"],
+  ["saveRoutine: keeps cards without changed", routineCards(saveRoutine(toggleChanged(DAY, 2), "morning"), "morning")
+    .map((c) => `${label(c)}${c.changed ? "*" : ""}`).join(", "), "School, Bus, Home"],
+  ["saveRoutine: empty day saves nothing", saveRoutine(EMPTY, "morning"), EMPTY],
+  ["saveRoutine: unknown slot ignored", saveRoutine(DAY, "midnight"), DAY],
+  ["useRoutine: loads saved cards from start", show(useRoutine(removeAll(saveRoutine(HALF, "morning")), "morning")),
+    "School, Bus, Home | done 0 | now-next"],
+  ["useRoutine: keeps saved routines intact", routineCards(useRoutine(removeAll(saveRoutine(HALF, "morning")), "morning"), "morning").length, 3],
+  ["removeRoutine: clears the slot", routineCards(removeRoutine(saveRoutine(DAY, "morning"), "morning"), "morning").length, 0],
+  ["clean routines: drops junk and freezes", Object.isFrozen(clean({
+    routines: { morning: [{ picture: "eat" }, null], bad: [{ picture: "sleep" }] },
+  }).routines.morning), true],
 
   // ---- the pictures the tool uses itself ----
   ["pictures: changed, all-done, wait", ["changed", "all-done", "wait"].every((id) => PICTURES.some((p) => p.id === id)), true],

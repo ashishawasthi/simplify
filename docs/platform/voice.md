@@ -7,8 +7,8 @@ status: stable
 ---
 
 Speak on a full-screen card ([Show a card](/learner/show-card.md#the-full-screen-card), used by
-[I need](/learner/i-need.md) too) plays a **recorded voice**: one clear voice for every fixed sentence, the same on
-every phone and iPad, online or not. Words nobody could record in advance — a stop name, words typed into I want — are
+[I need](/learner/i-need.md) and [Stop and check](/learner/stop-check.md) too) plays a **recorded voice**: one clear voice for every fixed card sentence, the same on
+every phone and iPad, online or not. Words without a pre-recorded card clip — a stop name, words typed into I want, a step in [Steps](/learner/steps.md), or a screen in [My class](/learner/my-class.md) — are
 read by the device's own voice. This document owns the clips, the generator that makes them and the playback in
 `public/js/say-aloud.js`.
 

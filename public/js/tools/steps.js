@@ -32,9 +32,11 @@
 // Pictures only: the words — the step's, the deck names, the buttons' — are
 // pic-words; the pictures, ◀ ▶ and the dots stay, and the picture takes the
 // words' room. Screen readers hear each new step ("Step 3 of 7: Put on soap")
-// from a status line; nothing is spoken aloud.
+// from a status line; when Speak is on (#setup), a 🔊 button in the corner of
+// the picture reads the step out loud on a tap.
 
 import { pictureImg, pictureSrc, menuIconSrc } from "../pictures.js";
+import { canSpeak, say, stop } from "../say-aloud.js";
 import {
   DECKS, DONE_PICTURE, deckById, where, stepAfter, stepBefore, cleanProgress, cleanFewer, leftOut,
   cleanTouched, resumeAt,
@@ -121,7 +123,12 @@ export function mount(block, shell) {
   const pictureBox = make("div", "steps-picture");
   const picture = pictureImg(DECKS[0].steps[0].picture); // its src follows the step
   picture.decoding = "sync"; // the new step's picture with its words, not a moment after
-  pictureBox.append(picture);
+  const speakBtn = make("button", "round-btn steps-speak");
+  speakBtn.type = "button";
+  speakBtn.setAttribute("aria-label", "Speak: say this step out loud");
+  speakBtn.hidden = true;
+  speakBtn.append(glyph("🔊"));
+  pictureBox.append(picture, speakBtn);
 
   // the words, and under them on one step a button to another tool (Pay by
   // card: Can I buy?) — that step's words are one line, so the button fits
@@ -166,7 +173,10 @@ export function mount(block, shell) {
   function render() {
     chooser.hidden = deck !== null;
     view.hidden = deck === null;
-    if (!deck) return;
+    if (!deck) {
+      speakBtn.hidden = true;
+      return;
+    }
 
     const now = place();
     const { count, done, step } = now;
@@ -189,6 +199,7 @@ export function mount(block, shell) {
     // "Halal tray?" / "Use the halal side", "All done." / "You paid."
     const text = done ? deck.end : step.words;
     words.replaceChildren(...text.split(/(?<=[.?]) /).flatMap((part, i) => (i ? [make("br"), part] : [part])));
+    speakBtn.hidden = !(shell.device.speak && canSpeak(text));
 
     openBtn.hidden = !step?.open;
     if (step?.open) {
@@ -232,6 +243,7 @@ export function mount(block, shell) {
   // start again on the first step)
   function move(to) {
     if (to === at[deck.id]) return;
+    stop();
     const focused = block.contains(document.activeElement) ? document.activeElement : null;
     at[deck.id] = to;
     keep(deck);
@@ -245,6 +257,11 @@ export function mount(block, shell) {
     if (focused && !usable(focused)) (now.done ? anotherBtn : nextBtn).focus({ preventScroll: true });
   }
 
+  speakBtn.addEventListener("click", () => {
+    if (!deck) return;
+    const now = place();
+    say(now.done ? deck.end : now.step.words);
+  });
   nextBtn.addEventListener("click", () => {
     const now = performance.now();
     if (now - lastNextAt < NEXT_REPEAT_MS) return;
@@ -269,6 +286,7 @@ export function mount(block, shell) {
   // the header ✕: this deck from its first step again, and Put it back
   function clearAll() {
     if (!deck) return;
+    stop();
     const d = deck;
     const before = at[d.id];
     at[d.id] = 0;
@@ -285,6 +303,7 @@ export function mount(block, shell) {
   }
 
   function show(params, { fresh }) {
+    stop();
     const d = deckById(params.get("deck")); // none, or not a deck: the chooser
     if (d) {
       // left alone for 30 minutes (a reload, Back, a new visit): step 1
@@ -310,9 +329,10 @@ export function mount(block, shell) {
     render();
   }
 
-  // an adult's "Fewer steps" changed (the set-up page, its Put it back, or
-  // another tab): the same place in the routine, with the steps now shown
+  // an adult's "Fewer steps" or "Speak" changed (the set-up page, its Put it
+  // back, or another tab): the same place in the routine, with the steps now shown
   shell.onDeviceChange(() => {
+    if (!shell.device.speak) stop();
     if (!deck) return;
     render();
     shell.setClearAll(hasAnything());
@@ -334,7 +354,7 @@ export function mount(block, shell) {
   });
 
   render();
-  return { show, clearAll, hasAnything };
+  return { show, hide: stop, clearAll, hasAnything };
 }
 
 // ---- the set-up page's section (the contract is in ../tools.js) ----

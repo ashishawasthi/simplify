@@ -106,6 +106,43 @@
   color: var(--color-muted);
 }
 
+/* Quick menu presets under "Show on the menu": one tap for All tools,
+   Money only, or Daily life only. */
+#tool-setup .setup-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 12px 0 4px;
+}
+#tool-setup .setup-preset {
+  flex: 1 1 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: var(--target-small);
+  padding: 8px 14px;
+  font-family: inherit;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.15;
+  color: var(--color-text);
+  background: #fff;
+  border: 3px solid var(--color-border);
+  border-radius: 999px;
+  cursor: pointer;
+}
+#tool-setup .setup-preset:active { background: #e3f2fd; }
+#tool-setup .setup-preset[aria-pressed="true"] {
+  color: #fff;
+  background: var(--color-primary-dark);
+  border-color: var(--color-primary-dark);
+}
+#tool-setup .setup-preset[aria-pressed="true"]::before {
+  content: "✔";
+  font-size: 18px;
+}
+
 /* A whole row is one switch: [picture] name ········ [● On] */
 #tool-setup .setup-switch {
   display: flex;

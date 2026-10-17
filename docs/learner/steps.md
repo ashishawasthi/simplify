@@ -22,8 +22,9 @@ Each has its own address, so Android's Back goes from a deck to the chooser and 
 An unknown deck id (including `toString`) finds nothing (`deckById` uses a `Map`) and the chooser shows.
 
 **Nothing moves from step to step**: the picture, the words and the buttons keep their places whether a step's words
-take one line or three. Screen readers hear each new step from a status line ("Step 3 of 7: Put on soap"); nothing is
-spoken aloud.
+take one line or three. Screen readers hear each new step from a status line ("Step 3 of 7: Put on soap"); when the
+device's **Speak** setting is on (`device.speak`), a **🔊** button in the bottom-right corner of the picture stage reads
+the current step (or **All done** line) out loud on a tap via `say-aloud.js` and stops when moving to another step.
 
 After the last step, **All done**: a green ✔, the deck's own end line pointing back to the real task, and **Choose
 another** (which returns to the chooser the way Back does).

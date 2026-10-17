@@ -39,11 +39,12 @@ document you need. Visual rules are in [DESIGN.md](DESIGN.md).
 
 ## Release rules
 
+- Make and test all code changes locally. Pushing/merging to `main` deploys everything via CI — never run a bare
+  `firebase deploy` (the email extension and the video renderer image are the only parts deployed by hand; see the
+  `release-and-deploy` skill).
 - Before merging any change to `public/`: **bump `CACHE` in `public/sw.js`** and add new files to `ASSETS`
   (`node tools/test-assets.mjs` checks).
 - Update the guide, its screenshots and videos only **after** a change is tested locally, never alongside it.
-- A merge to `main` deploys everything via CI. Never run a bare `firebase deploy`; the email extension and the video
-  renderer image are deployed by hand. See the `release-and-deploy` skill.
 - Keep secrets out of the repo (`.gitguardian.yaml` is active).
 
 ## Local agent config

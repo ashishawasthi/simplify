@@ -570,6 +570,12 @@ a.round-btn {
    so neither the green nor the red; #0d47a1 on #e3f2fd is 7.5:1 */
 .result.is-answer { background: #e3f2fd; color: var(--color-primary-dark); }
 
+/* 🔊 Speak: reads the answer's headline and subline out loud */
+.result-speak {
+  color: inherit;
+  border: 3px solid currentColor;
+}
+
 /* 💵 Show me: the notes and coins for the amount in the answer. A full row
    under the words, so the answer keeps the whole width and the button reads
    as the one thing to do next. */
@@ -1149,6 +1155,42 @@ a.round-btn {
   font-weight: 700;
   color: var(--color-muted);
 }
+.pp-jump-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: var(--gap);
+}
+.pp-jump-btn {
+  flex: 1 1 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: var(--target-small);
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 19px;
+  font-weight: 800;
+  line-height: 1.15;
+  color: var(--color-text);
+  background: #fff;
+  border: 3px solid var(--color-border);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.pp-jump-btn:active { background: #e3f2fd; }
+.pp-jump-btn[aria-current="true"] {
+  color: #fff;
+  background: var(--color-primary-dark);
+  border-color: var(--color-primary-dark);
+}
+.pp-jump-btn[aria-current="true"]::before {
+  content: "✔";
+  font-size: 17px;
+}
+/* leave room for the sticky header when a group pill scrolls to its heading */
+.picture-picker .picker-group-label { scroll-margin-top: 112px; }
 .pp-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));

@@ -5,14 +5,41 @@
 
 import { DEFAULT_CURRENCY, moneySvg } from "./currency-data.js";
 import { MARKUP } from "./answers.js";
+import { getDevice, onDeviceChange } from "./device.js";
+import { canSpeak, say, stop } from "./say-aloud.js";
 
-let panel, icon, headline, subline, float, floatIcon, floatAmount, actionWrap, action;
+let panel, icon, headline, subline, speak, float, floatIcon, floatAmount, actionWrap, action;
 let current = null;
 
+const spokenLines = () => [headline?.textContent, subline?.textContent].filter(Boolean);
+
+function updateSpeak() {
+  if (!speak) return;
+  const lines = spokenLines();
+  speak.hidden = panel.hidden || !current || current.tone === "neutral" || !(getDevice().speak && canSpeak(lines));
+}
+
+function setActionContent(emoji, words, label) {
+  action.setAttribute("aria-label", label || words);
+  const s = document.createElement("span");
+  s.setAttribute("aria-hidden", "true");
+  s.textContent = emoji;
+  action.replaceChildren(s, ` ${words}`);
+}
+
 export function initResult(els, { onShowMe }) {
-  ({ panel, icon, headline, subline, float, floatIcon, floatAmount, actionWrap, action } = els);
+  ({ panel, icon, headline, subline, speak, float, floatIcon, floatAmount, actionWrap, action } = els);
   action.addEventListener("click", () => {
     if (current?.showMe) onShowMe(current.showMe);
+    else if (typeof current?.action?.onClick === "function") current.action.onClick();
+  });
+  speak?.addEventListener("click", () => {
+    const lines = spokenLines();
+    if (lines.length) say(lines);
+  });
+  onDeviceChange((device) => {
+    if (!device.speak) stop();
+    updateSpeak();
   });
   pinFloatToVisualViewport();
   trackPanelHeight();
@@ -50,13 +77,17 @@ function trackPanelHeight() {
 // The menu has no question, so no panel
 export function setResultVisible(visible) {
   panel.hidden = !visible;
-  if (!visible) float.hidden = true;
+  if (!visible) {
+    float.hidden = true;
+    stop();
+  }
+  updateSpeak();
   applyPanelHeight();
 }
 
 const TONES = ["is-yes", "is-no", "is-answer"];
 
-// answer: { tone, icon, headline, subline?, badge?, showMe? } — see answers.js.
+// answer: { tone, icon, headline, subline?, badge?, showMe?, action? } — see answers.js.
 //   icon     an emoji, { picture: cents } for a note or coin, or an element
 //            (a picture from pictures.js)
 //   subline  plain text, unless the answer carries answers.js's MARKUP mark
@@ -67,6 +98,8 @@ export function renderResult(answer) {
   if (answer.tone === "neutral") {
     panel.hidden = true;
     float.hidden = true;
+    stop();
+    updateSpeak();
     applyPanelHeight();
     return;
   }
@@ -92,7 +125,17 @@ export function renderResult(answer) {
   // HTML; anything else is text, so words a person typed stay words.
   if (answer[MARKUP]) subline.innerHTML = answer.subline ?? "";
   else subline.textContent = answer.subline ?? "";
-  actionWrap.hidden = !answer.showMe;
+  updateSpeak();
+
+  if (answer.showMe) {
+    actionWrap.hidden = false;
+    setActionContent("💵", "Show me", "Show me: the notes and coins for this amount");
+  } else if (answer.action) {
+    actionWrap.hidden = false;
+    setActionContent(answer.action.icon ?? "", answer.action.words, answer.action.label);
+  } else {
+    actionWrap.hidden = true;
+  }
 
   // mirror a real yes/no at the top of the screen, with its short amount —
   // an "answer" tone (change, next dollar …) stays bottom-only because a

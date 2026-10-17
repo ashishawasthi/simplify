@@ -39,6 +39,7 @@ initResult(
     icon: $("result-icon"),
     headline: $("result-headline"),
     subline: $("result-subline"),
+    speak: $("result-speak"),
     float: $("result-float"),
     floatIcon: $("result-float-icon"),
     floatAmount: $("result-float-amount"),

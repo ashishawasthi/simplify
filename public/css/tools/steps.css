@@ -134,6 +134,7 @@ html[data-pictures-only] #tool-steps .steps-choose-picture img {
 }
 
 #tool-steps .steps-picture {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -146,6 +147,15 @@ html[data-pictures-only] #tool-steps .steps-choose-picture img {
   height: 100%;
   max-width: 100%;
   object-fit: contain;
+}
+/* 🔊 in the empty corner beside the square picture: 0px added to height,
+   so the words and Next/Back stay in the exact same place on every screen */
+#tool-steps .steps-speak {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  box-shadow: 0 0 0 3px var(--color-bg);
 }
 /* Three lines' room whatever the words need, so the buttons stay put; the
    longest step and the longest end line fit it on a 320px phone. */

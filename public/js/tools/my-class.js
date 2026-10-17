@@ -17,11 +17,12 @@
 // Saved (shell.save, "simplify-my-class-v1"): { page, screen } — the screen
 // being read, so Back to here or a reload shows the same one.
 
-import { parseClassMarkdown, renderScreen } from "../class-markdown.js";
+import { parseClassMarkdown, plainText, renderScreen } from "../class-markdown.js";
 import {
   savedClass, refreshClass, loadClassMedia, publishedWords, forgetClassIfNone, onNewPage,
 } from "../class-data.js";
 import { menuIconSrc } from "../pictures.js";
+import { canSpeak, say, stop } from "../say-aloud.js";
 
 const DOUBLE_TAP_MS = 450; // Next again this soon after the screen changed is the same tap twice
 const MAX_DOTS = 12; // more screens than this: "3 / 20" instead of dots
@@ -36,6 +37,19 @@ function make(tag, className, text) {
 function hidden(el) {
   el.setAttribute("aria-hidden", "true");
   return el;
+}
+
+// what a screen says aloud: its headings, sentences and list items, in order;
+// if there are none, the words of its links, pictures or videos
+function screenSpeech(blocks) {
+  const out = [];
+  for (const b of blocks ?? []) {
+    if (b.type === "heading" || b.type === "paragraph") out.push(plainText(b.inline));
+    else if (b.type === "list") out.push(...(b.items ?? []).map((item) => plainText(item)));
+  }
+  const clean = (list) => list.map((t) => String(t ?? "").replace(/\s+/g, " ").trim()).filter(Boolean);
+  const lines = clean(out);
+  return lines.length ? lines : clean((blocks ?? []).map((b) => b.words));
 }
 
 function schoolPicture(className) {
@@ -86,12 +100,17 @@ export function mount(block, shell) {
   const dots = make("span", "mc-dots");
   const count = make("span", "mc-count");
   where.append(dots, count);
+  const speak = make("button", "mc-btn mc-speak");
+  speak.type = "button";
+  speak.setAttribute("aria-label", "Speak: read this screen out loud");
+  speak.hidden = true;
+  speak.append(hidden(make("span", "mc-btn-icon", "🔊")));
   const next = make("button", "mc-btn mc-next");
   next.type = "button";
   const nextIcon = hidden(make("span", "mc-btn-icon"));
   const nextWords = make("span", "pic-words");
   next.append(nextWords, nextIcon);
-  nav.append(back, where, next);
+  nav.append(back, where, speak, next);
 
   block.append(meta, note, content, nav);
 
@@ -137,6 +156,20 @@ export function mount(block, shell) {
     return slot;
   }
 
+  function currentSpeech() {
+    const screens = shown?.screens ?? [];
+    const blocks = (screens[index] ?? []).filter((b) =>
+      (b.type !== "picture" && b.type !== "video") || files.get(`${b.type}/${b.id}`)?.state !== "gone");
+    return screenSpeech(blocks);
+  }
+
+  function updateSpeak() {
+    const showSpeak = Boolean(shell.device.speak) && canSpeak();
+    nav.classList.toggle("mc-nav-has-speak", showSpeak);
+    speak.hidden = !showSpeak;
+    speak.disabled = !showSpeak || !canSpeak(currentSpeech());
+  }
+
   function fillFile(slot) {
     const file = files.get(slot.dataset.file);
     const blockData = slotBlocks.get(slot);
@@ -161,6 +194,7 @@ export function mount(block, shell) {
       }
       slot.replaceChildren(frame);
     }
+    updateSpeak();
     updateBusy();
   }
 
@@ -199,6 +233,7 @@ export function mount(block, shell) {
     content.replaceChildren(...screens[index].map(blockSlot));
     const last = index === screens.length - 1;
     back.disabled = index === 0;
+    updateSpeak();
     nextWords.textContent = last ? "All done" : "Next";
     nextIcon.textContent = last ? "✔" : "\u25B6\uFE0E"; // ▶ as a shape, not an emoji
     next.classList.toggle("is-done", last);
@@ -215,6 +250,7 @@ export function mount(block, shell) {
   }
 
   function go(step) {
+    stop();
     index += step;
     changedAt = performance.now();
     render({ focus: true });
@@ -223,6 +259,10 @@ export function mount(block, shell) {
 
   back.addEventListener("click", () => {
     if (index > 0) go(-1);
+  });
+  speak.addEventListener("click", () => {
+    const lines = currentSpeech();
+    if (lines.length) say(lines);
   });
   next.addEventListener("click", () => {
     if (performance.now() - changedAt < DOUBLE_TAP_MS) return;
@@ -245,6 +285,7 @@ export function mount(block, shell) {
   // from its first screen. Otherwise the next show() takes it.
   onNewPage(() => {
     if (!onScreen) return;
+    stop();
     takePage();
     index = 0;
     render();
@@ -255,15 +296,19 @@ export function mount(block, shell) {
 
   shell.onDeviceChange((device) => {
     renderTile(device);
+    if (!device.speak) stop();
     // another class (or none): whatever is on show now is not its page
     if (device.classCode !== shown?.code) {
       reopen = true;
       if (onScreen) {
+        stop();
         takePage();
         index = 0;
         reopen = false;
         render();
       }
+    } else if (onScreen) {
+      render();
     }
   });
   renderTile(shell.device);
@@ -271,6 +316,7 @@ export function mount(block, shell) {
 
   return {
     show(params, { fresh }) {
+      stop();
       onScreen = true;
       if (fresh || reopen || !shown || shown.code !== shell.device.classCode) {
         takePage();
@@ -286,6 +332,7 @@ export function mount(block, shell) {
       if (shell.device.classCode) refreshClass().catch(() => {});
     },
     hide() {
+      stop();
       onScreen = false;
       reopen = true;
       // stop anything playing: the next visit builds the screen again

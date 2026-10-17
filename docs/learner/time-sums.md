@@ -41,6 +41,11 @@ and its styles (`public/css/tools/time-sums.css`). It is in the **My day** group
   answer is today or tomorrow, never further.
 - No Until time, or nothing to add: no answer (the panel stays hidden) — never an error. The answer's picture is
   the question's (⏳ or 🕒), from the app's own set.
+- When **How long until?** is between **1 and 60 minutes** (`MAX_WAIT`), the answer panel shows **⏳ Wait <amount>**
+  (`shell.go("wait", { m })`), which opens [Wait](/learner/wait.md) and starts that countdown at once; Back returns
+  to Time sums.
+- Like every answer panel across the tools (`result.js`), when `device.speak` is on and speech is available, a
+  56 × 56 px **🔊** button (`#result-speak`) reads the headline and subline out loud via `say()`.
 
 ## Kept, and cleared
 
@@ -56,7 +61,7 @@ they are not something a picture says.
 
 ## Tests
 
-`node tools/test-time-sums.mjs` pins the arithmetic and every answer's words (44 cases: reading the box, saying a
-time and an amount, forgiving typed numbers, tomorrow, the cap). `node tools/smoke.mjs time-sums` drives the screen in
-Chrome: the answer as times are set, tomorrow, quick and typed amounts, Now, ✕ and Put it back, what is kept, pictures
-only, and the iPad layout. The guide page is `/guide/time-sums`.
+`node tools/test-time-sums.mjs` pins the arithmetic and every answer's words (47 cases: reading the box, saying a
+time and an amount, forgiving typed numbers, tomorrow, the Wait range, the cap). `node tools/smoke.mjs time-sums` drives
+the screen in Chrome: the answer as times are set, tomorrow, quick and typed amounts, Now, the ⏳ Wait bridge and 🔊
+Speak button, ✕ and Put it back, what is kept, pictures only, and the iPad layout. The guide page is `/guide/time-sums`.

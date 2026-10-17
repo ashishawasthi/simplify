@@ -710,6 +710,46 @@ const scenes = [
       return Math.abs(nav.bottom - innerHeight) < 2 && next.height >= 72 && nav.width <= 520;
     }),
   },
+  {
+    name: "Speak (🔊): reads the screen's headings, paragraphs, list items or link words out loud, and hides when Speak is off",
+    path: "/#my-class",
+    init: HELPERS + FOLLOWS + saved(PAGE) + `
+      window.spoken = [];
+      const synth = new EventTarget();
+      Object.assign(synth, {
+        paused: false,
+        getVoices: () => [{ name: "SG", lang: "en-SG", localService: true }],
+        speak(u) { window.spoken.push(u.text); setTimeout(() => u.onend?.(), 0); },
+        cancel() { window.spoken.push("cancel"); },
+        resume() {},
+      });
+      Object.defineProperty(window, "speechSynthesis", { configurable: true, get: () => synth });
+      window.SpeechSynthesisUtterance = class { constructor(t) { this.text = t; } };
+    `,
+    setup: run(async () => {
+      if (!shown("#tool-my-class .mc-speak")) throw new Error("no 🔊 on screen 1");
+      document.querySelector("#tool-my-class .mc-speak").click();
+      await pause(50);
+      const said1 = spoken.filter((s) => s !== "cancel").join(" | ");
+      if (said1 !== "Going to the dentist | I sit in the big chair.") throw new Error("screen 1: " + said1);
+      await tap("#tool-my-class .mc-next");
+      await tap("#tool-my-class .mc-next"); // screen 3: numbered list
+      spoken.length = 0;
+      document.querySelector("#tool-my-class .mc-speak").click();
+      await pause(50);
+      const said3 = spoken.filter((s) => s !== "cancel").join(" | ");
+      if (said3 !== "Open wide | Rinse") throw new Error("screen 3: " + said3);
+      await tap("#tool-my-class .mc-next"); // screen 4: link only
+      spoken.length = 0;
+      document.querySelector("#tool-my-class .mc-speak").click();
+      await pause(50);
+      const said4 = spoken.filter((s) => s !== "cancel").join(" | ");
+      if (said4 !== "Clinic map") throw new Error("screen 4: " + said4);
+      const { setDevice } = await import("/js/device.js");
+      setDevice({ speak: false });
+    }),
+    expect: inPage(() => !shown("#tool-my-class .mc-speak") && spoken.at(-1) === "cancel"),
+  },
 ];
 
 export default scenes.map((scene) => ({ ...scene, init: GLOBALS + (scene.init ?? "") }));

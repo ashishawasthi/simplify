@@ -478,6 +478,76 @@
 }
 #tool-now-next .nn-remove-all:active { background: var(--color-no-bg); }
 
+/* ---------- saved routines (Morning, Afternoon, Outing) ---------- */
+#tool-now-next .nn-routines {
+  margin: 28px 0 0;
+  padding-top: 20px;
+  border-top: 2px solid var(--color-border);
+}
+#tool-now-next .nn-routines-title {
+  margin: 0 0 12px;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--color-muted);
+}
+#tool-now-next .nn-routine-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+#tool-now-next .nn-routine-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+#tool-now-next .nn-routine-save {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--target-small);
+  padding: 8px 16px;
+  font-family: inherit;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--color-primary-dark);
+  background: #fff;
+  border: 3px dashed #90caf9;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+#tool-now-next .nn-routine-save:active { background: #e3f2fd; }
+#tool-now-next .nn-routine-use {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  min-height: var(--target-small);
+  padding: 8px 16px;
+  font-family: inherit;
+  font-size: 21px;
+  font-weight: 800;
+  color: var(--color-primary-dark);
+  background: #f5f9ff;
+  border: 3px solid var(--color-primary);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+#tool-now-next .nn-routine-use:active { background: #e3f2fd; }
+#tool-now-next .nn-routine-count {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-muted);
+}
+#tool-now-next .nn-routine-remove {
+  flex: none;
+  color: var(--color-no-text);
+  border-color: var(--color-no-text);
+}
+
 /* ---------- pictures only ---------- */
 /* with the words gone, the switches and the Changed button are pictures */
 html[data-pictures-only] #tool-now-next .nn-view { min-height: 64px; }

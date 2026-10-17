@@ -345,6 +345,37 @@ export default [
       JSON.parse(localStorage.getItem("simplify-device-v1")).hidden.length === 0),
   },
   {
+    name: "set-up: quick menu presets (All tools, Money only, Daily life only) switch groups at once, with Put it back",
+    path: "/#setup",
+    init: HELPERS,
+    setup: HOLD + run(() => {
+      const preset = (id) => document.querySelector(`#tool-setup .setup-preset[data-preset="${id}"]`);
+      if (preset("all").getAttribute("aria-pressed") !== "true") throw new Error("All tools not pressed at start");
+      preset("money").click();
+      if (preset("money").getAttribute("aria-pressed") !== "true" || preset("all").getAttribute("aria-pressed") !== "false") {
+        throw new Error("Money only not pressed");
+      }
+      if (byName("Can I buy?").getAttribute("aria-checked") !== "true" ||
+        byName("Now and next").getAttribute("aria-checked") !== "false") {
+        throw new Error("switches did not follow Money only");
+      }
+      if (document.getElementById("toast-text").textContent !== "Menu: Money only") {
+        throw new Error("toast: " + document.getElementById("toast-text").textContent);
+      }
+      preset("daily").click();
+      if (preset("daily").getAttribute("aria-pressed") !== "true" ||
+        byName("Can I buy?").getAttribute("aria-checked") !== "false" ||
+        byName("Now and next").getAttribute("aria-checked") !== "true") {
+        throw new Error("switches did not follow Daily life only");
+      }
+      document.getElementById("toast-undo").click(); // back to Money only
+    }),
+    expect: inPage(() =>
+      document.querySelector('#tool-setup .setup-preset[data-preset="money"]').getAttribute("aria-pressed") === "true" &&
+      byName("Can I buy?").getAttribute("aria-checked") === "true" &&
+      byName("Now and next").getAttribute("aria-checked") === "false"),
+  },
+  {
     name: "set-up: a tool taken off the menu is tucked under its group's ＋, closed — and closed again back at the menu",
     path: "/#setup",
     init: HELPERS,

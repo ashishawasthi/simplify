@@ -71,23 +71,34 @@ function build() {
   words.placeholder = "1 to 4 words";
   wordsLabel.append(wordsText, words);
 
+  const jumpBar = make("nav", "pp-jump-bar");
+  jumpBar.setAttribute("aria-label", "Picture groups");
   const groups = make("div", "pp-groups");
   const known = new Set(PICTURE_GROUPS.map((g) => g.id));
   const sections = [
-    ...PICTURE_GROUPS.map((g) => ({ label: g.label, pictures: PICTURES.filter((p) => p.group === g.id) })),
+    ...PICTURE_GROUPS.map((g) => ({ id: g.id, label: g.label, pictures: PICTURES.filter((p) => p.group === g.id) })),
     // a picture whose group isn't listed still gets a place, at the end
-    { label: "More", pictures: PICTURES.filter((p) => !known.has(p.group)) },
-  ];
-  for (const { label, pictures } of sections) {
-    if (!pictures.length) continue;
+    { id: "more", label: "More", pictures: PICTURES.filter((p) => !known.has(p.group)) },
+  ].filter((s) => s.pictures.length > 0);
+  for (const { id, label, pictures } of sections) {
+    const heading = make("h3", "picker-group-label", label);
+    heading.id = `pp-group-${id}`;
+    const jumpBtn = make("button", "pp-jump-btn", label);
+    jumpBtn.type = "button";
+    jumpBtn.dataset.group = id;
+    jumpBtn.addEventListener("click", () => {
+      heading.scrollIntoView({ block: "start" });
+      setActiveJump(id);
+    });
+    jumpBar.append(jumpBtn);
     const grid = make("div", "pp-grid");
     for (const p of pictures) grid.append(pictureButton(p));
-    groups.append(make("h3", "picker-group-label", label), grid);
+    groups.append(heading, grid);
   }
 
-  dialog.append(header, wordsLabel, groups);
+  dialog.append(header, wordsLabel, jumpBar, groups);
   document.body.append(dialog);
-  els = { dialog, title, words, wordsLabel, groups };
+  els = { dialog, title, words, wordsLabel, jumpBar, groups, firstGroup: sections[0]?.id ?? null };
 
   close.addEventListener("click", () => finish(null));
   done.addEventListener("click", () => finish(result()));
@@ -103,6 +114,13 @@ function build() {
   dialog.addEventListener("close", () => {
     if (!dialog.open) finish(null);
   });
+}
+
+function setActiveJump(groupId) {
+  for (const btn of els.jumpBar.querySelectorAll(".pp-jump-btn")) {
+    if (btn.dataset.group === groupId) btn.setAttribute("aria-current", "true");
+    else btn.removeAttribute("aria-current");
+  }
 }
 
 function pictureButton(p) {
@@ -130,6 +148,7 @@ function choose(id) {
     autoWords = picked ? byId.get(picked).words : "";
     els.words.value = autoWords;
   }
+  if (picked) setActiveJump(byId.get(picked).group);
   showPicked();
 }
 
@@ -157,6 +176,7 @@ export function pickPicture({ title = "Pick a picture", allowWords = true, curre
   autoWords = picked && words === byId.get(picked).words ? words : "";
   els.wordsLabel.hidden = !allowWords;
   els.title.textContent = title;
+  setActiveJump(picked ? byId.get(picked).group : els.firstGroup);
   showPicked();
 
   els.dialog.showModal();

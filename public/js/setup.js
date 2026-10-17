@@ -72,7 +72,29 @@ export function mountSetup(block, shell) {
   menuHeading.id = "setup-menu-h";
   menuHeading.tabIndex = -1; // focus lands here once the hold opens the page, if My class can't
   menuSection.setAttribute("aria-labelledby", menuHeading.id);
-  menuSection.append(menuHeading);
+  const menuTools = TOOLS.filter((t) => t.group);
+  const presetsBar = make("div", "setup-presets");
+  presetsBar.setAttribute("role", "group");
+  presetsBar.setAttribute("aria-label", "Quick menu presets");
+  const presetButtons = [
+    { id: "all", label: "All tools", hidden: [] },
+    { id: "money", label: "Money only", hidden: menuTools.filter((t) => t.group !== "money").map((t) => t.id) },
+    { id: "daily", label: "Daily life only", hidden: menuTools.filter((t) => t.group === "money").map((t) => t.id) },
+  ].map((preset) => {
+    const btn = make("button", "setup-preset", preset.label);
+    btn.type = "button";
+    btn.dataset.preset = preset.id;
+    btn.setAttribute("aria-pressed", "false");
+    btn.addEventListener("click", () => {
+      const before = getDevice().hidden;
+      if (menuTools.every((t) => before.includes(t.id) === preset.hidden.includes(t.id))) return;
+      setDevice({ hidden: preset.hidden });
+      shell.showToast(`Menu: ${preset.label}`, () => setDevice({ hidden: before }));
+    });
+    presetsBar.append(btn);
+    return { ...preset, btn };
+  });
+  menuSection.append(menuHeading, presetsBar);
 
   const toolSwitches = new Map(); // tool id → its switch
   for (const group of GROUPS) {
@@ -154,6 +176,10 @@ export function mountSetup(block, shell) {
   // the switches follow the settings, including a "Put it back"
   function render(device) {
     for (const [id, sw] of toolSwitches) setSwitch(sw, !device.hidden.includes(id));
+    for (const { btn, hidden } of presetButtons) {
+      const match = menuTools.every((t) => device.hidden.includes(t.id) === hidden.includes(t.id));
+      btn.setAttribute("aria-pressed", String(match));
+    }
     setSwitch(picturesSwitch, device.picturesOnly);
     setSwitch(speakSwitch, device.speak);
   }

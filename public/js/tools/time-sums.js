@@ -16,7 +16,7 @@
 // again from the menu, it is the time now.
 
 import {
-  DAY, MAX_ADD, QUICK, afterAnswer, inputValue, minutesOf, parseTime, quickText, untilAnswer, wholeNumber,
+  DAY, MAX_ADD, QUICK, afterAnswer, durationText, inputValue, minutesOf, parseTime, quickText, untilAnswer, wholeNumber,
 } from "./time-sums-calc.js";
 import { pictureImg } from "../pictures.js";
 
@@ -178,7 +178,19 @@ export function mount(block, shell) {
     }
     const answer = state.mode === "until" ? untilAnswer(startNow(), state.end) : afterAnswer(startNow(), state.add || null);
     if (answer && (state.mode === "until" || state.add > 0)) {
-      shell.result.render({ ...answer, icon: pictureImg(state.mode === "until" ? "more-time" : "clock", { alt: "" }) ?? "🕒" });
+      const action = answer.waitMinutes
+        ? {
+            icon: "⏳",
+            words: `Wait ${durationText(answer.waitMinutes)}`,
+            label: `Wait ${durationText(answer.waitMinutes)}: start the timer`,
+            onClick: () => shell.go("wait", { m: answer.waitMinutes }),
+          }
+        : null;
+      shell.result.render({
+        ...answer,
+        icon: pictureImg(state.mode === "until" ? "more-time" : "clock", { alt: "" }) ?? "🕒",
+        action,
+      });
     } else {
       shell.result.render({ tone: "neutral" });
     }

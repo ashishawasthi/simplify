@@ -541,19 +541,25 @@ export default [
     expect: inPage(() => result?.picture === first.id && result.words === first.words),
   },
   {
-    name: "picture picker: every group has its pictures, each with its words",
+    name: "picture picker: every group has its pictures, each with its words, and a jump button that scrolls to it",
     path: "/",
     init: HELPERS,
     setup: run(async () => {
       const { pickPicture } = await import("/js/picture-picker.js");
       pickPicture({ title: "Now" });
+      const stepsBtn = document.querySelector('.pp-jump-btn[data-group="steps"]');
+      stepsBtn.click();
     }),
     expect: inPage(async () => {
       const { PICTURES, PICTURE_GROUPS } = await import("/js/pictures.js");
       const labels = [...document.querySelectorAll(".picture-picker .picker-group-label")].map((h) => h.textContent);
+      const jumps = [...document.querySelectorAll(".picture-picker .pp-jump-btn")];
       const buttons = document.querySelectorAll(".pp-pic");
       return buttons.length === PICTURES.length &&
         PICTURE_GROUPS.every((g) => labels.includes(g.label)) &&
+        jumps.map((b) => b.textContent).join("|") === PICTURE_GROUPS.map((g) => g.label).join("|") &&
+        document.querySelector('.pp-jump-btn[data-group="steps"]').getAttribute("aria-current") === "true" &&
+        document.querySelector(".picture-picker").scrollTop > 0 &&
         [...buttons].every((b) => b.querySelector(".pp-pic-words").textContent.length > 0 && b.querySelector("img"));
     }),
   },

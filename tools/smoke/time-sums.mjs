@@ -118,4 +118,23 @@ export default [
       return Math.abs(a.getBoundingClientRect().top - b.getBoundingClientRect().top) < 2 && fits();
     }),
   },
+  {
+    name: "how long until (1–60 min): shows 🔊 Speak and ⏳ Wait button that starts the Wait timer",
+    path: "/#time-sums",
+    init: HELPERS,
+    setup: run(async () => {
+      await waitFor(() => shown("#ts-from"));
+      set("ts-from", "14:10");
+      set("ts-until", "14:25");
+      await waitFor(() => shown("#result-action-wrap"));
+      if (!shown("#result-speak")) throw new Error("🔊 Speak button not shown on answer panel");
+      const btn = document.getElementById("result-action");
+      if (!btn.textContent.includes("Wait 15 minutes")) throw new Error("action text: " + btn.textContent);
+      btn.click();
+      await waitFor(() => location.hash === "#wait?m=15" && shown("#tool-wait .wait-disc"));
+    }),
+    expect: inPage(() =>
+      location.hash === "#wait?m=15" &&
+      document.querySelector("#tool-wait .wait-words")?.textContent.includes("15 minutes")),
+  },
 ];

@@ -40,6 +40,10 @@ The whole day as a strip, top to bottom:
   announced, not hidden.
 - A tap on a card's picture picks another picture.
 - **＋ Add** at the end, up to **12 cards** ("Full: 12 cards" after that); then **Remove all**, with Put it back.
+- **Saved routines** (**Morning**, **Afternoon**, **Outing**) below Remove all: save the current day's cards into a
+  slot (**＋ Save as Morning** → "Saved Morning", Put it back), load a saved routine from the start in one tap
+  (**Morning · N cards** → "Morning ready", Put it back), or take a saved routine away (**✕** → "Took away Morning",
+  Put it back).
 
 Cards are made with the shared picture picker (`pickPicture`, see [pictures](/learner/pictures.md#the-picture-picker)):
 a picture from the bundled set, a few words (at most 40 characters), or both. The picker's title says which slot is
@@ -61,7 +65,7 @@ never undoes itself.
 `localStorage` `simplify-now-next-v1` (through `shell.save`):
 
 ```
-{ cards: [{ id, picture, words, changed }], done, view }
+{ cards: [{ id, picture, words, changed }], done, view, routines?: { morning?, afternoon?, outing? } }
 ```
 
 - `cards` — the day in order, at most `MAX_CARDS` (12). `id` is a whole number unique in the list that follows the
@@ -70,6 +74,8 @@ never undoes itself.
 - `done` — how many cards from the top are done: `cards[done]` is Now, `cards[done + 1]` Next; `done ===
   cards.length` (with any cards) is All done.
 - `view` — `"now-next"` or `"my-day"`.
+- `routines` — optional saved templates (`morning`, `afternoon`, `outing`), each an array of up to `MAX_CARDS`
+  `{ picture, words }` cards.
 
 Every function in `now-next-list.js` takes a state and returns a new frozen one, or the same one when there is
 nothing to do — never an error. A card is found by its id, not its place, so a tap on a card that has since moved
@@ -83,5 +89,5 @@ Add, Changed, All done) are hidden from sight; the pictures and signs stay.
 ## Tests
 
 `node tools/test-now-next.mjs` pins every rule of the list (Done, going back, adding, moving past Now, take away and
-put back, Changed, remove all and restore, the 12-card limit, cleaning a saved state). `node tools/smoke.mjs now-next`
-drives both views in Chrome, including reduced motion, the bounce guard and pictures only.
+put back, Changed, remove all and restore, saved routines, the 12-card limit, cleaning a saved state). `node tools/smoke.mjs now-next`
+drives both views in Chrome, including saved routines, reduced motion, the bounce guard and pictures only.

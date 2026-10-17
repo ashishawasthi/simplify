@@ -359,6 +359,33 @@ export default [
     expect: inPage(() => strip() === "✔Brush teeth, ✔Bus, [School], Home" && saved()?.done === 2),
   },
   {
+    name: "My day: save a routine (Morning), load it after Remove all, and take it away with Put it back",
+    path: "/#now-next",
+    init: day(2, "my-day"),
+    setup: run(async () => {
+      nn('[data-routine-save="morning"]').click();
+      if (toast() !== "Saved Morning") throw new Error(`toast: ${toast()}`);
+      if (!nnShown('[data-routine-use="morning"]')) throw new Error("Use Morning not shown");
+      await pause(500);
+      nn(".nn-remove-all").click();
+      await pause(500);
+      if (nnAll(".nn-item").length !== 0) throw new Error("day not cleared");
+      // saved routine still shows on an empty day
+      if (!nnShown('[data-routine-use="morning"]')) throw new Error("saved routine hidden on empty day");
+      nn('[data-routine-use="morning"]').click();
+      if (toast() !== "Morning ready") throw new Error(`toast: ${toast()}`);
+      if (strip() !== "[Brush teeth], Bus, School, Home") throw new Error(`loaded strip: ${strip()}`);
+      await pause(500);
+      nn('[data-routine-remove="morning"]').click();
+      if (toast() !== "Took away Morning") throw new Error(`toast: ${toast()}`);
+      document.getElementById("toast-undo").click();
+    }),
+    expect: inPage(() =>
+      nnShown('[data-routine-use="morning"]') &&
+      strip() === "[Brush teeth], Bus, School, Home" &&
+      saved()?.routines?.morning?.length === 4),
+  },
+  {
     name: "My day: every button is a 56 px target or more, and each has a name",
     path: "/#now-next",
     init: day(1, "my-day", [DAY[0], DAY[1], card(3, "swim", "Swim", true), DAY[3]]),

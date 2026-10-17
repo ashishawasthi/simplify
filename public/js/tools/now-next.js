@@ -181,7 +181,38 @@ export function mount(block, shell) {
   const removeAllBtn = button("nn-remove-all", "Remove all the cards");
   removeAllBtn.append(sign("✕"), " Remove all");
   removeAllBtn.addEventListener("click", () => tap(removeAll));
-  myDay.append(strip, addBtn, full, removeAllBtn);
+
+  // saved routines (Morning, Afternoon, Outing): save the current day or
+  // load a saved one in one tap, with Put it back
+  const routinesSec = make("section", "nn-routines");
+  const routinesH = make("h2", "nn-routines-title", "Saved routines");
+  routinesH.id = "nn-routines-h";
+  routinesSec.setAttribute("aria-labelledby", routinesH.id);
+  const routinesList = make("div", "nn-routine-list");
+  const routineRows = new Map();
+  for (const r of day.ROUTINES) {
+    const row = make("div", "nn-routine-row");
+    row.dataset.routine = r.id;
+    const save = button("nn-routine-save", `Save as ${r.label}`);
+    save.dataset.routineSave = r.id;
+    save.append(sign("＋"), ` Save as ${r.label}`);
+    save.addEventListener("click", () => tap(() => saveRoutine(r)));
+    const use = button("nn-routine-use");
+    use.dataset.routineUse = r.id;
+    const useName = make("span", "nn-routine-name", r.label);
+    const useCount = make("span", "nn-routine-count");
+    use.append(useName, useCount);
+    use.addEventListener("click", () => tap(() => useRoutine(r)));
+    const remove = button("round-btn nn-routine-remove", `Take away saved routine: ${r.label}`);
+    remove.dataset.routineRemove = r.id;
+    remove.append(sign("✕"));
+    remove.addEventListener("click", () => tap(() => removeRoutine(r)));
+    row.append(save, use, remove);
+    routinesList.append(row);
+    routineRows.set(r.id, { row, save, use, useCount, remove });
+  }
+  routinesSec.append(routinesH, routinesList);
+  myDay.append(strip, addBtn, full, removeAllBtn, routinesSec);
 
   // Done's "Now: …" for screen readers; toasts speak for themselves
   const status = make("p", "visually-hidden");
@@ -320,6 +351,29 @@ export function mount(block, shell) {
     addBtn.hidden = !room;
     full.hidden = room;
     removeAllBtn.hidden = state.cards.length === 0;
+    renderRoutines();
+  }
+
+  function renderRoutines() {
+    const hasCards = state.cards.length > 0;
+    let anyVisible = false;
+    for (const r of day.ROUTINES) {
+      const saved = day.routineCards(state, r.id);
+      const hasSaved = saved.length > 0;
+      const it = routineRows.get(r.id);
+      const showRow = hasSaved || hasCards;
+      it.row.hidden = !showRow;
+      if (showRow) anyVisible = true;
+      it.save.hidden = hasSaved || !hasCards;
+      it.use.hidden = !hasSaved;
+      it.remove.hidden = !hasSaved;
+      if (hasSaved) {
+        const countText = `${saved.length} ${saved.length === 1 ? "card" : "cards"}`;
+        it.useCount.textContent = countText;
+        it.use.setAttribute("aria-label", `Use ${r.label}: ${countText}`);
+      }
+    }
+    routinesSec.hidden = !anyVisible;
   }
 
   function render() {
@@ -465,6 +519,28 @@ export function mount(block, shell) {
     addBtn.focus({ preventScroll: true });
     const text = before.cards.length === 1 ? day.label(before.cards[0]) : `${before.cards.length} cards`;
     shell.showToast(`Took away ${text}`, () => commit(day.restoreAll(state, before)));
+  }
+
+  function saveRoutine(r) {
+    const before = state;
+    if (!commit(day.saveRoutine(state, r.id))) return;
+    routineRows.get(r.id)?.use.focus({ preventScroll: true });
+    shell.showToast(`Saved ${r.label}`, () => commit(before));
+  }
+
+  function useRoutine(r) {
+    const before = state;
+    if (!commit(day.useRoutine(state, r.id))) return;
+    say(`${r.label} ready. Now: ${describe(day.current(state))}`);
+    shell.showToast(`${r.label} ready`, () => commit(before));
+  }
+
+  function removeRoutine(r) {
+    const before = state;
+    if (!commit(day.removeRoutine(state, r.id))) return;
+    const it = routineRows.get(r.id);
+    [it?.save, addBtn].find(usable)?.focus({ preventScroll: true });
+    shell.showToast(`Took away ${r.label}`, () => commit(before));
   }
 
   render();

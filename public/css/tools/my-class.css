@@ -79,8 +79,8 @@ html[data-pictures-only] #tool-my-class .mc-screen { min-height: calc(100dvh - 2
   color: var(--color-muted);
 }
 
-/* Where in the page, then Back and Next — held at the bottom of the screen
-   while the page scrolls under them. */
+/* Where in the page, then Back, optional Speak, and Next — held at the bottom
+   of the screen while the page scrolls under them. */
 #tool-my-class .mc-nav {
   position: sticky;
   bottom: 0;
@@ -93,6 +93,10 @@ html[data-pictures-only] #tool-my-class .mc-screen { min-height: calc(100dvh - 2
   padding: 10px 0 calc(12px + env(safe-area-inset-bottom));
   background: var(--color-bg);
   border-top: 3px solid #e0e0e0;
+}
+#tool-my-class .mc-nav.mc-nav-has-speak {
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1.5fr);
+  grid-template-areas: "where where where" "back speak next";
 }
 /* a phone on its side: a pinned bar would take a third of the screen and
    hide the picture or video, so it scrolls with the page instead */
@@ -157,6 +161,18 @@ html[data-pictures-only] #tool-my-class .mc-screen { min-height: calc(100dvh - 2
 #tool-my-class .mc-back:not(:disabled):active { background: #e3f2fd; }
 /* the first screen: Back stays where it is, faded, so Next doesn't move */
 #tool-my-class .mc-back:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+#tool-my-class .mc-speak {
+  grid-area: speak;
+  min-width: 72px;
+  color: var(--color-text);
+  background: #fff;
+  border: 3px solid var(--color-border);
+}
+#tool-my-class .mc-speak:not(:disabled):active { background: #e3f2fd; }
+#tool-my-class .mc-speak:disabled {
   opacity: 0.35;
   cursor: default;
 }

@@ -638,4 +638,35 @@ export default [
     }),
     expect: inPage(() => words() === "Look at the price on the screen" && dots() === "O..."),
   },
+  {
+    name: "Speak (🔊): reads the step or All done out loud, stops on Next, and hides when Speak is off",
+    path: "/#steps?deck=wash-hands",
+    init: HELPERS + progress({ "wash-hands": 6 }) + `
+      window.spoken = [];
+      const synth = new EventTarget();
+      Object.assign(synth, {
+        paused: false,
+        getVoices: () => [{ name: "SG", lang: "en-SG", localService: true }],
+        speak(u) { window.spoken.push(u.text); setTimeout(() => u.onend?.(), 0); },
+        cancel() { window.spoken.push("cancel"); },
+        resume() {},
+      });
+      Object.defineProperty(window, "speechSynthesis", { configurable: true, get: () => synth });
+      window.SpeechSynthesisUtterance = class { constructor(t) { this.text = t; } };
+    `,
+    setup: run(async () => {
+      if (!shown("#tool-steps .steps-speak")) fail("no 🔊 on step", "");
+      q(".steps-speak").click();
+      await pause(50);
+      if (spoken.at(-1) !== "Dry your hands") fail("said on step", spoken);
+      await tapNext();
+      if (!shown("#tool-steps .steps-speak")) fail("no 🔊 on All done", "");
+      q(".steps-speak").click();
+      await pause(50);
+      if (spoken.at(-1) !== "All done. Your hands are clean.") fail("said on All done", spoken);
+      const { setDevice } = await import("/js/device.js");
+      setDevice({ speak: false });
+    }),
+    expect: inPage(() => !shown("#tool-steps .steps-speak") && spoken.at(-1) === "cancel"),
+  },
 ];
